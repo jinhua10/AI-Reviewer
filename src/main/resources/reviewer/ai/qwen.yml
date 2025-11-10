@@ -1,0 +1,13 @@
+qwen:
+  apiUrl: https://api.qwen.com/v1/chat/completions
+  model: qwen-plus
+  temperature: 0.3
+  connectTimeoutSeconds: 60
+  readTimeoutSeconds: 120
+  systemPrompt: 你是一位资深代码评审与架构优化专家，能够根据不同语言特性给出高质量建议。
+  totalMaxTokens: 8190
+  maxConcurrency: 3
+  maxRetries: 2
+  initialRetryDelaySeconds: 3
+  maxRetryDelaySeconds: 20
+

@@ -1,0 +1,108 @@
+reviewer:
+  # 主平台（整体默认平台）。默认: deepseek
+  platform: deepseek
+  # AI 平台列表：可内联覆盖对应平台参数。若 reviewer.platform 未匹配资源，将使用第一个条目。
+  ai:
+    - platform: deepseek
+      # 没有 apiUrl，会加载 reviewer/ai/deepseek.yml
+      apiUrl: https://api.deepseek.com/v1/chat/completions      # 默认
+      model: deepseek-chat                                      # 默认
+      temperature: 0.3                                          # 默认 (越低越保守)
+      connectTimeoutSeconds: 60                                 # 默认
+      readTimeoutSeconds: 120                                   # 默认
+      systemPrompt: | # 默认系统提示词
+        你是一位资深代码评审专家，擅长分析各种编程语言的源代码质量。
+      totalMaxTokens: 8190                                      # 默认 (整体上下文最大 tokens)
+      maxConcurrency: 3                                         # 默认 并发调用上限
+      maxRetries: 2                                             # 默认 最大重试次数
+      initialRetryDelaySeconds: 3                               # 默认 初始重试延迟
+      maxRetryDelaySeconds: 20                                  # 默认 最大退避延迟
+    # - platform: openai        # 示例: 其他平台占位（当前未提供资源文件，可内联补全）
+    #   apiUrl: https://api.openai.com/v1/chat/completions
+    #   model: gpt-4o-mini
+    #   temperature: 0.4
+    #   totalMaxTokens: 8190
+    #   maxConcurrency: 2
+    #   maxRetries: 2
+    #   initialRetryDelaySeconds: 3
+    #   maxRetryDelaySeconds: 20
+    # - platform: qwen          # 示例占位
+    # - platform: doubao        # 示例占位
+
+  # 每个分块最大允许 tokens（模型上下文预算相关）。默认: 8000
+  maxTokensPerChunk: 8000
+
+  # 分块级分析配置（chunk section）
+  chunk:
+    platform: deepseek                # 缺失时回退 reviewer.platform
+    feature: feature_chunk.md         # 缺失回退默认维度列表
+    chunkPromptTemplate: |
+      你正在分析一个大型项目的源代码，这是项目的第 {{chunkIndex}} 部分（共 {{totalChunks}} 部分）。该部分包含以下文件: {{filePaths}}
+
+      源代码内容:
+      {{content}}
+
+      请根据以下评估标准分析此部分代码:
+      {{feature}}
+
+      注意：这只是项目的一部分，请专注于当前部分的分析，不要对整个项目做结论。
+    # 报告生成配置
+    report:
+      # 报告输出格式列表，支持: json, markdown, pdf
+      # 可以配置一种或多种格式，例如只配置 ["markdown"] 则只生成 Markdown 报告
+      # 默认: [json, markdown, pdf]
+      formats:
+        - json
+        - markdown
+        - pdf
+      # 报告输出目录（相对于项目根目录，默认: reports）
+      outputDir: reports
+  summary:
+    platform: deepseek                # 缺失时回退 reviewer.platform
+    feature: feature_summary.yml      # 缺失回退 chunk.feature 或默认维度
+    projectPromptTemplate: |
+      你将看到对项目分块分析后抽取的聚合特征（维度分数、优点、问题、高频缺陷等）。请基于这些信息对整个项目做综合评价。
+      任务要求：
+      1. 生成项目详情报告
+      2. 生成项目总评
+      3. 若某些维度信息不足，需在评语中注明局限性。
+
+      项目详情报告格式要求：
+      1. 整体结构：分章节呈现（含章节标题、子标题），章节顺序为：报告概述 → 安全漏洞分析 → 代码质量评估 → 合规性检查 → 性能分析 → 风险优先级排序 → 修复指导 → 总结建议
+      2. 数据呈现：关键指标用表格汇总，漏洞详情用列表分点说明，修复示例用代码块展示
+      3. 语言风格：专业、客观、严谨，避免模糊表述，所有结论需附具体依据（如“圈复杂度超标，因 OrderService.java 中 calculateOrder 方法圈复杂度为 12，超过行业建议阈值 10”）
+      4. 结尾需给出总结建议：含整体风险评级（高/中/低）、核心改进方向、后续检测频率建议
+      请基于以上要求生成完整报告，确保内容与 Veracode 报告一致，既有宏观统计，也有微观代码级别的具体问题定位，同时提供可直接落地的修复方案。
+
+      项目总评标准:
+      {{feature}}
+
+      聚合特征摘要:
+      {{aggregatedFeatures}}
+      请输出：{"totalScore": "总分", "comment": "评论", "suggestions": "建议"}
+    # 报告生成配置
+    report:
+      # 报告输出格式列表，支持: json, markdown, pdf
+      # 可以配置一种或多种格式，例如只配置 ["markdown"] 则只生成 Markdown 报告
+      # 默认: [json, markdown, pdf]
+      formats:
+        - json
+        - markdown
+        - pdf
+      # 是否生成文件级详细报告（默认: true）
+      generateFileDetails: true
+      # 报告输出目录（相对于项目根目录，默认: reports）
+      outputDir: reports
+
+
+  # 附加过滤（示例；若不需要可删除）
+  includePatterns:
+    - "src/main/java/**"
+  excludePatterns:
+    - "**/test/**"
+    - "**/generated/**"
+
+  # 可选未来扩展键（当前加载器未使用，作为示例注释保留）
+  # extraHeaders: { Authorization: "Bearer xxx" }   # 示例：额外 HTTP 头
+  # proxy: http://127.0.0.1:7890                      # 示例：HTTP 代理
+  # logPrompt: true                                   # 示例：是否输出最终 Prompt

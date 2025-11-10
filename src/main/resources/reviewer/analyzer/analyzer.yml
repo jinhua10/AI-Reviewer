@@ -1,0 +1,41 @@
+# Simplified analyzer configuration (regex/glob pattern only)
+# Deprecated keys removed: ignoredDirectories, supportedExtensions
+# Use includePatterns (whitelist when non-empty) and excludePatterns (blacklist) for file selection.
+
+includePatterns:
+  - 'src/main/**'
+excludePatterns:
+  - '**/generated/**'
+
+java:
+  includePatterns:
+    - 'src/main/java/**'
+  excludePatterns:
+    - '**/test/**'
+    - '**/generated/**'
+
+python:
+  includePatterns:
+    - 'src/**'
+  excludePatterns:
+    - '**/__pycache__/**'
+
+js:
+  includePatterns:
+    - 'src/**'
+  excludePatterns:
+    - '**/dist/**'
+    - '**/build/**'
+
+go:
+  includePatterns:
+    - 'src/**'
+  excludePatterns:
+    - '**/vendor/**'
+
+rust:
+  includePatterns:
+    - 'src/**'
+  excludePatterns:
+    - '**/target/**'
+

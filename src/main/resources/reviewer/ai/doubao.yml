@@ -1,0 +1,13 @@
+doubao:
+  apiUrl: https://api.doubao.com/v1/chat/completions
+  model: doubao-pro
+  temperature: 0.3
+  connectTimeoutSeconds: 60
+  readTimeoutSeconds: 120
+  systemPrompt: 你是一位严谨的企业级代码审查专家，强调稳定性、安全性与可维护性。
+  totalMaxTokens: 8190
+  maxConcurrency: 3
+  maxRetries: 2
+  initialRetryDelaySeconds: 3
+  maxRetryDelaySeconds: 20
+

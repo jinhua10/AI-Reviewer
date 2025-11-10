@@ -1,0 +1,13 @@
+openai:
+  apiUrl: https://api.openai.com/v1/chat/completions
+  model: gpt-4o
+  temperature: 0.2
+  connectTimeoutSeconds: 60
+  readTimeoutSeconds: 120
+  systemPrompt: 你是一位资深代码评审专家，擅长分析各种编程语言的源代码质量。
+  totalMaxTokens: 8190
+  maxConcurrency: 3
+  maxRetries: 2
+  initialRetryDelaySeconds: 3
+  maxRetryDelaySeconds: 20
+
