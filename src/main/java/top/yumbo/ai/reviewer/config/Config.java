@@ -97,7 +97,14 @@ public class Config {
         private String model;
         private int maxTokens;
         private double temperature;
-        private int timeout; // 请求超时时间(毫秒)
+
+        // 超时配置 (毫秒)
+        private int connectTimeout; // 连接超时
+        private int readTimeout; // 读取超时
+        private int writeTimeout; // 写入超时
+        private int analyzeTimeout; // 单个分析超时
+        private int batchAnalyzeTimeout; // 批量分析超时
+
         private int maxRetries; // 最大重试次数
         private int retryDelay; // 重试延迟(毫秒)
         private int maxConcurrency; // 最大并发请求数

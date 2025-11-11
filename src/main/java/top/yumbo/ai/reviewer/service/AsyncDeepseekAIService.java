@@ -21,7 +21,11 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     private static final String DEFAULT_MODEL = "deepseek-chat";
     private static final int DEFAULT_MAX_TOKENS = 4000;
     private static final double DEFAULT_TEMPERATURE = 0.3;
-    private static final int DEFAULT_TIMEOUT = 30000;
+    private static final int DEFAULT_CONNECT_TIMEOUT = 300000;     // 300秒
+    private static final int DEFAULT_READ_TIMEOUT = 60000;        // 60秒
+    private static final int DEFAULT_WRITE_TIMEOUT = 15000;       // 15秒
+    private static final int DEFAULT_ANALYZE_TIMEOUT = 300000;     // 300秒
+    private static final int DEFAULT_BATCH_ANALYZE_TIMEOUT = 120000; // 120秒
     private static final int DEFAULT_MAX_RETRIES = 3;
     private static final int DEFAULT_RETRY_DELAY = 1000;
     private static final int DEFAULT_MAX_CONCURRENCY = 3;
@@ -32,7 +36,11 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     private final String model;
     private final int maxTokens;
     private final double temperature;
-    private final int timeout;
+    private final int connectTimeout;
+    private final int readTimeout;
+    private final int writeTimeout;
+    private final int analyzeTimeout;
+    private final int batchAnalyzeTimeout;
     private final int maxRetries;
     private final int retryDelay;
 
@@ -47,7 +55,11 @@ public class AsyncDeepseekAIService implements AsyncAIService {
         this.model = config.getModel() != null ? config.getModel() : DEFAULT_MODEL;
         this.maxTokens = config.getMaxTokens() > 0 ? config.getMaxTokens() : DEFAULT_MAX_TOKENS;
         this.temperature = config.getTemperature() >= 0 ? config.getTemperature() : DEFAULT_TEMPERATURE;
-        this.timeout = config.getTimeout() > 0 ? config.getTimeout() : DEFAULT_TIMEOUT;
+        this.connectTimeout = config.getConnectTimeout() > 0 ? config.getConnectTimeout() : DEFAULT_CONNECT_TIMEOUT;
+        this.readTimeout = config.getReadTimeout() > 0 ? config.getReadTimeout() : DEFAULT_READ_TIMEOUT;
+        this.writeTimeout = config.getWriteTimeout() > 0 ? config.getWriteTimeout() : DEFAULT_WRITE_TIMEOUT;
+        this.analyzeTimeout = config.getAnalyzeTimeout() > 0 ? config.getAnalyzeTimeout() : DEFAULT_ANALYZE_TIMEOUT;
+        this.batchAnalyzeTimeout = config.getBatchAnalyzeTimeout() > 0 ? config.getBatchAnalyzeTimeout() : DEFAULT_BATCH_ANALYZE_TIMEOUT;
         this.maxRetries = config.getMaxRetries() >= 0 ? config.getMaxRetries() : DEFAULT_MAX_RETRIES;
         this.retryDelay = config.getRetryDelay() >= 0 ? config.getRetryDelay() : DEFAULT_RETRY_DELAY;
 
@@ -55,9 +67,9 @@ public class AsyncDeepseekAIService implements AsyncAIService {
 
         // 配置HTTP客户端
         this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(timeout, TimeUnit.MILLISECONDS)
-                .readTimeout(timeout * 4, TimeUnit.MILLISECONDS)  // 读取超时为连接超时的4倍
-                .writeTimeout(timeout, TimeUnit.MILLISECONDS)
+                .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+                .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
+                .writeTimeout(writeTimeout, TimeUnit.MILLISECONDS)
                 .build();
 
         // 创建线程池
@@ -83,7 +95,7 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     @Override
     public String analyze(String prompt) throws AnalysisException {
         try {
-            return analyzeAsync(prompt).get(60, TimeUnit.SECONDS);
+            return analyzeAsync(prompt).get(analyzeTimeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new AnalysisException("AI分析超时或失败: " + e.getMessage(), e);
         }
@@ -92,7 +104,7 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     @Override
     public String[] analyzeBatch(String[] prompts) throws AnalysisException {
         try {
-            return analyzeBatchAsync(prompts).get(120, TimeUnit.SECONDS);
+            return analyzeBatchAsync(prompts).get(batchAnalyzeTimeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new AnalysisException("批量AI分析超时或失败: " + e.getMessage(), e);
         }

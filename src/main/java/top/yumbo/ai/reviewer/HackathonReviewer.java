@@ -1,5 +1,7 @@
 package top.yumbo.ai.reviewer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.config.Config;
 import top.yumbo.ai.reviewer.entity.AnalysisResult;
@@ -7,6 +9,7 @@ import top.yumbo.ai.reviewer.exception.AnalysisException;
 import top.yumbo.ai.reviewer.report.ReportBuilder;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -78,22 +81,22 @@ public class HackathonReviewer {
     }
 
     public HackathonReviewer(String configPath) throws IOException {
-        // 加载Hackathon专用配置，支持从类路径加载作为fallback
+        // 加载Hackathon专用配置，优先从类路径加载
         Config config = null;
         try {
-            // 首先尝试从文件系统加载
-            config = Config.loadFromFile(configPath);
-            log.info("✅ 从文件加载配置成功: {}", configPath);
+            // 首先尝试从类路径加载
+            config = loadConfigFromClasspath(configPath);
+            log.info("✅ 从类路径加载配置成功: {}", configPath);
         } catch (IOException e) {
-            log.warn("⚠️ 配置文件不存在，尝试从类路径加载: {}", configPath);
+            log.warn("⚠️ 类路径配置不存在，尝试从文件系统加载: {}", configPath);
             try {
-                // 文件不存在时，从类路径加载
-                config = Config.loadFromFile("hackathon-config.yaml");
-                log.info("✅ 从类路径加载配置成功: hackathon-config.yaml");
-            } catch (IOException classPathException) {
-                log.warn("⚠️ 类路径配置也不存在，尝试加载默认配置");
+                // 类路径不存在时，从文件系统加载
+                config = Config.loadFromFile(configPath);
+                log.info("✅ 从文件加载配置成功: {}", configPath);
+            } catch (IOException fileException) {
+                log.warn("⚠️ 文件系统配置也不存在，尝试加载默认配置");
                 try {
-                    // 类路径也不存在时，加载默认配置
+                    // 文件系统也不存在时，加载默认配置
                     config = Config.loadDefault();
                     log.info("✅ 加载默认配置成功");
                 } catch (IOException defaultException) {
@@ -117,6 +120,19 @@ public class HackathonReviewer {
         log.info("🏆 Hackathon AI 评审工具初始化完成");
         log.info("📊 支持评审模式: {}", Arrays.toString(ReviewMode.values()));
         log.info("⚡ 并发处理能力: {} 线程", threadPoolSize);
+    }
+
+    /**
+     * 从类路径加载配置
+     */
+    private Config loadConfigFromClasspath(String configPath) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        try (InputStream input = HackathonReviewer.class.getClassLoader().getResourceAsStream(configPath)) {
+            if (input == null) {
+                throw new IOException("类路径中找不到配置文件: " + configPath);
+            }
+            return mapper.readValue(input, Config.class);
+        }
     }
 
     /**

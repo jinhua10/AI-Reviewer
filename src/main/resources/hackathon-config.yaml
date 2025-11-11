@@ -105,9 +105,17 @@ aiService:
   model: "deepseek-chat"
   maxTokens: 2000  # Hackathon模式减少token使用
   temperature: 0.3
-  timeout: 15000   # 缩短超时时间
-  maxRetries: 2    # 减少重试次数
-  maxConcurrency: 5  # 增加并发数
+
+  # 超时配置 (毫秒) - Hackathon专用优化
+  connectTimeout: 300000    # 连接超时: 300秒
+  readTimeout: 60000       # 读取超时: 60秒 (适合AI响应)
+  writeTimeout: 15000      # 写入超时: 15秒
+  analyzeTimeout: 300000    # 单个分析超时: 300秒
+  batchAnalyzeTimeout: 120000  # 批量分析超时: 120秒
+
+  maxRetries: 2    # 减少重试次数，加快评审速度
+  retryDelay: 1000 # 重试延迟: 1秒
+  maxConcurrency: 5  # 增加并发数，提升评审效率
 
 cache:
   enabled: true
