@@ -24,9 +24,6 @@ public class HackathonCLI {
         System.out.println("专业的AI驱动黑客松评审系统\n");
 
         try {
-            // 初始化评审工具
-            initializeReviewer();
-
             // 解析命令行参数
             if (args.length == 0) {
                 showHelp();
@@ -34,6 +31,26 @@ public class HackathonCLI {
             }
 
             String command = args[0].toLowerCase();
+
+            // 对于不需要初始化的命令，直接处理
+            switch (command) {
+                case "help":
+                case "h":
+                case "-h":
+                case "--help":
+                    showHelp();
+                    return;
+
+                case "version":
+                case "v":
+                case "-v":
+                case "--version":
+                    showVersion();
+                    return;
+            }
+
+            // 对于需要评审器的命令，先初始化
+            initializeReviewer();
 
             switch (command) {
                 case "review":
@@ -59,20 +76,6 @@ public class HackathonCLI {
                 case "demo":
                 case "d":
                     runDemo();
-                    break;
-
-                case "help":
-                case "h":
-                case "-h":
-                case "--help":
-                    showHelp();
-                    break;
-
-                case "version":
-                case "v":
-                case "-v":
-                case "--version":
-                    showVersion();
                     break;
 
                 default:

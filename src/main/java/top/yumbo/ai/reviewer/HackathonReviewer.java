@@ -78,8 +78,32 @@ public class HackathonReviewer {
     }
 
     public HackathonReviewer(String configPath) throws IOException {
-        // 加载Hackathon专用配置
-        this.config = Config.loadFromFile(configPath);
+        // 加载Hackathon专用配置，支持从类路径加载作为fallback
+        Config config = null;
+        try {
+            // 首先尝试从文件系统加载
+            config = Config.loadFromFile(configPath);
+            log.info("✅ 从文件加载配置成功: {}", configPath);
+        } catch (IOException e) {
+            log.warn("⚠️ 配置文件不存在，尝试从类路径加载: {}", configPath);
+            try {
+                // 文件不存在时，从类路径加载
+                config = Config.loadFromFile("hackathon-config.yaml");
+                log.info("✅ 从类路径加载配置成功: hackathon-config.yaml");
+            } catch (IOException classPathException) {
+                log.warn("⚠️ 类路径配置也不存在，尝试加载默认配置");
+                try {
+                    // 类路径也不存在时，加载默认配置
+                    config = Config.loadDefault();
+                    log.info("✅ 加载默认配置成功");
+                } catch (IOException defaultException) {
+                    log.error("❌ 所有配置加载方式都失败", defaultException);
+                    throw new IOException("无法加载任何配置文件", defaultException);
+                }
+            }
+        }
+
+        this.config = config;
         this.reviewer = new AIReviewer(config);
         this.reportBuilder = new ReportBuilder();
 

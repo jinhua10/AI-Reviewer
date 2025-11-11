@@ -54,8 +54,22 @@ public class Config {
      */
     public static Config loadFromFile(String configPath) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+
+        // 首先尝试从文件系统加载
         try (InputStream input = new FileInputStream(configPath)) {
             return mapper.readValue(input, Config.class);
+        } catch (IOException e) {
+            // 文件不存在时，尝试从类路径加载
+            try (InputStream input = Config.class.getClassLoader().getResourceAsStream(configPath)) {
+                if (input != null) {
+                    return mapper.readValue(input, Config.class);
+                }
+            } catch (Exception classPathException) {
+                // 类路径加载也失败，继续尝试默认配置
+            }
+
+            // 如果都失败，抛出原始异常
+            throw e;
         }
     }
 
