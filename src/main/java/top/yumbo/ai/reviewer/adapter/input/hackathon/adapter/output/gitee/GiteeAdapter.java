@@ -1,12 +1,10 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github;
+package top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.gitee;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,17 +21,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * GitHub 适配器实现
+ * Gitee（码云） 适配器实现
  *
- * 使用 JGit 实现 GitHub 仓库操作
+ * 使用 JGit 实现 Gitee 仓库操作，兼容 GitHubPort 接口
  *
  * @author AI-Reviewer Team
  * @version 1.0
  * @since 2025-11-12
  */
-public class GitHubAdapter implements GitHubPort {
+public class GiteeAdapter implements GitHubPort {
 
-    private static final Logger log = LoggerFactory.getLogger(GitHubAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(GiteeAdapter.class);
 
     private final Path workingDirectory;
     private final int cloneTimeout;  // 克隆超时时间（秒）
@@ -46,7 +44,7 @@ public class GitHubAdapter implements GitHubPort {
      * @param cloneTimeout 克隆超时时间（秒）
      * @param cloneDepth 克隆深度（1 表示浅克隆）
      */
-    public GitHubAdapter(Path workingDirectory, int cloneTimeout, int cloneDepth) {
+    public GiteeAdapter(Path workingDirectory, int cloneTimeout, int cloneDepth) {
         this.workingDirectory = workingDirectory;
         this.cloneTimeout = cloneTimeout;
         this.cloneDepth = cloneDepth;
@@ -62,16 +60,16 @@ public class GitHubAdapter implements GitHubPort {
     /**
      * 简化构造函数（使用默认值）
      */
-    public GitHubAdapter(Path workingDirectory) {
+    public GiteeAdapter(Path workingDirectory) {
         this(workingDirectory, 300, 1);  // 5分钟超时，浅克隆
     }
 
     @Override
     public Path cloneRepository(String githubUrl, String branch) throws GitHubException {
-        log.info("开始克隆 GitHub 仓库: {}, 分支: {}", githubUrl, branch);
+        log.info("开始克隆 Gitee 仓库: {}, 分支: {}", githubUrl, branch);
 
-        // 验证 URL
-        validateGitHubUrl(githubUrl);
+        // 验证 URL（兼容 GitHub URL 参数名，但实际验证 Gitee）
+        validateGiteeUrl(githubUrl);
 
         // 创建本地目录
         String repoName = extractRepositoryName(githubUrl);
@@ -91,13 +89,13 @@ public class GitHubAdapter implements GitHubPort {
 
             git.close();
 
-            log.info("成功克隆仓库到: {}", localPath);
+            log.info("成功克隆 Gitee 仓库到: {}", localPath);
             return localPath;
 
         } catch (GitAPIException e) {
             // 清理失败的克隆
             deleteDirectory(localPath);
-            throw new GitHubException("克隆仓库失败: " + e.getMessage(), e);
+            throw new GitHubException("克隆 Gitee 仓库失败: " + e.getMessage(), e);
         } catch (IOException e) {
             deleteDirectory(localPath);
             throw new GitHubException("创建本地目录失败: " + e.getMessage(), e);
@@ -106,9 +104,9 @@ public class GitHubAdapter implements GitHubPort {
 
     @Override
     public Path cloneRepositoryAtCommit(String githubUrl, String commitHash) throws GitHubException {
-        log.info("开始克隆 GitHub 仓库到指定 commit: {}, commit: {}", githubUrl, commitHash);
+        log.info("开始克隆 Gitee 仓库到指定 commit: {}, commit: {}", githubUrl, commitHash);
 
-        validateGitHubUrl(githubUrl);
+        validateGiteeUrl(githubUrl);
 
         String repoName = extractRepositoryName(githubUrl);
         Path localPath = workingDirectory.resolve(repoName + "-" + commitHash + "-" + System.currentTimeMillis());
@@ -120,6 +118,7 @@ public class GitHubAdapter implements GitHubPort {
             Git git = Git.cloneRepository()
                     .setURI(githubUrl)
                     .setDirectory(localPath.toFile())
+                    .setTimeout(cloneTimeout)
                     .call();
 
             // 切换到指定 commit
@@ -129,7 +128,7 @@ public class GitHubAdapter implements GitHubPort {
 
             git.close();
 
-            log.info("成功克隆仓库到指定 commit: {}", localPath);
+            log.info("成功克隆 Gitee 仓库到指定 commit: {}", localPath);
             return localPath;
 
         } catch (GitAPIException | IOException e) {
@@ -140,7 +139,7 @@ public class GitHubAdapter implements GitHubPort {
 
     @Override
     public GitHubMetrics getRepositoryMetrics(String githubUrl) throws GitHubException {
-        log.info("获取仓库指标: {}", githubUrl);
+        log.info("获取 Gitee 仓库指标: {}", githubUrl);
 
         // 克隆仓库（临时）
         Path localPath = cloneRepository(githubUrl, null);
@@ -190,8 +189,11 @@ public class GitHubAdapter implements GitHubPort {
                                hasFile(localPath, "readme") ||
                                hasFile(localPath, "README.txt") ||
                                hasFileStartingWith(localPath, "README");
-            boolean hasLicense = hasFile(localPath, "LICENSE") || hasFile(localPath, "license");
+            boolean hasLicense = hasFile(localPath, "LICENSE") ||
+                                hasFile(localPath, "license") ||
+                                hasFile(localPath, "LICENSE.txt");
             boolean hasGitHubActions = Files.exists(localPath.resolve(".github/workflows"));
+            boolean hasGiteeWorkflows = Files.exists(localPath.resolve(".gitee/workflows"));
 
             // 构建指标
             String[] urlParts = githubUrl.replace(".git", "").split("/");
@@ -214,23 +216,23 @@ public class GitHubAdapter implements GitHubPort {
                     .branches(branchNames)
                     .hasReadme(hasReadme)
                     .hasLicense(hasLicense)
-                    .hasGitHubActions(hasGitHubActions)
-                    .hasIssues(false)  // 需要 GitHub API
-                    .hasPullRequests(false)  // 需要 GitHub API
-                    .starsCount(0)  // 需要 GitHub API
-                    .forksCount(0)  // 需要 GitHub API
+                    .hasGitHubActions(hasGitHubActions || hasGiteeWorkflows)  // Gitee 也支持 CI/CD
+                    .hasIssues(false)  // 需要 Gitee API
+                    .hasPullRequests(false)  // 需要 Gitee API
+                    .starsCount(0)  // 需要 Gitee API
+                    .forksCount(0)  // 需要 Gitee API
                     .build();
 
         } catch (GitAPIException | IOException e) {
             deleteDirectory(localPath);
-            throw new GitHubException("获取仓库指标失败: " + e.getMessage(), e);
+            throw new GitHubException("获取 Gitee 仓库指标失败: " + e.getMessage(), e);
         }
     }
 
     @Override
     public boolean isRepositoryAccessible(String githubUrl) {
         try {
-            validateGitHubUrl(githubUrl);
+            validateGiteeUrl(githubUrl);
 
             // 尝试获取远程引用（不克隆）
             Collection<Ref> refs = Git.lsRemoteRepository()
@@ -241,7 +243,7 @@ public class GitHubAdapter implements GitHubPort {
             return refs != null && !refs.isEmpty();
 
         } catch (Exception e) {
-            log.warn("仓库不可访问: {}, 原因: {}", githubUrl, e.getMessage());
+            log.warn("Gitee 仓库不可访问: {}, 原因: {}", githubUrl, e.getMessage());
             return false;
         }
     }
@@ -256,7 +258,7 @@ public class GitHubAdapter implements GitHubPort {
             return size;
         } catch (IOException e) {
             deleteDirectory(localPath);
-            throw new GitHubException("计算仓库大小失败: " + e.getMessage(), e);
+            throw new GitHubException("计算 Gitee 仓库大小失败: " + e.getMessage(), e);
         }
     }
 
@@ -300,6 +302,7 @@ public class GitHubAdapter implements GitHubPort {
             Collection<Ref> refs = Git.lsRemoteRepository()
                     .setRemote(githubUrl)
                     .setHeads(true)
+                    .setTimeout(cloneTimeout)
                     .call();
 
             // 查找 HEAD 引用
@@ -310,24 +313,28 @@ public class GitHubAdapter implements GitHubPort {
                 }
             }
 
-            // 默认返回 main
-            return "main";
+            // Gitee 默认分支通常是 master
+            return "master";
 
         } catch (GitAPIException e) {
-            throw new GitHubException("获取默认分支失败: " + e.getMessage(), e);
+            throw new GitHubException("获取 Gitee 默认分支失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 验证 GitHub URL 格式
+     * 验证 Gitee URL 格式
+     * 支持的格式：
+     * - https://gitee.com/owner/repo
+     * - https://gitee.com/owner/repo.git
+     * - http://gitee.com/owner/repo
      */
-    private void validateGitHubUrl(String url) throws GitHubException {
+    private void validateGiteeUrl(String url) throws GitHubException {
         if (url == null || url.trim().isEmpty()) {
-            throw new GitHubException("GitHub URL 不能为空");
+            throw new GitHubException("Gitee URL 不能为空");
         }
 
-        if (!url.matches("^https?://github\\.com/[\\w-]+/[\\w.-]+.*$")) {
-            throw new GitHubException("无效的 GitHub URL 格式: " + url);
+        if (!url.matches("^https?://gitee\\.com/[\\w-]+/[\\w.-]+.*$")) {
+            throw new GitHubException("无效的 Gitee URL 格式: " + url + "，正确格式如：https://gitee.com/owner/repo");
         }
     }
 

@@ -154,13 +154,21 @@ public class LocalFileSystemAdapter implements FileSystemPort {
      */
     private boolean matchesPattern(String fileName, String pattern) {
         // 简单的通配符匹配
+        if (pattern.startsWith("*") && pattern.endsWith("*")) {
+            // *something* - contains pattern
+            String middle = pattern.substring(1, pattern.length() - 1);
+            return fileName.toLowerCase().contains(middle.toLowerCase());
+        }
         if (pattern.startsWith("*")) {
-            return fileName.endsWith(pattern.substring(1));
+            // *.ext - ends with pattern
+            return fileName.toLowerCase().endsWith(pattern.substring(1).toLowerCase());
         }
         if (pattern.endsWith("*")) {
-            return fileName.startsWith(pattern.substring(0, pattern.length() - 1));
+            // README* - starts with pattern
+            return fileName.toUpperCase().startsWith(pattern.substring(0, pattern.length() - 1).toUpperCase());
         }
-        return fileName.equals(pattern);
+        // Exact match (case insensitive for README, Makefile, etc.)
+        return fileName.equalsIgnoreCase(pattern);
     }
 
     /**
@@ -279,7 +287,11 @@ public class LocalFileSystemAdapter implements FileSystemPort {
     ) {
         public FileSystemConfig {
             if (includePatterns == null) {
-                includePatterns = List.of("*.java", "*.py", "*.js", "*.ts");
+                includePatterns = List.of(
+                    "*.java", "*.py", "*.js", "*.ts", "*.go", "*.rs", "*.cpp", "*.c", "*.h",
+                    "*.md", "*.txt", "*.json", "*.yaml", "*.yml", "*.xml", "*.properties",
+                    "README*", "Dockerfile", "Makefile", "pom.xml", "build.gradle", "package.json"
+                );
             }
             if (excludePatterns == null) {
                 excludePatterns = List.of("*test*", "*.class", "*.jar");
