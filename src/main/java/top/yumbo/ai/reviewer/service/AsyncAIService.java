@@ -7,7 +7,21 @@ import java.util.concurrent.CompletableFuture;
 /**
  * 异步AI服务接口
  */
-public interface AsyncAIService extends AIService {
+public interface AsyncAIService {
+
+    /**
+     * 同步分析单个提示词（为了向后兼容）
+     * @param prompt 分析提示词
+     * @return 分析结果
+     */
+    String analyze(String prompt) throws AnalysisException;
+
+    /**
+     * 同步批量分析（为了向后兼容）
+     * @param prompts 提示词数组
+     * @return 分析结果数组
+     */
+    String[] analyzeBatch(String[] prompts) throws AnalysisException;
 
     /**
      * 异步分析单个提示词
@@ -32,4 +46,14 @@ public interface AsyncAIService extends AIService {
      * 设置并发限制
      */
     void setMaxConcurrency(int maxConcurrency);
+
+    /**
+     * 获取服务提供商名称
+     */
+    String getProviderName();
+
+    /**
+     * 检查服务是否可用
+     */
+    boolean isAvailable();
 }

@@ -293,6 +293,55 @@ public class AIAnalyzer {
      * 初始化评分规则
      */
     private void initializeScoringRules() {
+        // 从配置文件中读取评分规则
+        if (config.getScoring() != null && config.getScoring().getRules() != null) {
+            for (Map<String, Object> ruleConfig : config.getScoring().getRules()) {
+                try {
+                    String name = (String) ruleConfig.get("name");
+                    String description = (String) ruleConfig.get("description");
+                    String typeStr = (String) ruleConfig.get("type");
+                    double weight = ((Number) ruleConfig.get("weight")).doubleValue();
+                    boolean enabled = (Boolean) ruleConfig.getOrDefault("enabled", true);
+
+                    if (!enabled) {
+                        continue; // 跳过禁用的规则
+                    }
+
+                    ScoringRule.RuleType ruleType;
+                    try {
+                        ruleType = ScoringRule.RuleType.valueOf(typeStr);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("未知的评分规则类型: {}, 跳过", typeStr);
+                        continue;
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> ruleConfigMap = (Map<String, Object>) ruleConfig.get("config");
+
+                    scoringEngine.registerRule(new ConfigurableScoringRule(
+                            name, description, ruleType, weight, ruleConfigMap));
+
+                    log.debug("从配置注册评分规则: {} ({})", name, ruleType);
+
+                } catch (Exception e) {
+                    log.error("注册评分规则失败: {}", ruleConfig, e);
+                }
+            }
+        }
+
+        // 如果配置文件中没有规则，使用默认规则
+        if (scoringEngine.getAllRules().isEmpty()) {
+            log.warn("配置文件中未找到评分规则，使用默认规则");
+            initializeDefaultScoringRules();
+        }
+
+        log.info("评分规则初始化完成，共注册 {} 个规则", scoringEngine.getStats().getTotalRules());
+    }
+
+    /**
+     * 初始化默认评分规则（当配置文件中没有规则时使用）
+     */
+    private void initializeDefaultScoringRules() {
         // 架构评分规则
         Map<String, Object> architectureConfig = new HashMap<>();
         Map<String, Integer> positiveKeywords = new HashMap<>();
@@ -420,8 +469,6 @@ public class AIAnalyzer {
                 0.10,
                 coverageConfig
         ));
-
-        log.info("评分规则初始化完成，共注册 {} 个规则", scoringEngine.getStats().getTotalRules());
     }
 
     /**
