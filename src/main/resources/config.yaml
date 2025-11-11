@@ -21,7 +21,7 @@ aiService:
 
   maxRetries: 2    # 减少重试次数，加快评审速度
   retryDelay: 1000 # 重试延迟: 1秒
-  maxConcurrency: 5  # 增加并发数，提升评审效率
+  maxConcurrency: 20  # 增加并发数，提升评审效率
   additionalParams:
     stream: false
     presence_penalty: 0.0
