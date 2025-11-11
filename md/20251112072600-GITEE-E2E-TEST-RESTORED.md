@@ -378,3 +378,8 @@ void shouldCompleteFullWorkflow() {
 
 **GiteeIntegrationEndToEndTest 已成功恢复！测试覆盖更完整了！** 🎉
 
+提示词
+```bash
+Hi Copilot,你的角色是世界上最顶级的架构师，
+你的任务是分析一下当前项目的架构，仔细阅读源码，注意模块与模块之间的关系，分析一下当前项目存在的问题 安排下一个计划清单，过程中新生成的markdown文件名带上YYYYMMDDHHmmss的时间戳前缀，并且将其归档到创建好的md文件夹中。 
+```
