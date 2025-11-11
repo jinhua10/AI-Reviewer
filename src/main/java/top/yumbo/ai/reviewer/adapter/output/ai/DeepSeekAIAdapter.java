@@ -83,6 +83,16 @@ public class DeepSeekAIAdapter implements AIServicePort {
 
     @Override
     public CompletableFuture<String> analyzeAsync(String prompt) {
+        // 验证输入
+        if (prompt == null) {
+            return CompletableFuture.failedFuture(
+                new IllegalArgumentException("提示词不能为空(null)"));
+        }
+        if (prompt.trim().isEmpty()) {
+            return CompletableFuture.failedFuture(
+                new IllegalArgumentException("提示词不能为空字符串"));
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             try {
                 concurrencyLimiter.acquire();

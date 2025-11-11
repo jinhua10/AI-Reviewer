@@ -110,7 +110,7 @@ class GiteeIntegrationEndToEndTest {
             HackathonProject submittedProject = teamManagement.submitCode(
                 project.getId(),
                 giteeUrl,
-                "master",
+                null,  // 使用默认分支
                 leader
             );
 
@@ -119,8 +119,8 @@ class GiteeIntegrationEndToEndTest {
             assertThat(submission.getGithubUrl()).isEqualTo(giteeUrl);
             assertThat(submission.getStatus()).isEqualTo(SubmissionStatus.PENDING);
 
-            // 4. 克隆仓库
-            Path localPath = giteeAdapter.cloneRepository(giteeUrl, "master");
+            // 4. 克隆仓库（使用 null 让 adapter 自动检测默认分支）
+            Path localPath = giteeAdapter.cloneRepository(giteeUrl, null);
             assertThat(localPath).isNotNull();
             assertThat(Files.exists(localPath)).isTrue();
 
@@ -190,13 +190,13 @@ class GiteeIntegrationEndToEndTest {
 
             // 第一次提交
             String url1 = "https://gitee.com/dromara/hutool.git";
-            teamManagement.submitCode(project.getId(), url1, "master", leader);
+            teamManagement.submitCode(project.getId(), url1, null, leader);
 
             assertThat(project.getSubmissions()).hasSize(1);
 
             // 第二次提交（改进后）
             String url2 = "https://gitee.com/dromara/hutool.git";
-            teamManagement.submitCode(project.getId(), url2, "master", leader);
+            teamManagement.submitCode(project.getId(), url2, null, leader);
 
             assertThat(project.getSubmissions()).hasSize(2);
             assertThat(project.getLatestSubmission().getGithubUrl()).isEqualTo(url2);
@@ -248,7 +248,7 @@ class GiteeIntegrationEndToEndTest {
             assertThatThrownBy(() ->
                 teamManagement.submitCode(project.getId(), invalidUrl, "main", leader)
             ).isInstanceOf(IllegalArgumentException.class)
-              .hasMessageContaining("无效的 GitHub URL 格式");
+              .hasMessageContaining("无效的 GitHub/Gitee URL 格式");
         }
 
         @Test

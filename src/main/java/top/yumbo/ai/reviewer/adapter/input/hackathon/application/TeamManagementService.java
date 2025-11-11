@@ -111,7 +111,7 @@ public class TeamManagementService {
      * 提交代码
      *
      * @param projectId 项目ID
-     * @param githubUrl GitHub URL
+     * @param githubUrl GitHub/Gitee URL
      * @param branch Git 分支
      * @param submitter 提交者
      * @return 更新后的项目
@@ -132,9 +132,9 @@ public class TeamManagementService {
             throw new IllegalArgumentException("只有团队成员才能提交代码");
         }
 
-        // 验证 GitHub URL 格式
+        // 验证 GitHub/Gitee URL 格式
         if (!isValidGitHubUrl(githubUrl)) {
-            throw new IllegalArgumentException("无效的 GitHub URL 格式");
+            throw new IllegalArgumentException("无效的 GitHub/Gitee URL 格式");
         }
 
         // 创建提交记录
@@ -154,7 +154,7 @@ public class TeamManagementService {
      * 提交代码（带 commit hash）
      *
      * @param projectId 项目ID
-     * @param githubUrl GitHub URL
+     * @param githubUrl GitHub/Gitee URL
      * @param branch Git 分支
      * @param commitHash commit 哈希
      * @param submitter 提交者
@@ -177,9 +177,9 @@ public class TeamManagementService {
             throw new IllegalArgumentException("只有团队成员才能提交代码");
         }
 
-        // 验证 GitHub URL 格式
+        // 验证 GitHub/Gitee URL 格式
         if (!isValidGitHubUrl(githubUrl)) {
-            throw new IllegalArgumentException("无效的 GitHub URL 格式");
+            throw new IllegalArgumentException("无效的 GitHub/Gitee URL 格式");
         }
 
         // 创建提交记录
@@ -197,13 +197,14 @@ public class TeamManagementService {
     }
 
     /**
-     * 验证 GitHub URL 格式
+     * 验证 GitHub/Gitee URL 格式
      */
     private boolean isValidGitHubUrl(String url) {
         if (url == null || url.trim().isEmpty()) {
             return false;
         }
-        return url.matches("^https?://github\\.com/[\\w-]+/[\\w.-]+.*$");
+        // 支持 GitHub 和 Gitee
+        return url.matches("^https?://(github\\.com|gitee\\.com)/[\\w-]+/[\\w.-]+.*$");
     }
 
     /**
