@@ -264,7 +264,7 @@ class GitHubIntegrationEndToEndTest {
             assertThatThrownBy(() ->
                 teamManagement.submitCode(project.getId(), invalidUrl, "main", leader)
             ).isInstanceOf(IllegalArgumentException.class)
-              .hasMessageContaining("无效的 GitHub URL 格式");
+              .hasMessageContaining("无效的 GitHub/Gitee URL 格式");
         }
 
         @Test
