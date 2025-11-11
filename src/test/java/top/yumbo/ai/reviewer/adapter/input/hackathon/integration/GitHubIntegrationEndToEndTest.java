@@ -46,7 +46,15 @@ class GitHubIntegrationEndToEndTest {
         teamManagement = new TeamManagementService();
         scoringService = new HackathonScoringService();
         leaderboardService = new LeaderboardService();
-        fileSystemAdapter = new LocalFileSystemAdapter();
+
+        // 创建默认的文件系统配置
+        LocalFileSystemAdapter.FileSystemConfig config = new LocalFileSystemAdapter.FileSystemConfig(
+            List.of("*.java", "*.py", "*.js", "*.ts", "*.go", "*.rs", "*.md"),
+            List.of(".git", "node_modules", "target", "build"),
+            1024,  // 1MB
+            10     // 最大深度
+        );
+        fileSystemAdapter = new LocalFileSystemAdapter(config);
     }
 
     @AfterEach
@@ -118,9 +126,18 @@ class GitHubIntegrationEndToEndTest {
             assertThat(Files.exists(localPath)).isTrue();
 
             // 5. 扫描文件
-            Project coreProject = fileSystemAdapter.scanProjectFiles(localPath);
-            assertThat(coreProject).isNotNull();
-            assertThat(coreProject.getSourceFiles()).isNotEmpty();
+            List<top.yumbo.ai.reviewer.domain.model.SourceFile> sourceFiles =
+                fileSystemAdapter.scanProjectFiles(localPath);
+            assertThat(sourceFiles).isNotNull();
+            assertThat(sourceFiles).isNotEmpty();
+
+            // 构建 Project 对象
+            Project coreProject = Project.builder()
+                .name(project.getName())
+                .rootPath(localPath)
+                .type(top.yumbo.ai.reviewer.domain.model.ProjectType.JAVA)
+                .sourceFiles(sourceFiles)
+                .build();
 
             // 6. 模拟评审报告（简化测试）
             // 实际环境中会调用 ProjectAnalysisService

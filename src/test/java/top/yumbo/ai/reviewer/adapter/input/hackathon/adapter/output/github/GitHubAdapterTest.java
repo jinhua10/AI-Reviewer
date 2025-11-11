@@ -150,7 +150,11 @@ class GitHubAdapterTest {
                 .isInstanceOf(GitHubPort.GitHubException.class);
 
             // 验证没有遗留临时目录
-            assertThat(Files.list(tempWorkDir).count()).isEqualTo(0);
+            try {
+                assertThat(Files.list(tempWorkDir).count()).isEqualTo(0);
+            } catch (IOException e) {
+                fail("无法列出临时目录: " + e.getMessage());
+            }
         }
 
         @Test
