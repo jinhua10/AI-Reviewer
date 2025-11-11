@@ -121,8 +121,24 @@ public class ProjectAnalyzer {
     }
 
     private static void saveReportToFile(AnalysisResult result, String outputPath) {
-        // TODO: 实现保存报告到文件的功能
-        log.info("保存报告到文件: {}", outputPath);
+        try {
+            // 使用新的ReportBuilder生成报告
+            top.yumbo.ai.reviewer.report.ReportBuilder reportBuilder =
+                new top.yumbo.ai.reviewer.report.ReportBuilder();
+
+            // 根据文件扩展名确定格式
+            String format = "markdown"; // 默认格式
+            if (outputPath.toLowerCase().endsWith(".html")) {
+                format = "html";
+            }
+
+            reportBuilder.saveReport(result, outputPath, format);
+            log.info("报告已保存到: {}", outputPath);
+
+        } catch (Exception e) {
+            log.error("保存报告失败: {}", outputPath, e);
+            System.err.println("保存报告失败: " + e.getMessage());
+        }
     }
 
     /**

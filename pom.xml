@@ -4,7 +4,7 @@
 
     <groupId>top.yumbo.ai</groupId>
     <artifactId>ai-reviewer</artifactId>
-    <version>1.0</version>
+    <version>2.0</version>
 
     <name>AI Reviewer</name>
     <description>Enterprise-grade AI-powered intelligent review engine for multi-modal project analysis</description>

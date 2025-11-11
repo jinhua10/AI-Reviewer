@@ -34,6 +34,12 @@ public class AIAnalyzer {
     private final AnalysisCache cache;
     private final ScoringEngine scoringEngine;
 
+    // 项目上下文信息
+    private String projectType = "java"; // 默认值
+    private int fileCount = 0;
+    private int totalLines = 0;
+    private String language = "java"; // 默认值
+
     public AIAnalyzer(Config config) {
         this.config = config;
         this.aiService = createAIService(config);
@@ -622,30 +628,90 @@ public class AIAnalyzer {
     }
 
     private int calculateArchitectureScore(ArchitectureAnalysis analysis) {
-        // 基于分析结果计算评分
-        return 85;
+        // 使用评分引擎计算评分
+        String analysisText = analysis != null ? "架构分析结果" : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "architecture", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("architecture", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("架构评分计算失败，使用默认分数", e);
+            return 85; // 默认分数
+        }
     }
 
     private int calculateCodeQualityScore(List<ModuleAnalysis> analyses) {
-        return 78;
+        // 使用评分引擎计算评分
+        String analysisText = analyses != null && !analyses.isEmpty() ?
+            analyses.stream().map(ModuleAnalysis::getResponsibilities).findFirst().orElse("") : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "code_quality", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("code_quality", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("代码质量评分计算失败，使用默认分数", e);
+            return 78; // 默认分数
+        }
     }
 
     private int calculateTechnicalDebtScore(List<ModuleAnalysis> analyses) {
-        return 72;
+        // 使用评分引擎计算评分
+        String analysisText = analyses != null && !analyses.isEmpty() ?
+            analyses.stream().map(ModuleAnalysis::getResponsibilities).findFirst().orElse("") : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "technical_debt", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("technical_debt", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("技术债务评分计算失败，使用默认分数", e);
+            return 72; // 默认分数
+        }
     }
 
     private int calculateFunctionalityScore(List<ModuleAnalysis> analyses) {
-        return 88;
+        // 使用评分引擎计算评分
+        String analysisText = analyses != null && !analyses.isEmpty() ?
+            analyses.stream().map(ModuleAnalysis::getResponsibilities).findFirst().orElse("") : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "functionality", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("functionality", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("功能评分计算失败，使用默认分数", e);
+            return 88; // 默认分数
+        }
     }
 
     private int calculateBusinessValueScore(BusinessValueAnalysis analysis) {
-        // 基于分析结果计算商业价值评分
-        return 90;
+        // 使用评分引擎计算评分
+        String analysisText = analysis != null ? "商业价值分析结果" : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "business_value", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("business_value", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("商业价值评分计算失败，使用默认分数", e);
+            return 90; // 默认分数
+        }
     }
 
     private int calculateTestCoverageScore(TestCoverageAnalysis analysis) {
-        // 基于分析结果计算测试覆盖率评分
-        return 75;
+        // 使用评分引擎计算评分
+        String analysisText = analysis != null ? "测试覆盖率分析结果" : "";
+        ScoringRule.ScoringContext context = new ScoringRule.ScoringContext(
+            "test_coverage", projectType, fileCount, totalLines, language
+        );
+        try {
+            return scoringEngine.calculateDimensionScore("test_coverage", analysisText, context);
+        } catch (AnalysisException e) {
+            log.warn("测试覆盖率评分计算失败，使用默认分数", e);
+            return 75; // 默认分数
+        }
     }
 
     private SummaryReport generateSummaryReport(int overall, int arch, int quality, int debt, int func, int biz, int coverage) {

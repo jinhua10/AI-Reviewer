@@ -21,6 +21,9 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     private static final String DEFAULT_MODEL = "deepseek-chat";
     private static final int DEFAULT_MAX_TOKENS = 4000;
     private static final double DEFAULT_TEMPERATURE = 0.3;
+    private static final int DEFAULT_TIMEOUT = 30000;
+    private static final int DEFAULT_MAX_RETRIES = 3;
+    private static final int DEFAULT_RETRY_DELAY = 1000;
     private static final int DEFAULT_MAX_CONCURRENCY = 3;
 
     private final OkHttpClient httpClient;
@@ -29,6 +32,9 @@ public class AsyncDeepseekAIService implements AsyncAIService {
     private final String model;
     private final int maxTokens;
     private final double temperature;
+    private final int timeout;
+    private final int maxRetries;
+    private final int retryDelay;
 
     // 异步处理相关
     private final ExecutorService executorService;
@@ -41,12 +47,17 @@ public class AsyncDeepseekAIService implements AsyncAIService {
         this.model = config.getModel() != null ? config.getModel() : DEFAULT_MODEL;
         this.maxTokens = config.getMaxTokens() > 0 ? config.getMaxTokens() : DEFAULT_MAX_TOKENS;
         this.temperature = config.getTemperature() >= 0 ? config.getTemperature() : DEFAULT_TEMPERATURE;
+        this.timeout = config.getTimeout() > 0 ? config.getTimeout() : DEFAULT_TIMEOUT;
+        this.maxRetries = config.getMaxRetries() >= 0 ? config.getMaxRetries() : DEFAULT_MAX_RETRIES;
+        this.retryDelay = config.getRetryDelay() >= 0 ? config.getRetryDelay() : DEFAULT_RETRY_DELAY;
+
+        int maxConcurrency = config.getMaxConcurrency() > 0 ? config.getMaxConcurrency() : DEFAULT_MAX_CONCURRENCY;
 
         // 配置HTTP客户端
         this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)  // 增加读取超时
-                .writeTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(timeout, TimeUnit.MILLISECONDS)
+                .readTimeout(timeout * 4, TimeUnit.MILLISECONDS)  // 读取超时为连接超时的4倍
+                .writeTimeout(timeout, TimeUnit.MILLISECONDS)
                 .build();
 
         // 创建线程池
