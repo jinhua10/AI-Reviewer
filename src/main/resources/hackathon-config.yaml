@@ -1,0 +1,273 @@
+# AI Reviewer - Hackathon 源码评分工具配置
+# 专为黑客松比赛设计的快速评分配置
+
+# =============================================================================
+# Hackathon专用配置
+# =============================================================================
+hackathon:
+  # 快速评分模式 - 缩短分析时间，聚焦关键指标
+  fastMode: true
+
+  # Hackathon评分维度权重 (更注重创新性和实用性)
+  dimensionWeights:
+    architecture: 0.15      # 架构设计权重 (降低权重)
+    code_quality: 0.20      # 代码质量权重
+    technical_debt: 0.10    # 技术债务权重 (降低权重)
+    functionality: 0.25     # 功能完整性权重 (黑客松重点)
+    business_value: 0.20    # 商业价值权重 (黑客松重点)
+    innovation_bonus: 0.10  # 创新加分 (Hackathon特色)
+
+  # Hackathon专用评分规则
+  scoringRules:
+    # 创新性评分 (Hackathon核心竞争力)
+    innovation:
+      enabled: true
+      weight: 0.10
+      criteria:
+        - "新技术应用": 20
+        - "创意解决方案": 25
+        - "用户体验创新": 15
+        - "技术难度挑战": 20
+        - "跨领域融合": 20
+
+    # 实用性评分 (实际可用性)
+    practicality:
+      enabled: true
+      weight: 0.15
+      criteria:
+        - "功能完整性": 25
+        - "用户界面友好": 20
+        - "错误处理完善": 15
+        - "性能表现良好": 20
+        - "可扩展性": 20
+
+    # 代码质量 (基础技术要求)
+    codeQuality:
+      enabled: true
+      weight: 0.20
+      criteria:
+        - "代码规范性": 15
+        - "注释完整性": 10
+        - "异常处理": 15
+        - "命名规范": 10
+        - "代码复用性": 15
+        - "测试覆盖": 15
+        - "文档完整": 10
+        - "架构合理": 10
+
+  # 评分组队配置 (模拟多维度评审)
+  judgingTeams:
+    - name: "技术专家组"
+      focus: ["architecture", "code_quality", "technical_debt"]
+      weight: 0.40
+
+    - name: "产品经理组"
+      focus: ["functionality", "business_value", "innovation_bonus"]
+      weight: 0.35
+
+    - name: "用户体验组"
+      focus: ["usability", "innovation_bonus"]
+      weight: 0.25
+
+  # 自动评分阈值 (Hackathon快速筛选)
+  autoJudging:
+    enabled: true
+    thresholds:
+      excellent: 85  # 优秀 - 进入决赛
+      good: 70       # 良好 - 晋级复赛
+      fair: 50       # 及格 - 基础奖项
+      poor: 30       # 不及格 - 参与奖
+
+  # Hackathon专用报告模板
+  reportTemplate: "hackathon-review-template.md"
+
+  # 批量处理配置 (同时处理多个参赛项目)
+  batchProcessing:
+    enabled: true
+    maxConcurrentProjects: 5  # 同时分析的项目数
+    projectTimeout: 60000     # 单个项目超时时间(毫秒)
+    retryFailedProjects: true # 失败项目重试
+
+  # 排行榜配置
+  leaderboard:
+    enabled: true
+    sortBy: "totalScore"  # 排序方式: totalScore, innovation, practicality
+    topCount: 10          # 显示前N名
+    includeDetails: true  # 包含详细评分
+
+# =============================================================================
+# 基础配置 (复用现有配置)
+# =============================================================================
+aiService:
+  provider: "deepseek"
+  apiKey: "${DEEPSEEK_API_KEY}"
+  baseUrl: "https://api.deepseek.com/v1"
+  model: "deepseek-chat"
+  maxTokens: 2000  # Hackathon模式减少token使用
+  temperature: 0.3
+  timeout: 15000   # 缩短超时时间
+  maxRetries: 2    # 减少重试次数
+  maxConcurrency: 5  # 增加并发数
+
+cache:
+  enabled: true
+  type: "file"
+  ttlHours: 2  # Hackathon项目缓存时间短
+  maxSize: 500
+  cleanupIntervalMinutes: 30
+
+fileScan:
+  includePatterns:
+    - "*.java"
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.go"
+    - "*.cpp"
+    - "*.c"
+    - "*.html"
+    - "*.css"
+  excludePatterns:
+    - "*.log"
+    - "*.tmp"
+    - "node_modules/"
+    - "*.git*"
+    - ".DS_Store"
+  maxFileSize: 512  # Hackathon项目通常较小
+  maxFilesCount: 100
+  includeTests: true  # Hackathon重视测试
+  includeDocumentation: true
+
+analysis:
+  analysisDimensions:
+    - "architecture"
+    - "code_quality"
+    - "technical_debt"
+    - "functionality"
+    - "business_value"
+    - "test_coverage"
+  dimensionWeights:
+    architecture: 0.15
+    code_quality: 0.20
+    technical_debt: 0.10
+    functionality: 0.25
+    business_value: 0.20
+    test_coverage: 0.10
+  batchSize: 5  # 减少批处理大小
+  maxConcurrentBatches: 2
+  batchTimeout: 200000  # 缩短批处理超时
+  enableIncrementalAnalysis: false  # Hackathon禁用增量分析
+  enableParallelAnalysis: true
+  enableCaching: true
+  enableMetrics: false  # Hackathon禁用详细指标
+
+scoring:
+  rules:
+    - name: "hackathon-architecture-rule"
+      description: "Hackathon架构评分规则"
+      type: "ARCHITECTURE"
+      weight: 0.15
+      strategy: "keyword_matching"
+      enabled: true
+      config:
+        keywords:
+          positive:
+            "模块化": 15
+            "分层设计": 10
+            "API设计": 10
+            "数据库设计": 10
+          negative:
+            "硬编码": -10
+            "全局变量": -10
+
+    - name: "hackathon-quality-rule"
+      description: "Hackathon代码质量评分规则"
+      type: "CODE_QUALITY"
+      weight: 0.20
+      strategy: "keyword_matching"
+      enabled: true
+      config:
+        keywords:
+          positive:
+            "单元测试": 20
+            "注释": 10
+            "异常处理": 15
+            "命名规范": 10
+          negative:
+            "代码重复": -15
+            "长方法": -10
+
+    - name: "hackathon-functionality-rule"
+      description: "Hackathon功能完整性评分规则"
+      type: "FUNCTIONALITY"
+      weight: 0.25
+      strategy: "keyword_matching"
+      enabled: true
+      config:
+        keywords:
+          positive:
+            "功能实现": 25
+            "用户界面": 20
+            "数据处理": 15
+            "错误处理": 15
+          negative:
+            "功能缺失": -20
+            "崩溃": -25
+
+    - name: "hackathon-business-rule"
+      description: "Hackathon商业价值评分规则"
+      type: "BUSINESS_VALUE"
+      weight: 0.20
+      strategy: "keyword_matching"
+      enabled: true
+      config:
+        keywords:
+          positive:
+            "用户价值": 20
+            "市场潜力": 20
+            "创新性": 15
+            "实用性": 15
+          negative:
+            "概念不清": -15
+
+    - name: "hackathon-test-rule"
+      description: "Hackathon测试覆盖率评分规则"
+      type: "TEST_COVERAGE"
+      weight: 0.10
+      strategy: "keyword_matching"
+      enabled: true
+      config:
+        keywords:
+          positive:
+            "测试用例": 20
+            "测试覆盖": 15
+          negative:
+            "无测试": -25
+            "测试失败": -15
+
+report:
+  defaultFormat: "markdown"
+  templates:
+    markdown:
+      enabled: true
+      templateFile: "templates/hackathon-report.md"
+      variables:
+        projectName: "${project.name}"
+        totalScore: "${analysis.totalScore}"
+        innovationScore: "${analysis.innovationScore}"
+        practicalityScore: "${analysis.practicalityScore}"
+        ranking: "${analysis.ranking}"
+        judgeComments: "${analysis.judgeComments}"
+  includeCharts: false  # Hackathon简化报告
+  includeMetrics: false
+  includeRecommendations: true
+  maxRecommendations: 3
+
+logging:
+  level: "WARN"  # Hackathon减少日志输出
+  console:
+    enabled: true
+    pattern: "%d{HH:mm:ss} %-5level %msg%n"
+
+metrics:
+  enabled: false  # Hackathon禁用监控
