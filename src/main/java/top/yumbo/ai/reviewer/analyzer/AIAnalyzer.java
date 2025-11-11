@@ -60,6 +60,9 @@ public class AIAnalyzer {
 
         log.info("开始AI分析项目，共 {} 个核心文件", coreFiles.size());
 
+        // 初始化项目上下文信息
+        initializeProjectContext(coreFiles, projectRoot);
+
         // 1. 第一批次：输入项目骨架，建立基础认知
         String projectOverview = analyzeProjectOverview(coreFiles, projectStructure, projectRoot);
 
@@ -859,5 +862,50 @@ public class AIAnalyzer {
 
     private static class TestCoverageAnalysis {
         // 测试覆盖率分析相关字段
+    }
+
+    /**
+     * 初始化项目上下文信息
+     */
+    private void initializeProjectContext(List<Path> coreFiles, Path projectRoot) {
+        // 统计文件数量
+        this.fileCount = coreFiles.size();
+
+        // 统计总代码行数
+        this.totalLines = coreFiles.stream()
+                .mapToInt(path -> {
+                    try {
+                        return FileUtil.readContent(path).split("\n").length;
+                    } catch (Exception e) {
+                        log.warn("统计代码行数失败: {}", path, e);
+                        return 0;
+                    }
+                })
+                .sum();
+
+        // 根据核心文件路径推测项目类型和语言
+        for (Path file : coreFiles) {
+            String filePath = file.toString().toLowerCase();
+            if (filePath.endsWith(".java")) {
+                this.projectType = "java";
+                this.language = "java";
+                break;
+            } else if (filePath.endsWith(".py")) {
+                this.projectType = "python";
+                this.language = "python";
+                break;
+            } else if (filePath.endsWith(".js")) {
+                this.projectType = "javascript";
+                this.language = "javascript";
+                break;
+            } else if (filePath.endsWith(".rb")) {
+                this.projectType = "ruby";
+                this.language = "ruby";
+                break;
+            }
+        }
+
+        log.info("项目上下文信息初始化完成：类型={}, 文件数={}, 总行数={}, 语言={}",
+                projectType, fileCount, totalLines, language);
     }
 }

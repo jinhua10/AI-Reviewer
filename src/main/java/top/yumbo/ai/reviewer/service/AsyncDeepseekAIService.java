@@ -74,10 +74,10 @@ public class AsyncDeepseekAIService implements AsyncAIService {
                 });
 
         // 并发限制器
-        this.concurrencyLimiter = new Semaphore(DEFAULT_MAX_CONCURRENCY);
+        this.concurrencyLimiter = new Semaphore(maxConcurrency);
 
         log.info("初始化异步DeepSeek AI服务: model={}, baseUrl={}, maxConcurrency={}",
-                model, baseUrl, DEFAULT_MAX_CONCURRENCY);
+                model, baseUrl, maxConcurrency);
     }
 
     @Override
