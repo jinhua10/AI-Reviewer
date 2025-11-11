@@ -24,6 +24,8 @@ public class DetailReport {
     private CodeQualityAnalysis codeQualityAnalysis;
     private TechnicalDebtAnalysis technicalDebtAnalysis;
     private FunctionalityAnalysis functionalityAnalysis;
+    private BusinessValueAnalysis businessValueAnalysis;
+    private TestCoverageAnalysis testCoverageAnalysis;
 
     // 文件级分析
     private List<FileAnalysis> fileAnalyses;
@@ -75,6 +77,30 @@ public class DetailReport {
         private List<String> redundantFeatures;
         private String completenessAssessment;
         private List<String> improvementSuggestions;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BusinessValueAnalysis {
+        private String overview;
+        private List<String> highValueFeatures;
+        private List<String> lowValueFeatures;
+        private String roiEstimation;
+        private List<String> costReductionOpportunities;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class TestCoverageAnalysis {
+        private String overview;
+        private List<String> coveredFeatures;
+        private List<String> uncoveredFeatures;
+        private String coveragePercentage;
+        private List<String> testQualityIssues;
     }
 
     @Data

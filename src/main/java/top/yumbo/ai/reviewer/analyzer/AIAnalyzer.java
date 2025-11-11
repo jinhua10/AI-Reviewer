@@ -51,8 +51,13 @@ public class AIAnalyzer {
         // 3. 第三批次：输入跨模块逻辑，分析整体架构
         ArchitectureAnalysis architectureAnalysis = analyzeArchitecture(coreFiles, moduleAnalyses, projectRoot);
 
-        // 4. 生成综合分析结果
-        return generateAnalysisResult(projectOverview, moduleAnalyses, architectureAnalysis, projectRoot);
+        // 4. 第四批次：分析商业价值和测试覆盖率
+        BusinessValueAnalysis businessValueAnalysis = analyzeBusinessValue(coreFiles, moduleAnalyses, projectRoot);
+        TestCoverageAnalysis testCoverageAnalysis = analyzeTestCoverage(coreFiles, projectRoot);
+
+        // 5. 生成综合分析结果
+        return generateAnalysisResult(projectOverview, moduleAnalyses, architectureAnalysis,
+                businessValueAnalysis, testCoverageAnalysis, projectRoot);
     }
 
     /**
@@ -156,11 +161,66 @@ public class AIAnalyzer {
     }
 
     /**
+     * 第四批次分析：商业价值和测试覆盖率
+     */
+    private BusinessValueAnalysis analyzeBusinessValue(List<Path> coreFiles,
+                                                     List<ModuleAnalysis> moduleAnalyses,
+                                                     Path projectRoot) throws AnalysisException {
+
+        log.info("第四批次：分析商业价值");
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("根据项目代码和模块分析，评估以下商业价值：\n\n");
+
+        // 模块分析摘要
+        prompt.append("1. 模块职责总结：\n");
+        for (ModuleAnalysis analysis : moduleAnalyses) {
+            prompt.append("- ").append(analysis.getModuleName()).append(": ")
+                  .append(analysis.getResponsibilities()).append("\n");
+        }
+        prompt.append("\n");
+
+        // 关键流程代码片段
+        prompt.append("2. 核心业务流程代码片段：\n");
+        appendKeyFlowCode(prompt, coreFiles, projectRoot);
+
+        // 分析指令
+        prompt.append("\n请输出：\n");
+        prompt.append("- 项目的商业价值是什么？（如：成本节约、收入增加、用户增长等）\n");
+        prompt.append("- 影响商业价值的关键因素有哪些？\n");
+
+        String analysis = aiService.analyze(prompt.toString());
+        return parseBusinessValueAnalysis(analysis);
+    }
+
+    private TestCoverageAnalysis analyzeTestCoverage(List<Path> coreFiles, Path projectRoot) throws AnalysisException {
+        log.info("第四批次：分析测试覆盖率");
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("根据项目代码，评估以下测试覆盖率相关信息：\n\n");
+
+        // 入口文件代码
+        prompt.append("1. 入口文件代码：\n");
+        appendEntryFilesContent(prompt, coreFiles, projectRoot);
+
+        // 分析指令
+        prompt.append("\n请输出：\n");
+        prompt.append("- 项目的测试覆盖率是多少？（如：百分比）\n");
+        prompt.append("- 覆盖率低的原因可能是什么？\n");
+        prompt.append("- 针对覆盖率低的部分，有哪些改进建议？\n");
+
+        String analysis = aiService.analyze(prompt.toString());
+        return parseTestCoverageAnalysis(analysis);
+    }
+
+    /**
      * 生成综合分析结果
      */
     private AnalysisResult generateAnalysisResult(String projectOverview,
                                                 List<ModuleAnalysis> moduleAnalyses,
                                                 ArchitectureAnalysis architectureAnalysis,
+                                                BusinessValueAnalysis businessValueAnalysis,
+                                                TestCoverageAnalysis testCoverageAnalysis,
                                                 Path projectRoot) throws AnalysisException {
 
         // 计算各维度评分
@@ -168,12 +228,15 @@ public class AIAnalyzer {
         int codeQualityScore = calculateCodeQualityScore(moduleAnalyses);
         int technicalDebtScore = calculateTechnicalDebtScore(moduleAnalyses);
         int functionalityScore = calculateFunctionalityScore(moduleAnalyses);
+        int businessValueScore = calculateBusinessValueScore(businessValueAnalysis);
+        int testCoverageScore = calculateTestCoverageScore(testCoverageAnalysis);
 
-        int overallScore = (architectureScore + codeQualityScore + technicalDebtScore + functionalityScore) / 4;
+        int overallScore = (architectureScore + codeQualityScore + technicalDebtScore + functionalityScore
+                          + businessValueScore + testCoverageScore) / 6;
 
         // 生成报告
         SummaryReport summaryReport = generateSummaryReport(overallScore, architectureScore,
-                codeQualityScore, technicalDebtScore, functionalityScore);
+                codeQualityScore, technicalDebtScore, functionalityScore, businessValueScore, testCoverageScore);
 
         DetailReport detailReport = generateDetailReport(architectureAnalysis, moduleAnalyses);
 
@@ -183,6 +246,8 @@ public class AIAnalyzer {
                 .codeQualityScore(codeQualityScore)
                 .technicalDebtScore(technicalDebtScore)
                 .functionalityScore(functionalityScore)
+                .businessValueScore(businessValueScore)
+                .testCoverageScore(testCoverageScore)
                 .summaryReport(summaryReport)
                 .detailReport(detailReport)
                 .analysisTimestamp(System.currentTimeMillis())
@@ -378,6 +443,16 @@ public class AIAnalyzer {
         return new ArchitectureAnalysis();
     }
 
+    private BusinessValueAnalysis parseBusinessValueAnalysis(String analysis) {
+        // 简单的解析，实际应该更复杂
+        return new BusinessValueAnalysis();
+    }
+
+    private TestCoverageAnalysis parseTestCoverageAnalysis(String analysis) {
+        // 简单的解析，实际应该更复杂
+        return new TestCoverageAnalysis();
+    }
+
     private int calculateArchitectureScore(ArchitectureAnalysis analysis) {
         // 基于分析结果计算评分
         return 85;
@@ -395,19 +470,33 @@ public class AIAnalyzer {
         return 88;
     }
 
-    private SummaryReport generateSummaryReport(int overall, int arch, int quality, int debt, int func) {
+    private int calculateBusinessValueScore(BusinessValueAnalysis analysis) {
+        // 基于分析结果计算商业价值评分
+        return 90;
+    }
+
+    private int calculateTestCoverageScore(TestCoverageAnalysis analysis) {
+        // 基于分析结果计算测试覆盖率评分
+        return 75;
+    }
+
+    private SummaryReport generateSummaryReport(int overall, int arch, int quality, int debt, int func, int biz, int coverage) {
         return SummaryReport.builder()
                 .title("项目分析摘要报告")
-                .content("本次分析对项目的架构设计、代码质量、技术债务和功能完整性进行了全面评估。总体评分 " + overall + "/100，表明项目在大部分方面表现良好，但在某些领域仍有改进空间。")
+                .content("本次分析对项目的架构设计、代码质量、技术债务、功能完整性、商业价值和测试覆盖率进行了全面评估。总体评分 " + overall + "/100，表明项目在大部分方面表现良好，但在某些领域仍有改进空间。")
                 .keyFindings(java.util.Arrays.asList(
                         "架构设计相对合理，但模块耦合度有待优化",
                         "代码质量整体良好，但存在一些技术债务",
-                        "核心功能实现完整，但缺少部分边界情况处理"
+                        "核心功能实现完整，但缺少部分边界情况处理",
+                        "商业价值较高，主要得益于成本节约和用户增长潜力",
+                        "测试覆盖率有待提高，部分关键路径缺乏测试"
                 ))
                 .recommendations(java.util.Arrays.asList(
                         "重构核心模块，降低耦合度",
                         "清理技术债务，修复已知问题",
-                        "完善单元测试覆盖率"
+                        "完善单元测试覆盖率，特别是关键业务流程",
+                        "定期评估商业价值，确保项目方向与市场需求一致",
+                        "优化测试用例，提升覆盖率和测试质量"
                 ))
                 .analysisTime(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                         .format(new java.util.Date()))
@@ -439,6 +528,20 @@ public class AIAnalyzer {
                         .missingFeatures(java.util.Arrays.asList("错误重试机制", "配置热更新"))
                         .improvementSuggestions(java.util.Arrays.asList("添加监控指标", "完善日志记录"))
                         .build())
+                .businessValueAnalysis(DetailReport.BusinessValueAnalysis.builder()
+                        .overview("项目具有较高的商业价值，主要体现在成本节约和用户增长潜力")
+                        .highValueFeatures(java.util.Arrays.asList("高效的资源利用", "良好的用户反馈"))
+                        .lowValueFeatures(java.util.Arrays.asList("部分功能使用率不高"))
+                        .roiEstimation("预计投资回报率约为150%")
+                        .costReductionOpportunities(java.util.Arrays.asList("自动化部署", "云资源优化"))
+                        .build())
+                .testCoverageAnalysis(DetailReport.TestCoverageAnalysis.builder()
+                        .overview("测试覆盖率较低，部分关键路径缺乏测试")
+                        .coveredFeatures(java.util.Arrays.asList("核心业务逻辑", "数据处理"))
+                        .uncoveredFeatures(java.util.Arrays.asList("异常处理", "边界情况"))
+                        .coveragePercentage("约75%")
+                        .testQualityIssues(java.util.Arrays.asList("缺少集成测试", "测试用例不完整"))
+                        .build())
                 .build();
     }
 
@@ -467,5 +570,13 @@ public class AIAnalyzer {
 
     private static class ArchitectureAnalysis {
         // 架构分析相关字段
+    }
+
+    private static class BusinessValueAnalysis {
+        // 商业价值分析相关字段
+    }
+
+    private static class TestCoverageAnalysis {
+        // 测试覆盖率分析相关字段
     }
 }

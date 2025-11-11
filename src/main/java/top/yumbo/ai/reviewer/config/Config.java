@@ -87,7 +87,8 @@ public class Config {
     @AllArgsConstructor
     @Builder
     public static class AnalysisConfig {
-        private List<String> analysisDimensions; // 分析维度: architecture, code_quality, technical_debt, functionality
+        private List<String> analysisDimensions; // 分析维度: architecture, code_quality, technical_debt, functionality, business_value, test_coverage
+        private Map<String, Double> dimensionWeights; // 各维度的权重配置
         private int batchSize; // 批处理大小
         private int maxContextLength; // 最大上下文长度
         private boolean enableIncrementalAnalysis; // 是否启用增量分析

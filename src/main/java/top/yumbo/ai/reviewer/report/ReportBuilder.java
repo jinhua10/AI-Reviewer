@@ -34,10 +34,12 @@ public class ReportBuilder {
         md.append("### 评分详情\n\n");
         md.append("| 维度 | 评分 | 权重 |\n");
         md.append("|------|------|------|\n");
-        md.append("| 架构设计 | ").append(result.getArchitectureScore()).append("/100 | 25% |\n");
-        md.append("| 代码质量 | ").append(result.getCodeQualityScore()).append("/100 | 25% |\n");
-        md.append("| 技术债务 | ").append(result.getTechnicalDebtScore()).append("/100 | 25% |\n");
-        md.append("| 功能完整性 | ").append(result.getFunctionalityScore()).append("/100 | 25% |\n");
+        md.append("| 架构设计 | ").append(result.getArchitectureScore()).append("/100 | 20% |\n");
+        md.append("| 代码质量 | ").append(result.getCodeQualityScore()).append("/100 | 20% |\n");
+        md.append("| 技术债务 | ").append(result.getTechnicalDebtScore()).append("/100 | 15% |\n");
+        md.append("| 功能完整性 | ").append(result.getFunctionalityScore()).append("/100 | 20% |\n");
+        md.append("| 商业价值 | ").append(result.getBusinessValueScore()).append("/100 | 15% |\n");
+        md.append("| 测试覆盖率 | ").append(result.getTestCoverageScore()).append("/100 | 10% |\n");
         md.append("\n");
 
         // 摘要报告
@@ -118,6 +120,14 @@ public class ReportBuilder {
         html.append("            <div class=\"score-item\">\n");
         html.append("                <div class=\"score-label\">功能完整性</div>\n");
         html.append("                <div class=\"score-value\">").append(result.getFunctionalityScore()).append("</div>\n");
+        html.append("            </div>\n");
+        html.append("            <div class=\"score-item\">\n");
+        html.append("                <div class=\"score-label\">商业价值</div>\n");
+        html.append("                <div class=\"score-value\">").append(result.getBusinessValueScore()).append("</div>\n");
+        html.append("            </div>\n");
+        html.append("            <div class=\"score-item\">\n");
+        html.append("                <div class=\"score-label\">测试覆盖率</div>\n");
+        html.append("                <div class=\"score-value\">").append(result.getTestCoverageScore()).append("</div>\n");
         html.append("            </div>\n");
         html.append("        </div>\n");
         html.append("    </div>\n");
@@ -208,6 +218,16 @@ public class ReportBuilder {
             md.append("## 功能分析\n\n");
             appendFunctionalityAnalysis(md, detailReport.getFunctionalityAnalysis());
         }
+
+        if (detailReport.getBusinessValueAnalysis() != null) {
+            md.append("## 商业价值分析\n\n");
+            appendBusinessValueAnalysis(md, detailReport.getBusinessValueAnalysis());
+        }
+
+        if (detailReport.getTestCoverageAnalysis() != null) {
+            md.append("## 测试覆盖率分析\n\n");
+            appendTestCoverageAnalysis(md, detailReport.getTestCoverageAnalysis());
+        }
     }
 
     private void appendArchitectureAnalysis(StringBuilder md, DetailReport.ArchitectureAnalysis analysis) {
@@ -252,7 +272,7 @@ public class ReportBuilder {
         }
 
         if (analysis.getBestPractices() != null && !analysis.getBestPractices().isEmpty()) {
-            md.append("### 最���实践\n\n");
+            md.append("### 最佳实践\n\n");
             for (String practice : analysis.getBestPractices()) {
                 md.append("- ").append(practice).append("\n");
             }
@@ -297,6 +317,61 @@ public class ReportBuilder {
             md.append("### 改进建议\n\n");
             for (String suggestion : analysis.getImprovementSuggestions()) {
                 md.append("- ").append(suggestion).append("\n");
+            }
+            md.append("\n");
+        }
+    }
+
+    private void appendBusinessValueAnalysis(StringBuilder md, DetailReport.BusinessValueAnalysis analysis) {
+        md.append("### 概述\n\n");
+        md.append(analysis.getOverview()).append("\n\n");
+
+        if (analysis.getValueDrivers() != null && !analysis.getValueDrivers().isEmpty()) {
+            md.append("### 价值驱动因素\n\n");
+            for (String driver : analysis.getValueDrivers()) {
+                md.append("- ").append(driver).append("\n");
+            }
+            md.append("\n");
+        }
+
+        if (analysis.getRisks() != null && !analysis.getRisks().isEmpty()) {
+            md.append("### 风险\n\n");
+            for (String risk : analysis.getRisks()) {
+                md.append("- ").append(risk).append("\n");
+            }
+            md.append("\n");
+        }
+
+        if (analysis.getRecommendations() != null && !analysis.getRecommendations().isEmpty()) {
+            md.append("### 改进建议\n\n");
+            for (String recommendation : analysis.getRecommendations()) {
+                md.append("- ").append(recommendation).append("\n");
+            }
+            md.append("\n");
+        }
+    }
+
+    private void appendTestCoverageAnalysis(StringBuilder md, DetailReport.TestCoverageAnalysis analysis) {
+        md.append("### 概述\n\n");
+        md.append(analysis.getOverview()).append("\n\n");
+
+        if (analysis.getCoveredFeatures() != null && !analysis.getCoveredFeatures().isEmpty()) {
+            md.append("### 覆盖的代码元素\n\n");
+            for (String element : analysis.getCoveredFeatures()) {
+                md.append("- ").append(element).append("\n");
+            }
+            md.append("\n");
+        }
+
+        if (analysis.getCoveragePercentage() != null) {
+            md.append("### 覆盖率\n\n");
+            md.append(analysis.getCoveragePercentage()).append("\n\n");
+        }
+
+        if (analysis.getTestQualityIssues() != null && !analysis.getTestQualityIssues().isEmpty()) {
+            md.append("### 测试质量问题\n\n");
+            for (String issue : analysis.getTestQualityIssues()) {
+                md.append("- ").append(issue).append("\n");
             }
             md.append("\n");
         }

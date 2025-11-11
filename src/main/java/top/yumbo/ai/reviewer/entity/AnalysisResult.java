@@ -24,6 +24,8 @@ public class AnalysisResult {
     private int codeQualityScore;
     private int technicalDebtScore;
     private int functionalityScore;
+    private int businessValueScore;
+    private int testCoverageScore;
 
     // 报告
     private SummaryReport summaryReport;

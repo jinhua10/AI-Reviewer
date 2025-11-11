@@ -35,6 +35,9 @@ public class ProjectAnalyzer {
             System.out.println("架构评分: " + result.getArchitectureScore() + "/100");
             System.out.println("代码质量评分: " + result.getCodeQualityScore() + "/100");
             System.out.println("技术债务评分: " + result.getTechnicalDebtScore() + "/100");
+            System.out.println("功能评分: " + result.getFunctionalityScore() + "/100");
+            System.out.println("商业价值评分: " + result.getBusinessValueScore() + "/100");
+            System.out.println("测试覆盖率评分: " + result.getTestCoverageScore() + "/100");
 
             System.out.println("\n=== 详细报告 ===");
             System.out.println(result.getSummaryReport().getContent());

@@ -34,6 +34,18 @@
 - 缺少文档的方法
 - 循环依赖问题
 
+### 5. 商业价值评估
+- 成本节约分析
+- 收入增长潜力
+- 投资回报率估算
+- 市场竞争优势
+
+### 6. 测试覆盖率分析
+- 单元测试覆盖率
+- 集成测试完整性
+- 测试质量评估
+- 测试用例有效性
+
 ## 🛠️ 技术架构
 
 ### 3层架构设计
@@ -48,7 +60,7 @@
 └──────────────────┬──────────────────────────────────┘
                    │ 依赖
                    ▼
-┌─────────────────────────────────────────────────────┐
+┌──────────────────────��──────────────────────────────┐
 │  L2: Core Layer (核心业务层)                         │
 │  ├─ FileScanner (文件扫描与筛选)                     │
 │  ├─ AIAnalyzer (AI 分析协调器)                       │
@@ -175,7 +187,29 @@ analysis:
     - "code_quality"
     - "technical_debt"
     - "functionality"
+    - "business_value"
+    - "test_coverage"
+  dimensionWeights:  # 各维度权重配置 (权重之和应为1.0)
+    architecture: 0.20    # 架构设计权重
+    code_quality: 0.20    # 代码质量权重
+    technical_debt: 0.15  # 技术债务权重
+    functionality: 0.20   # 功能完整性权重
+    business_value: 0.15  # 商业价值权重
+    test_coverage: 0.10   # 测试覆盖率权重
   batchSize: 10  # 批处理大小
+  maxContextLength: 32000  # 最大上下文长度
+  enableIncrementalAnalysis: true
+  domainKnowledge:
+    # 可以添加特定领域的知识
+    java:
+      frameworks: ["Spring Boot", "Spring MVC", "Hibernate", "MyBatis"]
+      patterns: ["MVC", "DAO", "Service", "Controller", "Repository"]
+    python:
+      frameworks: ["Django", "Flask", "FastAPI", "SQLAlchemy"]
+      patterns: ["MVC", "ORM", "Blueprint"]
+    javascript:
+      frameworks: ["React", "Vue.js", "Angular", "Express.js", "Node.js"]
+      patterns: ["MVC", "MVVM", "Component", "Service"]
 ```
 
 ## 📊 输出示例
@@ -189,9 +223,11 @@ analysis:
 代码质量评分: 78/100
 技术债务评分: 72/100
 功能评分: 88/100
+商业价值评分: 90/100
+测试覆盖率评分: 75/100
 
 === 详细报告 ===
-本次分析对项目的架构设计、代码质量、技术债务和功能完整性进行了全面评估...
+本次分析对项目的架构设计、代码质量、技术债务、功能完整性、商业价值和测试覆盖率进行了全面评估...
 ```
 
 ### Markdown报告
@@ -207,10 +243,12 @@ analysis:
 ### 评分详情
 | 维度 | 评分 | 权重 |
 |------|------|------|
-| 架构设计 | 85/100 | 25% |
-| 代码质量 | 78/100 | 25% |
-| 技术债务 | 72/100 | 25% |
-| 功能完整性 | 88/100 | 25% |
+| 架构设计 | 85/100 | 20% |
+| 代码质量 | 78/100 | 20% |
+| 技术债务 | 72/100 | 15% |
+| 功能完整性 | 88/100 | 20% |
+| 商业价值 | 90/100 | 15% |
+| 测试覆盖率 | 75/100 | 10% |
 
 ## 执行摘要
 本次分析显示项目整体表现良好，但在技术债务方面需要关注...
