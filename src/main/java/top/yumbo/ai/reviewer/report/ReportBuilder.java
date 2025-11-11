@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.entity.AnalysisResult;
 import top.yumbo.ai.reviewer.entity.DetailReport;
 import top.yumbo.ai.reviewer.entity.SummaryReport;
+import top.yumbo.ai.reviewer.report.template.ReportTemplate;
+import top.yumbo.ai.reviewer.report.template.TemplateEngine;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,10 +17,80 @@ import java.nio.file.Paths;
 @Slf4j
 public class ReportBuilder {
 
+    private final TemplateEngine templateEngine;
+
+    public ReportBuilder() {
+        this.templateEngine = new TemplateEngine();
+        // 创建内置模板
+        templateEngine.createBuiltInTemplates();
+    }
+
     /**
      * 生成Markdown格式的报告
      */
     public String generateMarkdownReport(AnalysisResult result) {
+        try {
+            return templateEngine.renderDefault(result, ReportTemplate.TemplateType.MARKDOWN);
+        } catch (Exception e) {
+            log.error("生成Markdown报告失败", e);
+            return generateFallbackMarkdownReport(result);
+        }
+    }
+
+    /**
+     * 生成HTML格式的报告
+     */
+    public String generateHtmlReport(AnalysisResult result) {
+        try {
+            return templateEngine.renderDefault(result, ReportTemplate.TemplateType.HTML);
+        } catch (Exception e) {
+            log.error("生成HTML报告失败", e);
+            return generateFallbackHtmlReport(result);
+        }
+    }
+
+    /**
+     * 保存报告到文件
+     */
+    public void saveReport(AnalysisResult result, String filePath, String format) throws IOException {
+        String content;
+        String extension;
+
+        switch (format.toLowerCase()) {
+            case "markdown":
+            case "md":
+                content = generateMarkdownReport(result);
+                extension = ".md";
+                break;
+            case "html":
+                content = generateHtmlReport(result);
+                extension = ".html";
+                break;
+            default:
+                content = generateMarkdownReport(result);
+                extension = ".md";
+        }
+
+        Path path = Paths.get(filePath);
+        if (!filePath.endsWith(extension)) {
+            path = Paths.get(filePath + extension);
+        }
+
+        java.nio.file.Files.writeString(path, content);
+        log.info("报告已保存到: {}", path);
+    }
+
+    /**
+     * 获取模板引擎
+     */
+    public TemplateEngine getTemplateEngine() {
+        return templateEngine;
+    }
+
+    /**
+     * 降级Markdown报告生成（当模板引擎失败时使用）
+     */
+    private String generateFallbackMarkdownReport(AnalysisResult result) {
         StringBuilder md = new StringBuilder();
 
         // 标题
@@ -64,18 +136,13 @@ public class ReportBuilder {
             }
         }
 
-        // 详细报告
-        if (result.getDetailReport() != null) {
-            appendDetailReport(md, result.getDetailReport());
-        }
-
         return md.toString();
     }
 
     /**
-     * 生成HTML格式的报告
+     * 降级HTML报告生成（当模板引擎失败时使用）
      */
-    public String generateHtmlReport(AnalysisResult result) {
+    private String generateFallbackHtmlReport(AnalysisResult result) {
         StringBuilder html = new StringBuilder();
 
         html.append("<!DOCTYPE html>\n");
@@ -132,249 +199,10 @@ public class ReportBuilder {
         html.append("        </div>\n");
         html.append("    </div>\n");
 
-        // 摘要报告
-        if (result.getSummaryReport() != null) {
-            html.append("    <div class=\"section\">\n");
-            html.append("        <h2>执行摘要</h2>\n");
-            html.append("        <div class=\"content\">").append(formatToHtml(result.getSummaryReport().getContent())).append("</div>\n");
-
-            if (result.getSummaryReport().getKeyFindings() != null && !result.getSummaryReport().getKeyFindings().isEmpty()) {
-                html.append("        <h3>关键发现</h3>\n");
-                html.append("        <ul>\n");
-                for (String finding : result.getSummaryReport().getKeyFindings()) {
-                    html.append("            <li>").append(finding).append("</li>\n");
-                }
-                html.append("        </ul>\n");
-            }
-
-            if (result.getSummaryReport().getRecommendations() != null && !result.getSummaryReport().getRecommendations().isEmpty()) {
-                html.append("        <h3>建议改进</h3>\n");
-                html.append("        <ul>\n");
-                for (String recommendation : result.getSummaryReport().getRecommendations()) {
-                    html.append("            <li>").append(recommendation).append("</li>\n");
-                }
-                html.append("        </ul>\n");
-            }
-            html.append("    </div>\n");
-        }
-
         html.append("</body>\n");
         html.append("</html>\n");
 
         return html.toString();
-    }
-
-    /**
-     * 保存报告到文件
-     */
-    public void saveReport(AnalysisResult result, String filePath, String format) throws IOException {
-        String content;
-        String extension;
-
-        switch (format.toLowerCase()) {
-            case "markdown":
-            case "md":
-                content = generateMarkdownReport(result);
-                extension = ".md";
-                break;
-            case "html":
-                content = generateHtmlReport(result);
-                extension = ".html";
-                break;
-            default:
-                content = generateMarkdownReport(result);
-                extension = ".md";
-        }
-
-        Path path = Paths.get(filePath);
-        if (!filePath.endsWith(extension)) {
-            path = Paths.get(filePath + extension);
-        }
-
-        java.nio.file.Files.writeString(path, content);
-        log.info("报告已保存到: {}", path);
-    }
-
-    /**
-     * 追加详细报告内容
-     */
-    private void appendDetailReport(StringBuilder md, DetailReport detailReport) {
-        if (detailReport.getArchitectureAnalysis() != null) {
-            md.append("## 架构分析\n\n");
-            appendArchitectureAnalysis(md, detailReport.getArchitectureAnalysis());
-        }
-
-        if (detailReport.getCodeQualityAnalysis() != null) {
-            md.append("## 代码质量分析\n\n");
-            appendCodeQualityAnalysis(md, detailReport.getCodeQualityAnalysis());
-        }
-
-        if (detailReport.getTechnicalDebtAnalysis() != null) {
-            md.append("## 技术债务分析\n\n");
-            appendTechnicalDebtAnalysis(md, detailReport.getTechnicalDebtAnalysis());
-        }
-
-        if (detailReport.getFunctionalityAnalysis() != null) {
-            md.append("## 功能分析\n\n");
-            appendFunctionalityAnalysis(md, detailReport.getFunctionalityAnalysis());
-        }
-
-        if (detailReport.getBusinessValueAnalysis() != null) {
-            md.append("## 商业价值分析\n\n");
-            appendBusinessValueAnalysis(md, detailReport.getBusinessValueAnalysis());
-        }
-
-        if (detailReport.getTestCoverageAnalysis() != null) {
-            md.append("## 测试覆盖率分析\n\n");
-            appendTestCoverageAnalysis(md, detailReport.getTestCoverageAnalysis());
-        }
-    }
-
-    private void appendArchitectureAnalysis(StringBuilder md, DetailReport.ArchitectureAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getStrengths() != null && !analysis.getStrengths().isEmpty()) {
-            md.append("### 优势\n\n");
-            for (String strength : analysis.getStrengths()) {
-                md.append("- ").append(strength).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getWeaknesses() != null && !analysis.getWeaknesses().isEmpty()) {
-            md.append("### 不足\n\n");
-            for (String weakness : analysis.getWeaknesses()) {
-                md.append("- ").append(weakness).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getRecommendations() != null && !analysis.getRecommendations().isEmpty()) {
-            md.append("### 改进建议\n\n");
-            for (String recommendation : analysis.getRecommendations()) {
-                md.append("- ").append(recommendation).append("\n");
-            }
-            md.append("\n");
-        }
-    }
-
-    private void appendCodeQualityAnalysis(StringBuilder md, DetailReport.CodeQualityAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getIssues() != null && !analysis.getIssues().isEmpty()) {
-            md.append("### 发现的问题\n\n");
-            for (String issue : analysis.getIssues()) {
-                md.append("- ").append(issue).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getBestPractices() != null && !analysis.getBestPractices().isEmpty()) {
-            md.append("### 最佳实践\n\n");
-            for (String practice : analysis.getBestPractices()) {
-                md.append("- ").append(practice).append("\n");
-            }
-            md.append("\n");
-        }
-    }
-
-    private void appendTechnicalDebtAnalysis(StringBuilder md, DetailReport.TechnicalDebtAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getDebts() != null && !analysis.getDebts().isEmpty()) {
-            md.append("### 技术债务\n\n");
-            for (String debt : analysis.getDebts()) {
-                md.append("- ").append(debt).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getRefactoringSuggestions() != null && !analysis.getRefactoringSuggestions().isEmpty()) {
-            md.append("### 重构建议\n\n");
-            for (String suggestion : analysis.getRefactoringSuggestions()) {
-                md.append("- ").append(suggestion).append("\n");
-            }
-            md.append("\n");
-        }
-    }
-
-    private void appendFunctionalityAnalysis(StringBuilder md, DetailReport.FunctionalityAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getMissingFeatures() != null && !analysis.getMissingFeatures().isEmpty()) {
-            md.append("### 缺失功能\n\n");
-            for (String feature : analysis.getMissingFeatures()) {
-                md.append("- ").append(feature).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getImprovementSuggestions() != null && !analysis.getImprovementSuggestions().isEmpty()) {
-            md.append("### 改进建议\n\n");
-            for (String suggestion : analysis.getImprovementSuggestions()) {
-                md.append("- ").append(suggestion).append("\n");
-            }
-            md.append("\n");
-        }
-    }
-
-    private void appendBusinessValueAnalysis(StringBuilder md, DetailReport.BusinessValueAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getValueDrivers() != null && !analysis.getValueDrivers().isEmpty()) {
-            md.append("### 价值驱动因素\n\n");
-            for (String driver : analysis.getValueDrivers()) {
-                md.append("- ").append(driver).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getRisks() != null && !analysis.getRisks().isEmpty()) {
-            md.append("### 风险\n\n");
-            for (String risk : analysis.getRisks()) {
-                md.append("- ").append(risk).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getRecommendations() != null && !analysis.getRecommendations().isEmpty()) {
-            md.append("### 改进建议\n\n");
-            for (String recommendation : analysis.getRecommendations()) {
-                md.append("- ").append(recommendation).append("\n");
-            }
-            md.append("\n");
-        }
-    }
-
-    private void appendTestCoverageAnalysis(StringBuilder md, DetailReport.TestCoverageAnalysis analysis) {
-        md.append("### 概述\n\n");
-        md.append(analysis.getOverview()).append("\n\n");
-
-        if (analysis.getCoveredFeatures() != null && !analysis.getCoveredFeatures().isEmpty()) {
-            md.append("### 覆盖的代码元素\n\n");
-            for (String element : analysis.getCoveredFeatures()) {
-                md.append("- ").append(element).append("\n");
-            }
-            md.append("\n");
-        }
-
-        if (analysis.getCoveragePercentage() != null) {
-            md.append("### 覆盖率\n\n");
-            md.append(analysis.getCoveragePercentage()).append("\n\n");
-        }
-
-        if (analysis.getTestQualityIssues() != null && !analysis.getTestQualityIssues().isEmpty()) {
-            md.append("### 测试质量问题\n\n");
-            for (String issue : analysis.getTestQualityIssues()) {
-                md.append("- ").append(issue).append("\n");
-            }
-            md.append("\n");
-        }
     }
 
     /**
@@ -446,33 +274,6 @@ public class ReportBuilder {
                 font-weight: bold;
                 color: #2196F3;
             }
-            .section {
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                margin-bottom: 30px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .section h2 {
-                color: #333;
-                border-bottom: 2px solid #667eea;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
-            }
-            .section h3 {
-                color: #555;
-                margin-top: 25px;
-                margin-bottom: 15px;
-            }
-            .content {
-                margin-bottom: 20px;
-            }
-            ul {
-                padding-left: 20px;
-            }
-            li {
-                margin-bottom: 8px;
-            }
             """;
     }
 
@@ -482,13 +283,5 @@ public class ReportBuilder {
     private String formatTimestamp(long timestamp) {
         return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(new java.util.Date(timestamp));
-    }
-
-    /**
-     * 转换为HTML格式
-     */
-    private String formatToHtml(String text) {
-        if (text == null) return "";
-        return text.replace("\n", "<br>");
     }
 }

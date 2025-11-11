@@ -1,11 +1,15 @@
 package top.yumbo.ai.reviewer.analyzer;
 
 import lombok.extern.slf4j.Slf4j;
+import top.yumbo.ai.reviewer.cache.AnalysisCache;
 import top.yumbo.ai.reviewer.config.Config;
 import top.yumbo.ai.reviewer.entity.*;
 import top.yumbo.ai.reviewer.exception.AnalysisException;
-import top.yumbo.ai.reviewer.service.AIService;
-import top.yumbo.ai.reviewer.service.DeepseekAIService;
+import top.yumbo.ai.reviewer.scoring.ConfigurableScoringRule;
+import top.yumbo.ai.reviewer.scoring.ScoringEngine;
+import top.yumbo.ai.reviewer.scoring.ScoringRule;
+import top.yumbo.ai.reviewer.service.AsyncAIService;
+import top.yumbo.ai.reviewer.service.AsyncDeepseekAIService;
 import top.yumbo.ai.reviewer.util.FileUtil;
 import top.yumbo.ai.reviewer.util.TokenEstimator;
 
@@ -14,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -23,15 +28,22 @@ import java.util.stream.Collectors;
 public class AIAnalyzer {
 
     private final Config config;
-    private final AIService aiService;
+    private final AsyncAIService aiService;
     private final ChunkSplitter chunkSplitter;
     private final TokenEstimator tokenEstimator;
+    private final AnalysisCache cache;
+    private final ScoringEngine scoringEngine;
 
     public AIAnalyzer(Config config) {
         this.config = config;
         this.aiService = createAIService(config);
         this.chunkSplitter = new ChunkSplitter();
         this.tokenEstimator = new TokenEstimator();
+        this.cache = new top.yumbo.ai.reviewer.cache.FileBasedAnalysisCache();
+        this.scoringEngine = new ScoringEngine();
+
+        // 初始化评分规则
+        initializeScoringRules();
     }
 
     /**
@@ -260,15 +272,171 @@ public class AIAnalyzer {
     /**
      * 创建AI服务实例
      */
-    private AIService createAIService(Config config) {
+    private AsyncAIService createAIService(Config config) {
         Config.AIServiceConfig aiConfig = config.getAiService();
         switch (aiConfig.getProvider().toLowerCase()) {
             case "deepseek":
-                return new DeepseekAIService(aiConfig);
+                return new AsyncDeepseekAIService(aiConfig);
             // 可以添加其他AI服务提供商
             default:
-                return new DeepseekAIService(aiConfig);
+                return new AsyncDeepseekAIService(aiConfig);
         }
+    }
+
+    /**
+     * 初始化评分规则
+     */
+    private void initializeScoringRules() {
+        // 架构评分规则
+        Map<String, Object> architectureConfig = new HashMap<>();
+        Map<String, Integer> positiveKeywords = new HashMap<>();
+        positiveKeywords.put("分层", 10);
+        positiveKeywords.put("模块化", 10);
+        positiveKeywords.put("低耦合", 15);
+        positiveKeywords.put("高内聚", 15);
+        positiveKeywords.put("设计模式", 10);
+
+        Map<String, Integer> negativeKeywords = new HashMap<>();
+        negativeKeywords.put("紧耦合", -15);
+        negativeKeywords.put("循环依赖", -20);
+        negativeKeywords.put("硬编码", -10);
+
+        architectureConfig.put("keywords", Map.of("positive", positiveKeywords, "negative", negativeKeywords));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "architecture-rule",
+                "基于关键词匹配的架构评分规则",
+                ScoringRule.RuleType.ARCHITECTURE,
+                0.20,
+                architectureConfig
+        ));
+
+        // 代码质量评分规则
+        Map<String, Object> qualityConfig = new HashMap<>();
+        Map<String, Integer> qualityPositive = new HashMap<>();
+        qualityPositive.put("单元测试", 15);
+        qualityPositive.put("注释", 10);
+        qualityPositive.put("命名规范", 10);
+        qualityPositive.put("异常处理", 10);
+
+        Map<String, Integer> qualityNegative = new HashMap<>();
+        qualityNegative.put("代码重复", -15);
+        qualityNegative.put("魔法数字", -10);
+        qualityNegative.put("长方法", -10);
+
+        qualityConfig.put("keywords", Map.of("positive", qualityPositive, "negative", qualityNegative));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "code-quality-rule",
+                "基于关键词匹配的代码质量评分规则",
+                ScoringRule.RuleType.CODE_QUALITY,
+                0.20,
+                qualityConfig
+        ));
+
+        // 技术债务评分规则
+        Map<String, Object> debtConfig = new HashMap<>();
+        Map<String, Integer> debtPositive = new HashMap<>();
+        debtPositive.put("最新版本", 10);
+        debtPositive.put("现代化", 10);
+
+        Map<String, Integer> debtNegative = new HashMap<>();
+        debtNegative.put("过时", -20);
+        debtNegative.put("废弃", -15);
+        debtNegative.put("安全漏洞", -25);
+
+        debtConfig.put("keywords", Map.of("positive", debtPositive, "negative", debtNegative));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "technical-debt-rule",
+                "基于关键词匹配的技术债务评分规则",
+                ScoringRule.RuleType.TECHNICAL_DEBT,
+                0.15,
+                debtConfig
+        ));
+
+        // 功能完整性评分规则
+        Map<String, Object> functionalityConfig = new HashMap<>();
+        Map<String, Integer> funcPositive = new HashMap<>();
+        funcPositive.put("完整", 20);
+        funcPositive.put("边界处理", 15);
+        funcPositive.put("错误处理", 15);
+
+        Map<String, Integer> funcNegative = new HashMap<>();
+        funcNegative.put("缺失", -20);
+        funcNegative.put("不完整", -15);
+
+        functionalityConfig.put("keywords", Map.of("positive", funcPositive, "negative", funcNegative));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "functionality-rule",
+                "基于关键词匹配的功能完整性评分规则",
+                ScoringRule.RuleType.FUNCTIONALITY,
+                0.20,
+                functionalityConfig
+        ));
+
+        // 商业价值评分规则
+        Map<String, Object> businessConfig = new HashMap<>();
+        Map<String, Integer> businessPositive = new HashMap<>();
+        businessPositive.put("成本节约", 20);
+        businessPositive.put("收入增加", 20);
+        businessPositive.put("用户增长", 15);
+        businessPositive.put("效率提升", 15);
+
+        businessConfig.put("keywords", Map.of("positive", businessPositive, "negative", new HashMap<>()));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "business-value-rule",
+                "基于关键词匹配的商业价值评分规则",
+                ScoringRule.RuleType.BUSINESS_VALUE,
+                0.15,
+                businessConfig
+        ));
+
+        // 测试覆盖率评分规则
+        Map<String, Object> coverageConfig = new HashMap<>();
+        Map<String, Integer> coveragePositive = new HashMap<>();
+        coveragePositive.put("高覆盖率", 25);
+        coveragePositive.put("单元测试", 15);
+        coveragePositive.put("集成测试", 15);
+
+        Map<String, Integer> coverageNegative = new HashMap<>();
+        coverageNegative.put("低覆盖率", -20);
+        coverageNegative.put("无测试", -25);
+
+        coverageConfig.put("keywords", Map.of("positive", coveragePositive, "negative", coverageNegative));
+
+        scoringEngine.registerRule(new ConfigurableScoringRule(
+                "test-coverage-rule",
+                "基于关键词匹配的测试覆盖率评分规则",
+                ScoringRule.RuleType.TEST_COVERAGE,
+                0.10,
+                coverageConfig
+        ));
+
+        log.info("评分规则初始化完成，共注册 {} 个规则", scoringEngine.getStats().getTotalRules());
+    }
+
+    /**
+     * 获取AI服务实例
+     */
+    public AsyncAIService getAiService() {
+        return aiService;
+    }
+
+    /**
+     * 获取缓存系统实例
+     */
+    public AnalysisCache getCache() {
+        return cache;
+    }
+
+    /**
+     * 获取评分引擎实例
+     */
+    public ScoringEngine getScoringEngine() {
+        return scoringEngine;
     }
 
     // 辅助方法实现

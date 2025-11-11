@@ -2,10 +2,13 @@ package top.yumbo.ai.reviewer;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.analyzer.AIAnalyzer;
+import top.yumbo.ai.reviewer.cache.AnalysisCache;
 import top.yumbo.ai.reviewer.config.Config;
 import top.yumbo.ai.reviewer.entity.AnalysisResult;
 import top.yumbo.ai.reviewer.exception.AnalysisException;
 import top.yumbo.ai.reviewer.scanner.FileScanner;
+import top.yumbo.ai.reviewer.scoring.ScoringEngine;
+import top.yumbo.ai.reviewer.service.AsyncAIService;
 import top.yumbo.ai.reviewer.util.FileUtil;
 
 import java.nio.file.Path;
@@ -62,6 +65,27 @@ public class AIReviewer {
             log.error("项目分析失败", e);
             throw new AnalysisException("项目分析失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 获取AI服务实例（用于演示和测试）
+     */
+    public AsyncAIService getAiService() {
+        return aiAnalyzer.getAiService();
+    }
+
+    /**
+     * 获取缓存系统实例（用于演示和测试）
+     */
+    public AnalysisCache getCache() {
+        return aiAnalyzer.getCache();
+    }
+
+    /**
+     * 获取评分引擎实例（用于演示和测试）
+     */
+    public ScoringEngine getScoringEngine() {
+        return aiAnalyzer.getScoringEngine();
     }
 
     /**
