@@ -1,7 +1,7 @@
 package top.yumbo.ai.reviewer.adapter.input.hackathon.integration;
 
 import org.junit.jupiter.api.*;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github.GitHubAdapter;
 import top.yumbo.ai.reviewer.application.hackathon.service.*;
 import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.*;
 class GitHubIntegrationEndToEndTest {
 
     private Path tempWorkDir;
-    private GitHubRepositoryAdapter gitHubAdapter;
+    private GitHubAdapter gitHubAdapter;
     private TeamManagementService teamManagement;
     private HackathonScoringService scoringService;
     private LeaderboardService leaderboardService;
@@ -42,7 +42,7 @@ class GitHubIntegrationEndToEndTest {
         tempWorkDir = Files.createTempDirectory("github-e2e-test");
 
         // 初始化服务
-        gitHubAdapter = new GitHubRepositoryAdapter(tempWorkDir);
+        gitHubAdapter = new GitHubAdapter(tempWorkDir);
         teamManagement = new TeamManagementService();
         scoringService = new HackathonScoringService();
         leaderboardService = new LeaderboardService();
