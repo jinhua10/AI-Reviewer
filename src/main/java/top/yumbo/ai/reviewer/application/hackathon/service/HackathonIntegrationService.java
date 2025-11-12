@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
 import top.yumbo.ai.reviewer.domain.hackathon.model.*;
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;
 import top.yumbo.ai.reviewer.domain.model.Project;
@@ -18,8 +17,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 黑客松集成服务
- *
- * 整合完整的工作流程：GitHub URL → 克隆 → 扫描 → 分析 → 评分 → 排行榜
+ * <p>
+ * 整合完整的工作流程：GitHub/Gitee URL → 克隆 → 扫描 → 分析 → 评分 → 排行榜
  *
  * @author AI-Reviewer Team
  * @version 1.0
