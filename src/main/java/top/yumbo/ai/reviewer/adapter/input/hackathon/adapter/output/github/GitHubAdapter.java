@@ -1,16 +1,13 @@
-package top.yumbo.ai.reviewer.adapter.output.repository;
+package top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import top.yumbo.ai.reviewer.application.port.output.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
 
 import java.io.File;
@@ -24,17 +21,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * GitHub 仓库适配器
+ * GitHub 适配器实现
  *
- * 使用 JGit 实现 GitHub 仓库操作
+ * 使用 JGit 实现 GitHub 仓库操作，实现 GitHubPort 接口
  *
  * @author AI-Reviewer Team
  * @version 1.0
  * @since 2025-11-12
  */
-public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
+public class GitHubAdapter implements GitHubPort {
 
-    private static final Logger log = LoggerFactory.getLogger(GitHubRepositoryAdapter.class);
+    private static final Logger log = LoggerFactory.getLogger(GitHubAdapter.class);
 
     private final Path workingDirectory;
     private final int cloneTimeout;  // 克隆超时时间（秒）
@@ -47,7 +44,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
      * @param cloneTimeout 克隆超时时间（秒）
      * @param cloneDepth 克隆深度（1 表示浅克隆）
      */
-    public GitHubRepositoryAdapter(Path workingDirectory, int cloneTimeout, int cloneDepth) {
+    public GitHubAdapter(Path workingDirectory, int cloneTimeout, int cloneDepth) {
         this.workingDirectory = workingDirectory;
         this.cloneTimeout = cloneTimeout;
         this.cloneDepth = cloneDepth;
@@ -63,7 +60,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
     /**
      * 简化构造函数（使用默认值）
      */
-    public GitHubRepositoryAdapter(Path workingDirectory) {
+    public GitHubAdapter(Path workingDirectory) {
         this(workingDirectory, 300, 1);  // 5分钟超时，浅克隆
     }
 
@@ -92,13 +89,13 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
 
             git.close();
 
-            log.info("成功克隆仓库到: {}", localPath);
+            log.info("成功克隆 GitHub 仓库到: {}", localPath);
             return localPath;
 
         } catch (GitAPIException e) {
             // 清理失败的克隆
             deleteDirectory(localPath);
-            throw new GitHubException("克隆仓库失败: " + e.getMessage(), e);
+            throw new GitHubException("克隆 GitHub 仓库失败: " + e.getMessage(), e);
         } catch (IOException e) {
             deleteDirectory(localPath);
             throw new GitHubException("创建本地目录失败: " + e.getMessage(), e);
@@ -121,6 +118,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
             Git git = Git.cloneRepository()
                     .setURI(githubUrl)
                     .setDirectory(localPath.toFile())
+                    .setTimeout(cloneTimeout)
                     .call();
 
             // 切换到指定 commit
@@ -130,7 +128,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
 
             git.close();
 
-            log.info("成功克隆仓库到指定 commit: {}", localPath);
+            log.info("成功克隆 GitHub 仓库到指定 commit: {}", localPath);
             return localPath;
 
         } catch (GitAPIException | IOException e) {
@@ -141,7 +139,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
 
     @Override
     public GitHubMetrics getRepositoryMetrics(String githubUrl) throws GitHubException {
-        log.info("获取仓库指标: {}", githubUrl);
+        log.info("获取 GitHub 仓库指标: {}", githubUrl);
 
         // 克隆仓库（临时）
         Path localPath = cloneRepository(githubUrl, null);
@@ -191,7 +189,9 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
                                hasFile(localPath, "readme") ||
                                hasFile(localPath, "README.txt") ||
                                hasFileStartingWith(localPath, "README");
-            boolean hasLicense = hasFile(localPath, "LICENSE") || hasFile(localPath, "license");
+            boolean hasLicense = hasFile(localPath, "LICENSE") ||
+                                hasFile(localPath, "license") ||
+                                hasFile(localPath, "LICENSE.txt");
             boolean hasGitHubActions = Files.exists(localPath.resolve(".github/workflows"));
 
             // 构建指标
@@ -224,7 +224,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
 
         } catch (GitAPIException | IOException e) {
             deleteDirectory(localPath);
-            throw new GitHubException("获取仓库指标失败: " + e.getMessage(), e);
+            throw new GitHubException("获取 GitHub 仓库指标失败: " + e.getMessage(), e);
         }
     }
 
@@ -242,7 +242,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
             return refs != null && !refs.isEmpty();
 
         } catch (Exception e) {
-            log.warn("仓库不可访问: {}, 原因: {}", githubUrl, e.getMessage());
+            log.warn("GitHub 仓库不可访问: {}, 原因: {}", githubUrl, e.getMessage());
             return false;
         }
     }
@@ -257,7 +257,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
             return size;
         } catch (IOException e) {
             deleteDirectory(localPath);
-            throw new GitHubException("计算仓库大小失败: " + e.getMessage(), e);
+            throw new GitHubException("计算 GitHub 仓库大小失败: " + e.getMessage(), e);
         }
     }
 
@@ -295,14 +295,13 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
         }
     }
 
-    /**
-     * 获取默认分支 (GitHubPort 实现)
-     */
-    public String getDefaultBranchForGitHub(String githubUrl) throws GitHubException {
+    @Override
+    public String getDefaultBranch(String githubUrl) throws GitHubException {
         try {
             Collection<Ref> refs = Git.lsRemoteRepository()
                     .setRemote(githubUrl)
                     .setHeads(true)
+                    .setTimeout(cloneTimeout)
                     .call();
 
             // 查找 HEAD 引用
@@ -313,26 +312,20 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
                 }
             }
 
-            // 默认返回 main
+            // GitHub 默认分支通常是 main
             return "main";
 
         } catch (GitAPIException e) {
-            throw new GitHubException("获取默认分支失败: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public String getDefaultBranch(String githubUrl) {
-        try {
-            return getDefaultBranchForGitHub(githubUrl);
-        } catch (GitHubException e) {
-            log.warn("获取默认分支失败，返回 main: {}", e.getMessage());
-            return "main";
+            throw new GitHubException("获取 GitHub 默认分支失败: " + e.getMessage(), e);
         }
     }
 
     /**
      * 验证 GitHub URL 格式
+     * 支持的格式：
+     * - https://github.com/owner/repo
+     * - https://github.com/owner/repo.git
+     * - http://github.com/owner/repo
      */
     private void validateGitHubUrl(String url) throws GitHubException {
         if (url == null || url.trim().isEmpty()) {
@@ -340,7 +333,7 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
         }
 
         if (!url.matches("^https?://github\\.com/[\\w-]+/[\\w.-]+.*$")) {
-            throw new GitHubException("无效的 GitHub URL 格式: " + url);
+            throw new GitHubException("无效的 GitHub URL 格式: " + url + "，正确格式如：https://github.com/owner/repo");
         }
     }
 
@@ -399,43 +392,5 @@ public class GitHubRepositoryAdapter implements RepositoryPort, GitHubPort {
             log.warn("删除目录失败: {}, 原因: {}", directory, e.getMessage());
         }
     }
-
-    // ========== RepositoryPort 接口实现 ==========
-
-    @Override
-    public Path cloneRepository(CloneRequest request) throws RepositoryException {
-        try {
-            return cloneRepository(request.url(), request.branch());
-        } catch (GitHubException e) {
-            throw new RepositoryException("克隆仓库失败: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public boolean isAccessible(String repositoryUrl) {
-        return isRepositoryAccessible(repositoryUrl);
-    }
-
-    @Override
-    public RepositoryMetrics getMetrics(String repositoryUrl) throws RepositoryException {
-        try {
-            // 简化实现：返回基本指标
-            String repoName = extractRepositoryName(repositoryUrl);
-            return RepositoryMetrics.builder()
-                    .repositoryName(repoName)
-                    .owner("Unknown")
-                    .commitCount(0)
-                    .contributorCount(0)
-                    .starCount(0)
-                    .hasReadme(hasFile(repositoryUrl, "README"))
-                    .hasLicense(hasFile(repositoryUrl, "LICENSE"))
-                    .primaryLanguage("Unknown")
-                    .sizeInKB(0)
-                    .build();
-        } catch (Exception e) {
-            throw new RepositoryException("获取仓库指标失败: " + e.getMessage(), e);
-        }
-    }
 }
-
 
