@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -224,4 +224,5 @@ public class HackathonProject {
                 '}';
     }
 }
+
 

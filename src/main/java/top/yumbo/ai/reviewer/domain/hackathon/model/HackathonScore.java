@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 /**
  * 黑客松评分领域模型
@@ -197,4 +197,5 @@ public class HackathonScore {
         );
     }
 }
+
 

@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -194,4 +194,5 @@ public class Team {
         return id.hashCode();
     }
 }
+
 

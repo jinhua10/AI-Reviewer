@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 /**
  * 参与者角色枚举

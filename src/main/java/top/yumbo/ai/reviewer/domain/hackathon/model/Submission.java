@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 import top.yumbo.ai.reviewer.domain.model.ReviewReport;
 
@@ -265,4 +265,5 @@ public class Submission {
                 '}';
     }
 }
+
 

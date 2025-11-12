@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 import java.util.UUID;
 
@@ -157,4 +157,5 @@ public class Participant {
         return id.hashCode();
     }
 }
+
 

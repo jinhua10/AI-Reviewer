@@ -1,6 +1,6 @@
 package top.yumbo.ai.reviewer.adapter.input.hackathon.application;
 
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.*;
+import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 
 import java.time.LocalDateTime;
 import java.util.*;

@@ -3,7 +3,7 @@ package top.yumbo.ai.reviewer.adapter.input.hackathon.application;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github.GitHubAdapter;
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.*;
+import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;

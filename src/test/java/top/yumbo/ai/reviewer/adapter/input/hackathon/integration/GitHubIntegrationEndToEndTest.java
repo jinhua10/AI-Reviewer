@@ -3,7 +3,7 @@ package top.yumbo.ai.reviewer.adapter.input.hackathon.integration;
 import org.junit.jupiter.api.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github.GitHubAdapter;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.application.*;
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.*;
+import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;

@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 /**
  * 提交状态枚举
@@ -80,4 +80,5 @@ public enum SubmissionStatus {
         return this == FAILED;
     }
 }
+
 

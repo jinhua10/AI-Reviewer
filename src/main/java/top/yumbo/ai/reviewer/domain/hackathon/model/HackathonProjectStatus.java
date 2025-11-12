@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model;
+package top.yumbo.ai.reviewer.domain.hackathon.model;
 
 /**
  * 黑客松项目状态枚举
@@ -71,4 +71,5 @@ public enum HackathonProjectStatus {
         return this == REVIEWED || this == CLOSED;
     }
 }
+
 

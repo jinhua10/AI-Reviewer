@@ -1,6 +1,6 @@
 package top.yumbo.ai.reviewer.adapter.input.hackathon.application;
 
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.HackathonScore;
+import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
 import top.yumbo.ai.reviewer.domain.model.Project;
 import top.yumbo.ai.reviewer.domain.model.ReviewReport;
 import top.yumbo.ai.reviewer.domain.model.SourceFile;

@@ -1,7 +1,7 @@
 package top.yumbo.ai.reviewer.adapter.input.hackathon.application;
 
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.HackathonProject;
-import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.model.HackathonScore;
+import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonProject;
+import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
