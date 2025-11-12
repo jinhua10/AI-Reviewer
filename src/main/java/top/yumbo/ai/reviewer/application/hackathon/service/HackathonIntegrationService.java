@@ -2,7 +2,8 @@ package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github.GitHubAdapter;
+import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
+import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
 import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
@@ -29,7 +30,7 @@ public class HackathonIntegrationService {
     private static final Logger log = LoggerFactory.getLogger(HackathonIntegrationService.class);
 
     private final TeamManagementService teamManagement;
-    private final GitHubAdapter gitHubAdapter;
+    private final RepositoryPort repositoryPort;
     private final LocalFileSystemAdapter fileSystemAdapter;
     private final ProjectAnalysisService coreAnalysisService;
     private final HackathonScoringService scoringService;
@@ -40,13 +41,13 @@ public class HackathonIntegrationService {
      */
     public HackathonIntegrationService(
             TeamManagementService teamManagement,
-            GitHubAdapter gitHubAdapter,
+            RepositoryPort repositoryPort,
             LocalFileSystemAdapter fileSystemAdapter,
             ProjectAnalysisService coreAnalysisService,
             HackathonScoringService scoringService,
             LeaderboardService leaderboardService) {
         this.teamManagement = teamManagement;
-        this.gitHubAdapter = gitHubAdapter;
+        this.repositoryPort = repositoryPort;
         this.fileSystemAdapter = fileSystemAdapter;
         this.coreAnalysisService = coreAnalysisService;
         this.scoringService = scoringService;
@@ -85,15 +86,21 @@ public class HackathonIntegrationService {
             Submission submission = project.getLatestSubmission();
             submission.startReview();
 
-            // 2. 验证 GitHub URL
-            log.info("步骤 2/7: 验证 GitHub URL 可访问性");
-            if (!gitHubAdapter.isRepositoryAccessible(githubUrl)) {
-                throw new HackathonIntegrationException("GitHub 仓库不可访问: " + githubUrl);
+            // 2. 验证仓库 URL
+            log.info("步骤 2/7: 验证仓库 URL 可访问性");
+            if (!repositoryPort.isAccessible(githubUrl)) {
+                throw new HackathonIntegrationException("仓库不可访问: " + githubUrl);
             }
 
             // 3. 克隆仓库
-            log.info("步骤 3/7: 克隆 GitHub 仓库");
-            localPath = gitHubAdapter.cloneRepository(githubUrl, branch);
+            log.info("步骤 3/7: 克隆仓库");
+            localPath = repositoryPort.cloneRepository(
+                CloneRequest.builder()
+                    .url(githubUrl)
+                    .branch(branch)
+                    .timeoutSeconds(300)
+                    .build()
+            );
             log.info("仓库已克隆到: {}", localPath);
 
             // 4. 扫描项目文件
@@ -144,10 +151,6 @@ public class HackathonIntegrationService {
 
             return project;
 
-        } catch (GitHubPort.GitHubException e) {
-            log.error("GitHub 操作失败: projectId={}", projectId, e);
-            failSubmission(projectId, "GitHub 操作失败: " + e.getMessage());
-            throw new HackathonIntegrationException("GitHub 操作失败", e);
 
         } catch (Exception e) {
             log.error("项目分析失败: projectId={}", projectId, e);
@@ -187,47 +190,47 @@ public class HackathonIntegrationService {
     }
 
     /**
-     * 获取 GitHub 仓库指标
+     * 获取仓库指标
      *
-     * @param githubUrl GitHub 仓库 URL
-     * @return GitHub 指标
+     * @param repositoryUrl 仓库 URL
+     * @return 仓库指标
      * @throws HackathonIntegrationException 如果获取失败
      */
-    public GitHubPort.GitHubMetrics getGitHubMetrics(String githubUrl)
+    public top.yumbo.ai.reviewer.application.port.output.RepositoryMetrics getRepositoryMetrics(String repositoryUrl)
             throws HackathonIntegrationException {
         try {
-            log.info("获取 GitHub 仓库指标: {}", githubUrl);
-            return gitHubAdapter.getRepositoryMetrics(githubUrl);
-        } catch (GitHubPort.GitHubException e) {
-            throw new HackathonIntegrationException("获取 GitHub 指标失败", e);
+            log.info("获取仓库指标: {}", repositoryUrl);
+            return repositoryPort.getMetrics(repositoryUrl);
+        } catch (Exception e) {
+            throw new HackathonIntegrationException("获取仓库指标失败", e);
         }
     }
 
     /**
-     * 验证 GitHub URL
+     * 验证仓库 URL
      *
-     * @param githubUrl GitHub 仓库 URL
+     * @param repositoryUrl 仓库 URL
      * @return 验证结果
      */
-    public ValidationResult validateGitHubUrl(String githubUrl) {
+    public ValidationResult validateRepositoryUrl(String repositoryUrl) {
         ValidationResult result = new ValidationResult();
 
         // 1. 格式验证
-        if (!isValidGitHubUrlFormat(githubUrl)) {
+        if (!isValidRepositoryUrlFormat(repositoryUrl)) {
             result.addError("URL 格式无效");
             return result;
         }
 
         // 2. 可访问性验证
-        if (!gitHubAdapter.isRepositoryAccessible(githubUrl)) {
+        if (!repositoryPort.isAccessible(repositoryUrl)) {
             result.addError("仓库不可访问或不存在");
             return result;
         }
 
         // 3. 必需文件检查
         try {
-            boolean hasReadme = gitHubAdapter.hasFile(githubUrl, "README.md") ||
-                              gitHubAdapter.hasFile(githubUrl, "readme.md");
+            boolean hasReadme = repositoryPort.hasFile(repositoryUrl, "README.md") ||
+                              repositoryPort.hasFile(repositoryUrl, "readme.md");
             if (!hasReadme) {
                 result.addWarning("缺少 README.md 文件");
             }
@@ -326,13 +329,14 @@ public class HackathonIntegrationService {
     }
 
     /**
-     * 验证 GitHub URL 格式
+     * 验证仓库 URL 格式（支持 GitHub 和 Gitee）
      */
-    private boolean isValidGitHubUrlFormat(String url) {
+    private boolean isValidRepositoryUrlFormat(String url) {
         if (url == null || url.trim().isEmpty()) {
             return false;
         }
-        return url.matches("^https?://github\\.com/[\\w-]+/[\\w.-]+.*$");
+        // 支持 GitHub 和 Gitee
+        return url.matches("^https?://(github\\.com|gitee\\.com)/[\\w-]+/[\\w.-]+.*$");
     }
 
     /**

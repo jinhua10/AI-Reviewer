@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github;
+package top.yumbo.ai.reviewer.adapter.output.repository;
 
 import org.junit.jupiter.api.*;
 import top.yumbo.ai.reviewer.adapter.input.hackathon.domain.port.GitHubPort;
@@ -11,23 +11,23 @@ import java.nio.file.Paths;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * GitHubAdapter 单元测试
+ * GitHubRepositoryAdapter 单元测试
  *
  * @author AI-Reviewer Team
  * @version 1.0
  * @since 2025-11-12
  */
-@DisplayName("GitHubAdapter 测试")
-class GitHubAdapterTest {
+@DisplayName("GitHubRepositoryAdapter 测试")
+class GitHubRepositoryAdapterTest {
 
-    private GitHubAdapter gitHubAdapter;
+    private GitHubRepositoryAdapter gitHubAdapter;
     private Path tempWorkDir;
 
     @BeforeEach
     void setUp() throws IOException {
         // 创建临时工作目录
         tempWorkDir = Files.createTempDirectory("github-test");
-        gitHubAdapter = new GitHubAdapter(tempWorkDir);
+        gitHubAdapter = new GitHubRepositoryAdapter(tempWorkDir);
     }
 
     @AfterEach
@@ -306,7 +306,7 @@ class GitHubAdapterTest {
         @DisplayName("应该处理大型仓库（但设置超时）")
         void shouldHandleLargeRepositoryWithTimeout() {
             // 创建一个短超时的适配器
-            GitHubAdapter shortTimeoutAdapter = new GitHubAdapter(tempWorkDir, 5, 1);
+            GitHubRepositoryAdapter shortTimeoutAdapter = new GitHubRepositoryAdapter(tempWorkDir, 5, 1);
 
             // 这个测试只验证超时机制，不实际克隆大型仓库
             assertThat(shortTimeoutAdapter).isNotNull();
@@ -324,7 +324,7 @@ class GitHubAdapterTest {
             int timeout = 600;
             int depth = 5;
 
-            GitHubAdapter adapter = new GitHubAdapter(customDir, timeout, depth);
+            GitHubRepositoryAdapter adapter = new GitHubRepositoryAdapter(customDir, timeout, depth);
 
             assertThat(adapter).isNotNull();
         }
@@ -334,7 +334,7 @@ class GitHubAdapterTest {
         void shouldUseDefaultParameters() {
             Path customDir = Paths.get("./default-dir");
 
-            GitHubAdapter adapter = new GitHubAdapter(customDir);
+            GitHubRepositoryAdapter adapter = new GitHubRepositoryAdapter(customDir);
 
             assertThat(adapter).isNotNull();
         }
@@ -348,7 +348,7 @@ class GitHubAdapterTest {
             assertThat(Files.exists(newDir)).isFalse();
 
             // 创建适配器应该自动创建目录
-            GitHubAdapter adapter = new GitHubAdapter(newDir);
+            GitHubRepositoryAdapter adapter = new GitHubRepositoryAdapter(newDir);
 
             assertThat(Files.exists(newDir)).isTrue();
             assertThat(Files.isDirectory(newDir)).isTrue();
@@ -376,4 +376,5 @@ class GitHubAdapterTest {
         }
     }
 }
+
 
