@@ -92,7 +92,7 @@ public class HackathonInteractiveApp {
     private void printWelcomeBanner() {
         System.out.println("\n╔════════════════════════════════════════════════╗");
         System.out.println("║                                                ║");
-        System.out.println("║        🏆 黑客松项目评审工具 v2.0 🏆         ║");
+        System.out.println("║        🏆 黑客松项目评审工具 🏆              ║");
         System.out.println("║                                                ║");
         System.out.println("║        基于AI的智能评分系统                   ║");
         System.out.println("║                                                ║");

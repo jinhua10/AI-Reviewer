@@ -72,7 +72,7 @@ public class CommandLineAdapter {
             // 3. 获取 CLI 适配器实例
             CommandLineAdapter cli = injector.getInstance(CommandLineAdapter.class);
 
-            log.info("🤖 AI-Reviewer v2.0 (通用代码审查) 已启动");
+            log.info("🤖 AI-Reviewer (通用代码审查) 已启动");
             log.info("AI 服务: {} (model: {})", config.getAiProvider(), config.getAiModel());
 
             // 4. 解析并执行命令
@@ -224,7 +224,7 @@ public class CommandLineAdapter {
      * 打印使用说明
      */
     private static void printUsage() {
-        System.out.println("🤖 AI-Reviewer v2.0 - 通用代码审查工具");
+        System.out.println("🤖 AI-Reviewer - 通用代码审查工具");
         System.out.println("\n用法:");
         System.out.println("  java -cp ai-reviewer.jar top.yumbo.ai.reviewer.adapter.input.cli.CommandLineAdapter [选项]");
         System.out.println("\n选项:");

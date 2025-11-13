@@ -1,33 +1,39 @@
 package top.yumbo.ai.reviewer.domain.hackathon.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * 黑客松评分领域模型
+ * 黑客松评分领域模型（动态权重版）
  *
- * 包含四个维度的评分和综合得分计算
+ * 支持动态权重配置
  *
  * @author AI-Reviewer Team
  * @version 1.0
- * @since 2025-11-12
+ * @since 2025-11-13
  */
 public class HackathonScore {
 
-    // 代码质量分数 (0-100)，权重 40%
+    // 代码质量分数 (0-100)
     private final int codeQuality;
 
-    // 创新性分数 (0-100)，权重 30%
+    // 创新性分数 (0-100)
     private final int innovation;
 
-    // 完成度分数 (0-100)，权重 20%
+    // 完成度分数 (0-100)
     private final int completeness;
 
-    // 文档质量分数 (0-100)，权重 10%
+    // 文档质量分数 (0-100)
     private final int documentation;
 
-    // 权重常量
-    private static final double WEIGHT_CODE_QUALITY = 0.40;
-    private static final double WEIGHT_INNOVATION = 0.30;
-    private static final double WEIGHT_COMPLETENESS = 0.20;
-    private static final double WEIGHT_DOCUMENTATION = 0.10;
+    // 默认权重常量（向后兼容）
+    private static final double DEFAULT_WEIGHT_CODE_QUALITY = 0.40;
+    private static final double DEFAULT_WEIGHT_INNOVATION = 0.30;
+    private static final double DEFAULT_WEIGHT_COMPLETENESS = 0.20;
+    private static final double DEFAULT_WEIGHT_DOCUMENTATION = 0.10;
+
+    // 动态权重（可选）
+    private final Map<String, Double> customWeights;
 
     // 私有构造函数，强制使用Builder
     private HackathonScore(Builder builder) {
@@ -35,6 +41,7 @@ public class HackathonScore {
         this.innovation = validateScore(builder.innovation, "创新性");
         this.completeness = validateScore(builder.completeness, "完成度");
         this.documentation = validateScore(builder.documentation, "文档质量");
+        this.customWeights = builder.customWeights;
     }
 
     /**
@@ -50,16 +57,47 @@ public class HackathonScore {
     }
 
     /**
-     * 计算综合得分
+     * 计算综合得分（支持动态权重）
      */
     public int calculateTotalScore() {
-        double total = codeQuality * WEIGHT_CODE_QUALITY
-                     + innovation * WEIGHT_INNOVATION
-                     + completeness * WEIGHT_COMPLETENESS
-                     + documentation * WEIGHT_DOCUMENTATION;
+        // 获取权重（自定义或默认）
+        double weightCodeQuality = getWeight("code_quality", DEFAULT_WEIGHT_CODE_QUALITY);
+        double weightInnovation = getWeight("innovation", DEFAULT_WEIGHT_INNOVATION);
+        double weightCompleteness = getWeight("completeness", DEFAULT_WEIGHT_COMPLETENESS);
+        double weightDocumentation = getWeight("documentation", DEFAULT_WEIGHT_DOCUMENTATION);
+
+        double total = codeQuality * weightCodeQuality
+                     + innovation * weightInnovation
+                     + completeness * weightCompleteness
+                     + documentation * weightDocumentation;
         return (int) Math.round(total);
     }
 
+    /**
+     * 获取权重（自定义或默认）
+     */
+    private double getWeight(String dimension, double defaultWeight) {
+        if (customWeights != null && customWeights.containsKey(dimension)) {
+            return customWeights.get(dimension);
+        }
+        return defaultWeight;
+    }
+
+    /**
+     * 获取指定维度的权重（用于显示）- 使用映射而非硬编码
+     */
+    public double getDimensionWeight(String dimension) {
+        // 使用映射表（消除硬编码switch）
+        Map<String, Double> defaultWeights = Map.of(
+            "code_quality", DEFAULT_WEIGHT_CODE_QUALITY,
+            "innovation", DEFAULT_WEIGHT_INNOVATION,
+            "completeness", DEFAULT_WEIGHT_COMPLETENESS,
+            "documentation", DEFAULT_WEIGHT_DOCUMENTATION
+        );
+
+        double defaultWeight = defaultWeights.getOrDefault(dimension, 0.0);
+        return getWeight(dimension, defaultWeight);
+    }
     /**
      * 获取综合得分（getTotalScore是calculateTotalScore的别名）
      */
@@ -127,17 +165,20 @@ public class HackathonScore {
     }
 
     /**
-     * 获取分数详情描述
+     * 获取分数详情描述（动态权重版）
      */
     public String getScoreDetails() {
         return String.format(
             "总分: %d (%s)\n" +
-            "  代码质量: %d (40%%)\n" +
-            "  创新性:   %d (30%%)\n" +
-            "  完成度:   %d (20%%)\n" +
-            "  文档质量: %d (10%%)",
+            "  代码质量: %d (%.0f%%)\n" +
+            "  创新性:   %d (%.0f%%)\n" +
+            "  完成度:   %d (%.0f%%)\n" +
+            "  文档质量: %d (%.0f%%)",
             calculateTotalScore(), getGrade(),
-            codeQuality, innovation, completeness, documentation
+            codeQuality, getDimensionWeight("code_quality") * 100,
+            innovation, getDimensionWeight("innovation") * 100,
+            completeness, getDimensionWeight("completeness") * 100,
+            documentation, getDimensionWeight("documentation") * 100
         );
     }
 
@@ -168,6 +209,7 @@ public class HackathonScore {
         private int innovation;
         private int completeness;
         private int documentation;
+        private Map<String, Double> customWeights;
 
         public Builder codeQuality(int codeQuality) {
             this.codeQuality = codeQuality;
@@ -186,6 +228,28 @@ public class HackathonScore {
 
         public Builder documentation(int documentation) {
             this.documentation = documentation;
+            return this;
+        }
+
+        /**
+         * 设置自定义权重
+         */
+        public Builder customWeights(Map<String, Double> weights) {
+            this.customWeights = weights;
+            return this;
+        }
+
+        /**
+         * 从配置设置权重
+         */
+        public Builder weightsFromConfig(HackathonScoringConfig config) {
+            if (config != null) {
+                this.customWeights = new HashMap<>();
+                this.customWeights.put("code_quality", config.getDimensionWeight("code_quality"));
+                this.customWeights.put("innovation", config.getDimensionWeight("innovation"));
+                this.customWeights.put("completeness", config.getDimensionWeight("completeness"));
+                this.customWeights.put("documentation", config.getDimensionWeight("documentation"));
+            }
             return this;
         }
 

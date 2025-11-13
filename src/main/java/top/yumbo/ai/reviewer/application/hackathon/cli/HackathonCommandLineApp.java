@@ -7,12 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
 import top.yumbo.ai.reviewer.adapter.output.repository.GiteeRepositoryAdapter;
-import top.yumbo.ai.reviewer.application.hackathon.service.HackathonIntegrationService;
+import top.yumbo.ai.reviewer.application.hackathon.service.HackathonScoringService;
 import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;
 import top.yumbo.ai.reviewer.application.service.ReportGenerationService;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
+import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScoringConfig;
+import top.yumbo.ai.reviewer.domain.hackathon.model.DimensionScoringRegistry;
 import top.yumbo.ai.reviewer.domain.model.*;
 import top.yumbo.ai.reviewer.infrastructure.config.Configuration;
 import top.yumbo.ai.reviewer.infrastructure.config.ConfigurationLoader;
@@ -48,6 +50,8 @@ public class HackathonCommandLineApp {
     private final ReportGenerationService reportService;
     private final LocalFileSystemAdapter fileSystemAdapter;
     private final Configuration configuration;
+    private final HackathonScoringService scoringService;
+    private final HackathonScoringConfig scoringConfig;
 
     @Inject
     public HackathonCommandLineApp(
@@ -59,6 +63,10 @@ public class HackathonCommandLineApp {
         this.reportService = reportService;
         this.fileSystemAdapter = fileSystemAdapter;
         this.configuration = configuration;
+        // 初始化黑客松评分服务（动态配置版）
+        this.scoringService = new HackathonScoringService();
+        this.scoringConfig = HackathonScoringConfig.createDefault();
+        log.info("✅ 黑客松评分服务已初始化（动态配置）");
     }
 
     /**
@@ -77,7 +85,7 @@ public class HackathonCommandLineApp {
             // 3. 获取黑客松 CLI 应用实例
             HackathonCommandLineApp app = injector.getInstance(HackathonCommandLineApp.class);
 
-            log.info("🏆 黑客松评审工具 v2.0 已启动");
+            log.info("🏆 黑客松评审工具已启动");
             log.info("AI 服务: {} (model: {})", config.getAiProvider(), config.getAiModel());
 
             // 4. 解析并执行命令
@@ -245,16 +253,49 @@ public class HackathonCommandLineApp {
     }
 
     /**
-     * 打印黑客松评分
+     * 打印黑客松评分（动态版）
+     * 根据配置文件动态显示所有维度
      */
     private void printHackathonScore(HackathonScore score) {
-        System.out.println("\n=== 黑客松评分细则 ===");
-        System.out.println("代码质量: " + score.getCodeQuality() + "/100 (权重40%)");
-        System.out.println("创新性: " + score.getInnovation() + "/100 (权重30%)");
-        System.out.println("完整性: " + score.getCompleteness() + "/100 (权重20%)");
-        System.out.println("文档质量: " + score.getDocumentation() + "/100 (权重10%)");
+        System.out.println("\n=== 黑客松评分细则（动态配置版）===");
+
+        // 动态显示所有维度
+        int index = 1;
+        for (String dimensionName : scoringConfig.getAllDimensions()) {
+            double weight = scoringConfig.getDimensionWeight(dimensionName);
+            String displayName = scoringConfig.getDimensionDisplayName(dimensionName);
+
+            // 获取维度分数（映射到固定字段或使用默认值）
+            int dimensionScore = getDimensionScore(score, dimensionName);
+
+            System.out.printf("%d. %s: %d/100 (权重%.0f%%)\n",
+                index++, displayName, dimensionScore, weight * 100);
+        }
+
         System.out.println("----------------------------------------");
-        System.out.println("总分: " + score.calculateTotalScore() + "/100 (" + score.getGrade() + ")");
+        System.out.printf("📊 总分: %d/100 (%s)\n", score.calculateTotalScore(), score.getGrade());
+        System.out.printf("📝 评价: %s\n", score.getGradeDescription());
+
+        // 显示维度数量
+        System.out.printf("\n💡 当前评分维度: %d个\n", scoringConfig.getAllDimensions().size());
+        System.out.printf("📋 启用的规则: %d个\n", scoringConfig.getEnabledRules().size());
+    }
+
+    /**
+     * 获取维度分数（策略模式 - 零硬编码）
+     */
+    private int getDimensionScore(HackathonScore score, String dimensionName) {
+        // 使用注册表获取Score字段值（消除硬编码switch）
+        DimensionScoringRegistry registry = DimensionScoringRegistry.createDefault();
+        Integer fieldValue = registry.getScoreFieldValue(dimensionName, score);
+
+        if (fieldValue != null) {
+            return fieldValue;
+        }
+
+        // 自定义维度使用总分
+        log.debug("未映射的维度: {}, 使用总分", dimensionName);
+        return score.calculateTotalScore();
     }
 
     /**
@@ -275,16 +316,53 @@ public class HackathonCommandLineApp {
     }
 
     /**
-     * 计算黑客松评分
+     * 计算黑客松评分（动态版）
+     * 使用HackathonScoringService进行基于AST和规则的评分
      */
     private HackathonScore calculateHackathonScore(ReviewReport report) {
+        try {
+            // 使用动态评分服务
+            // 注意：这里需要Project对象，但当前上下文没有，所以使用简化方式
+            log.info("🎯 使用黑客松评分服务进行评分");
+
+            // 从ReviewReport构建简化的Project对象用于评分
+            Project project = buildProjectFromReport(report);
+
+            // 调用动态评分服务
+            return scoringService.calculateScore(report, project);
+
+        } catch (Exception e) {
+            log.error("动态评分失败，使用降级评分: {}", e.getMessage());
+            // 降级：使用简化评分
+            return buildFallbackScore(report);
+        }
+    }
+
+    /**
+     * 从ReviewReport构建简化的Project对象
+     */
+    private Project buildProjectFromReport(ReviewReport report) {
+        return Project.builder()
+            .name(report.getProjectName())
+            .rootPath(Paths.get(report.getProjectPath()))
+            .type(ProjectType.UNKNOWN)
+            .sourceFiles(new ArrayList<>())
+            .build();
+    }
+
+    /**
+     * 降级评分（当动态评分失败时使用）
+     */
+    private HackathonScore buildFallbackScore(ReviewReport report) {
         double overallScore = report.getOverallScore();
 
-        // 基于总体评分分配到各个维度（各维度满分100）
-        int codeQuality = (int) Math.min(100, overallScore * 1.1);  // 稍微提高代码质量权重
+        // 基于总体评分分配到各个维度
+        int codeQuality = (int) Math.min(100, overallScore * 1.1);
         int innovation = (int) Math.min(100, overallScore * 0.9);
         int completeness = (int) Math.min(100, overallScore * 0.95);
         int documentation = (int) Math.min(100, overallScore * 0.85);
+
+        log.warn("⚠️ 使用降级评分方法");
 
         return HackathonScore.builder()
                 .codeQuality(codeQuality)
@@ -410,7 +488,7 @@ public class HackathonCommandLineApp {
      * 打印使用说明
      */
     private static void printUsage() {
-        System.out.println("🏆 黑客松项目评审工具 v2.0");
+        System.out.println("🏆 黑客松项目评审工具");
         System.out.println("\n用法:");
         System.out.println("  java -jar hackathon-reviewer.jar [选项]");
         System.out.println("\n选项:");

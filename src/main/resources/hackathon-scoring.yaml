@@ -1,12 +1,52 @@
-# 黑客松评分配置
-# Hackathon Scoring Configuration
+# 黑客松评分配置 V2.0 - 支持动态扩展
+# Hackathon Scoring Configuration - Dynamic & Extensible
 
-# ==================== 评分维度权重 (总和必须为1.0) ====================
+# ==================== 动态评分维度 (支持任意扩展) ====================
+# 总和必须为1.0，可以添加任意数量的自定义维度
 dimensions:
-  code_quality_weight: 0.40      # 代码质量权重 40%
-  innovation_weight: 0.30        # 创新性权重 30%
-  completeness_weight: 0.20      # 完成度权重 20%
-  documentation_weight: 0.10     # 文档质量权重 10%
+  # 核心维度
+  code_quality:
+    weight: 0.40
+    display_name: "代码质量"
+    description: "代码规范、复杂度、坏味道、架构设计"
+
+  innovation:
+    weight: 0.30
+    display_name: "创新性"
+    description: "技术栈创新、设计模式、AI评价、独特性"
+
+  completeness:
+    weight: 0.20
+    display_name: "完成度"
+    description: "代码结构、功能实现、测试覆盖"
+
+  documentation:
+    weight: 0.10
+    display_name: "文档质量"
+    description: "README、代码注释、API文档"
+
+  # ========== 可扩展的自定义维度示例 ==========
+  # 取消注释以启用自定义维度
+
+  # user_experience:
+  #   weight: 0.15
+  #   display_name: "用户体验"
+  #   description: "界面设计、交互流畅度、易用性"
+
+  # performance:
+  #   weight: 0.10
+  #   display_name: "性能表现"
+  #   description: "响应时间、资源占用、并发能力"
+
+  # security:
+  #   weight: 0.10
+  #   display_name: "安全性"
+  #   description: "输入验证、数据加密、权限控制"
+
+  # scalability:
+  #   weight: 0.05
+  #   display_name: "可扩展性"
+  #   description: "模块化设计、插件机制、配置灵活性"
 
 # ==================== 代码质量子维度权重 (总和必须为1.0) ====================
 code_quality:
@@ -49,20 +89,185 @@ code_smell_penalties:
 
 # ==================== 设计模式加分 ====================
 design_pattern_bonus:
-  # 创建型模式 (Singleton, Factory, Builder, Prototype)
   CREATIONAL: 2
-
-  # 结构型模式 (Adapter, Decorator, Proxy, Facade, Bridge)
   STRUCTURAL: 3
-
-  # 行为型模式 (Strategy, Observer, Command, Template, State)
   BEHAVIORAL: 3
-
-  # 架构模式 (MVC, MVVM, Repository, Hexagonal)
   ARCHITECTURAL: 4
-
-  # 组合使用奖励 (使用3种及以上设计模式)
   COMBINATION: 5
+
+# ==================== 动态评分规则 (支持任意扩展) ====================
+# 规则会自动应用到对应的维度
+scoring_rules:
+
+  # ---------- 代码质量规则 ----------
+  - name: "code-quality-basic"
+    description: "基础代码质量规则"
+    dimension: "code_quality"
+    weight: 0.5
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "单元测试": 20
+      "集成测试": 15
+      "代码注释": 10
+      "异常处理": 15
+      "日志记录": 10
+      "输入验证": 10
+    negative_keywords:
+      "代码重复": -15
+      "长方法": -10
+      "硬编码": -10
+      "全局变量": -8
+
+  - name: "code-quality-advanced"
+    description: "高级代码质量规则"
+    dimension: "code_quality"
+    weight: 0.5
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "设计模式": 15
+      "依赖注入": 12
+      "接口抽象": 10
+      "错误处理": 10
+    negative_keywords:
+      "循环依赖": -15
+      "上帝类": -12
+
+  # ---------- 创新性规则 ----------
+  - name: "innovation-technology"
+    description: "技术创新规则"
+    dimension: "innovation"
+    weight: 0.6
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "AI": 20
+      "机器学习": 20
+      "深度学习": 18
+      "大模型": 18
+      "区块链": 15
+      "微服务": 12
+      "GraphQL": 12
+      "WebAssembly": 15
+      "Rust": 10
+      "Kubernetes": 10
+
+  - name: "innovation-design"
+    description: "设计创新规则"
+    dimension: "innovation"
+    weight: 0.4
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "创新架构": 15
+      "独特算法": 18
+      "原创方案": 20
+      "跨领域": 12
+
+  # ---------- 完成度规则 ----------
+  - name: "completeness-features"
+    description: "功能完整性规则"
+    dimension: "completeness"
+    weight: 0.7
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "完整功能": 20
+      "用户界面": 15
+      "数据处理": 12
+      "错误提示": 10
+      "配置管理": 8
+    negative_keywords:
+      "功能缺失": -20
+      "未实现": -15
+
+  - name: "completeness-testing"
+    description: "测试完整性规则"
+    dimension: "completeness"
+    weight: 0.3
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "测试用例": 18
+      "测试覆盖": 15
+      "自动化测试": 12
+    negative_keywords:
+      "无测试": -25
+
+  # ---------- 文档质量规则 ----------
+  - name: "documentation-readme"
+    description: "README文档规则"
+    dimension: "documentation"
+    weight: 0.6
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "安装说明": 15
+      "使用教程": 15
+      "API文档": 12
+      "示例代码": 10
+      "贡献指南": 8
+
+  - name: "documentation-code-comments"
+    description: "代码注释规则"
+    dimension: "documentation"
+    weight: 0.4
+    enabled: true
+    strategy: "keyword_matching"
+    positive_keywords:
+      "详细注释": 12
+      "JavaDoc": 10
+      "TODO注释": 5
+
+  # ========== 自定义规则示例 ==========
+  # 可以添加任意数量的自定义规则
+
+  # 用户体验规则（如果启用了user_experience维度）
+  # - name: "ux-interface"
+  #   description: "用户界面体验规则"
+  #   dimension: "user_experience"
+  #   weight: 1.0
+  #   enabled: false
+  #   strategy: "keyword_matching"
+  #   positive_keywords:
+  #     "响应式设计": 15
+  #     "友好界面": 12
+  #     "流畅交互": 10
+  #     "无障碍": 8
+
+  # 性能规则（如果启用了performance维度）
+  # - name: "performance-optimization"
+  #   description: "性能优化规则"
+  #   dimension: "performance"
+  #   weight: 1.0
+  #   enabled: false
+  #   strategy: "keyword_matching"
+  #   positive_keywords:
+  #     "缓存策略": 15
+  #     "异步处理": 12
+  #     "性能优化": 10
+  #     "数据库索引": 8
+  #   negative_keywords:
+  #     "性能问题": -15
+  #     "内存泄漏": -20
+
+  # 安全性规则（如果启用了security维度）
+  # - name: "security-basic"
+  #   description: "基础安全规则"
+  #   dimension: "security"
+  #   weight: 1.0
+  #   enabled: false
+  #   strategy: "keyword_matching"
+  #   positive_keywords:
+  #     "输入验证": 15
+  #     "数据加密": 15
+  #     "SQL注入防护": 12
+  #     "XSS防护": 12
+  #     "认证授权": 10
+  #   negative_keywords:
+  #     "安全漏洞": -20
+  #     "明文密码": -18
 
 # ==================== AST分析配置 ====================
 ast_analysis:
