@@ -48,7 +48,6 @@ public class HackathonCommandLineApp {
     private final ProjectAnalysisService analysisService;
     private final ReportGenerationService reportService;
     private final LocalFileSystemAdapter fileSystemAdapter;
-    private final Configuration configuration;
     private final HackathonScoringService scoringService;
     private final HackathonScoringConfig scoringConfig;
 
@@ -56,12 +55,10 @@ public class HackathonCommandLineApp {
     public HackathonCommandLineApp(
             ProjectAnalysisService analysisService,
             ReportGenerationService reportService,
-            LocalFileSystemAdapter fileSystemAdapter,
-            Configuration configuration) {
+            LocalFileSystemAdapter fileSystemAdapter) {
         this.analysisService = analysisService;
         this.reportService = reportService;
         this.fileSystemAdapter = fileSystemAdapter;
-        this.configuration = configuration;
         // 初始化黑客松评分服务（动态配置版）
         this.scoringService = new HackathonScoringService();
         this.scoringConfig = HackathonScoringConfig.createDefault();
@@ -95,7 +92,7 @@ public class HackathonCommandLineApp {
             log.error("配置错误: {}", e.getMessage());
             System.err.println("❌ 配置错误: " + e.getMessage());
             System.err.println("\n请检查:");
-            System.err.println("  1. 环境变量 AI_API_KEY 或 DEEPSEEK_API_KEY 是否设置");
+            System.err.println("  1. 环境变量 AI_API_KEY 是否设置");
             System.err.println("  2. config.yaml 文件是否正确配置");
             System.exit(1);
         } catch (IllegalArgumentException e) {

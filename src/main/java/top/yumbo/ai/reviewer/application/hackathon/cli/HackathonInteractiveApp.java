@@ -125,10 +125,9 @@ public class HackathonInteractiveApp {
 
         // 2. 选择输入方式
         System.out.println("\n选择项目来源:");
-        System.out.println("  1. GitHub URL");
-        System.out.println("  2. Gitee URL");
-        System.out.println("  3. 本地目录");
-        System.out.print("选择 [1-3]: ");
+        System.out.println("  1. GitHub/Gitee/Gitlab/ip URL");
+        System.out.println("  2. 本地目录");
+        System.out.print("选择 [1-2]: ");
 
         String sourceChoice = scanner.nextLine().trim();
         String url = null;
@@ -136,17 +135,14 @@ public class HackathonInteractiveApp {
 
         switch (sourceChoice) {
             case "1" -> {
-                System.out.print("GitHub URL: ");
+                System.out.print("Git URL: ");
                 url = scanner.nextLine().trim();
             }
             case "2" -> {
-                System.out.print("Gitee URL: ");
-                url = scanner.nextLine().trim();
-            }
-            case "3" -> {
                 System.out.print("本地目录: ");
                 directory = scanner.nextLine().trim();
             }
+
             default -> {
                 System.out.println("❌ 无效选项");
                 return;

@@ -184,13 +184,6 @@ public class ConfigurationLoader {
             log.debug("AI API Key 从环境变量覆盖");
         }
 
-        // 兼容旧的环境变量名
-        String deepseekApiKey = System.getenv("DEEPSEEK_API_KEY");
-        if (deepseekApiKey != null && !deepseekApiKey.isBlank() && config.getAiApiKey() == null) {
-            config.setAiApiKey(deepseekApiKey);
-            log.debug("AI API Key 从 DEEPSEEK_API_KEY 环境变量覆盖");
-        }
-
         String aiModel = System.getenv("AI_MODEL");
         if (aiModel != null && !aiModel.isBlank()) {
             config.setAiModel(aiModel);

@@ -195,8 +195,11 @@ public class APIAdapter {
     }
 
     private DeepSeekAIAdapter createDefaultAIAdapter() {
-        String apiKey = System.getenv("DEEPSEEK_API_KEY");
-
+        log.info("将使用Deepseek作为默认AI服务");
+        String apiKey = System.getenv("AI_API_KEY");
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("AI_API_KEY环境变量未设置，无法使用Deepseek AI服务");
+        }
         return new DeepSeekAIAdapter(new AIServiceConfig(
                 apiKey, null, null, 4000, 0.3, 3, 3, 1000, 30000, 60000, null
         ));
@@ -214,7 +217,8 @@ public class APIAdapter {
 
     // ==================== API请求/响应对象 ====================
 
-    public record AnalysisRequest(String projectPath, String configuration) {}
+    public record AnalysisRequest(String projectPath, String configuration) {
+    }
 
     public record AnalysisResponse(
             boolean success,
@@ -224,14 +228,16 @@ public class APIAdapter {
             java.util.Map<String, Integer> dimensionScores,
             long durationMillis,
             String error
-    ) {}
+    ) {
+    }
 
     public record AsyncAnalysisResponse(
             boolean success,
             String taskId,
             String message,
             String error
-    ) {}
+    ) {
+    }
 
     public record TaskStatusResponse(
             boolean success,
@@ -241,7 +247,8 @@ public class APIAdapter {
             String currentPhase,
             boolean completed,
             String error
-    ) {}
+    ) {
+    }
 
     public record ReportResponse(
             boolean success,
@@ -250,13 +257,15 @@ public class APIAdapter {
             String content,
             int overallScore,
             String error
-    ) {}
+    ) {
+    }
 
     public record CancelResponse(
             boolean success,
             String taskId,
             String message,
             String error
-    ) {}
+    ) {
+    }
 }
 

@@ -83,7 +83,7 @@ public class CommandLineAdapter {
             log.error("配置错误: {}", e.getMessage());
             System.err.println("❌ 配置错误: " + e.getMessage());
             System.err.println("\n请检查:");
-            System.err.println("  1. 环境变量 AI_API_KEY 或 DEEPSEEK_API_KEY 是否设置");
+            System.err.println("  1. 环境变量 AI_API_KEY 是否设置");
             System.err.println("  2. config.yaml 文件是否正确配置");
             System.exit(1);
         } catch (IllegalArgumentException e) {
