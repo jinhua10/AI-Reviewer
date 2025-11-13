@@ -3,7 +3,9 @@ package top.yumbo.ai.reviewer.infrastructure.di;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
+import top.yumbo.ai.reviewer.application.port.output.ASTParserPort;
 import top.yumbo.ai.reviewer.adapter.output.cache.FileCacheAdapter;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
@@ -49,6 +51,7 @@ public class ApplicationModule extends AbstractModule {
         // 绑定输出端口到实现
         bind(CachePort.class).to(FileCacheAdapter.class).in(Singleton.class);
         bind(FileSystemPort.class).to(LocalFileSystemAdapter.class).in(Singleton.class);
+        bind(ASTParserPort.class).to(ASTParserFactory.class).in(Singleton.class);
     }
 
     /**

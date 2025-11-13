@@ -100,13 +100,24 @@ public class DeepSeekAIAdapter implements AIServicePort {
                 concurrencyLimiter.acquire();
                 activeRequests.incrementAndGet();
 
-                log.debug("开始AI分析，提示词长度: {}, 活跃请求: {}",
+                log.info("开始AI分析，提示词长度: {} 字符, 活跃请求: {}",
                         prompt.length(), activeRequests.get());
 
-                log.info("AI分析提示词: {}", prompt);
+                // 检查提示词是否包含AST内容
+                boolean hasASTContent = prompt.contains("## 代码结构分析") ||
+                                       prompt.contains("## 代码质量指标");
+                log.info("提示词包含AST内容: {}", hasASTContent ? "✅ 是" : "❌ 否");
+
+
+                log.info("提示词预览: {}", prompt);
+
                 String result = doAnalyzeWithRetry(prompt);
-                log.debug("AI分析完成");
-                log.info("AI分析结果: {}", result);
+                log.info("AI分析完成，响应长度: {} 字符", result != null ? result.length() : 0);
+
+                // 输出响应前200字符
+                if (result != null && result.length() > 0) {
+                    log.info("AI响应预览: {}", result);
+                }
                 return result;
 
             } catch (Exception e) {

@@ -55,7 +55,33 @@ public class DependencyGraph {
     }
 
     /**
-     * 检测循环依赖
+     * 获取总依赖数量
+     */
+    public int getTotalDependencies() {
+        return dependencies.values().stream()
+            .mapToInt(Set::size)
+            .sum();
+    }
+
+    /**
+     * 检测是否存在循环依赖
+     */
+    public boolean hasCyclicDependencies() {
+        Set<String> visited = new HashSet<>();
+        Set<String> recursionStack = new HashSet<>();
+
+        for (String className : dependencies.keySet()) {
+            if (!visited.contains(className)) {
+                if (detectCycle(className, visited, recursionStack)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 检测指定类的循环依赖
      */
     public boolean hasCyclicDependency(String className) {
         Set<String> visited = new HashSet<>();
