@@ -1,0 +1,163 @@
+# 黑客松评分配置
+# Hackathon Scoring Configuration
+
+# ==================== 评分维度权重 (总和必须为1.0) ====================
+dimensions:
+  code_quality_weight: 0.40      # 代码质量权重 40%
+  innovation_weight: 0.30        # 创新性权重 30%
+  completeness_weight: 0.20      # 完成度权重 20%
+  documentation_weight: 0.10     # 文档质量权重 10%
+
+# ==================== 代码质量子维度权重 (总和必须为1.0) ====================
+code_quality:
+  base_quality_weight: 0.40      # 基础质量 40%
+  complexity_weight: 0.30        # 复杂度控制 30%
+  code_smell_weight: 0.20        # 代码坏味道 20%
+  architecture_weight: 0.10      # 架构设计 10%
+
+# ==================== 创新性子维度权重 (总和必须为1.0) ====================
+innovation:
+  tech_stack_weight: 0.30        # 技术栈创新 30%
+  design_pattern_weight: 0.30    # 设计模式 30%
+  ai_evaluation_weight: 0.25     # AI评价 25%
+  uniqueness_weight: 0.15        # 独特性 15%
+
+# ==================== 完成度子维度权重 (总和必须为1.0) ====================
+completeness:
+  structure_weight: 0.40         # 代码结构 40%
+  functionality_weight: 0.30     # 功能实现 30%
+  test_coverage_weight: 0.20     # 测试覆盖 20%
+  code_standard_weight: 0.10     # 代码规范 10%
+
+# ==================== 复杂度评分阈值 ====================
+complexity:
+  excellent: 5.0                 # < 5.0 优秀 (满分)
+  good: 7.0                      # 5.0-7.0 良好 (扣2分)
+  medium: 10.0                   # 7.0-10.0 中等 (扣5分)
+  poor: 15.0                     # 10.0-15.0 较差 (扣10分)
+  # > 15.0 很差 (扣15分)
+
+  high_complexity_ratio_warning: 0.15   # 高复杂度方法占比警戒线 15%
+  high_complexity_ratio_critical: 0.30  # 高复杂度方法占比危险线 30%
+
+# ==================== 代码坏味道扣分 ====================
+code_smell_penalties:
+  CRITICAL: 3                    # 严重问题 -3分
+  HIGH: 2                        # 高优先级 -2分
+  MEDIUM: 1                      # 中等优先级 -1分
+  LOW: 0                         # 低优先级 -0分
+
+# ==================== 设计模式加分 ====================
+design_pattern_bonus:
+  # 创建型模式 (Singleton, Factory, Builder, Prototype)
+  CREATIONAL: 2
+
+  # 结构型模式 (Adapter, Decorator, Proxy, Facade, Bridge)
+  STRUCTURAL: 3
+
+  # 行为型模式 (Strategy, Observer, Command, Template, State)
+  BEHAVIORAL: 3
+
+  # 架构模式 (MVC, MVVM, Repository, Hexagonal)
+  ARCHITECTURAL: 4
+
+  # 组合使用奖励 (使用3种及以上设计模式)
+  COMBINATION: 5
+
+# ==================== AST分析配置 ====================
+ast_analysis:
+  enabled: true                  # 启用AST深度分析
+
+  # 代码度量阈值
+  thresholds:
+    long_method: 50              # 长方法阈值 (行数)
+    high_complexity: 10          # 高复杂度阈值 (圈复杂度)
+    god_class_methods: 20        # 上帝类-方法数阈值
+    god_class_fields: 15         # 上帝类-字段数阈值
+    too_many_parameters: 5       # 参数过多阈值
+    max_nesting_depth: 4         # 最大嵌套深度
+
+  # 类规模评分标准
+  class_count:
+    excellent: 20                # >= 20个类
+    good: 10                     # >= 10个类
+    medium: 5                    # >= 5个类
+    basic: 3                     # >= 3个类
+
+  # 方法数量评分标准
+  method_count:
+    excellent: 50                # >= 50个方法
+    good: 30                     # >= 30个方法
+    medium: 15                   # >= 15个方法
+    basic: 5                     # >= 5个方法
+
+# ==================== 架构风格评分 ====================
+architecture_styles:
+  hexagonal: 10                  # 六边形架构
+  microservices: 9               # 微服务架构
+  layered: 8                     # 分层架构
+  has_patterns: 7                # 使用设计模式
+  simple: 5                      # 简单架构
+
+# ==================== 技术栈创新关键词 ====================
+innovation_keywords:
+  - "AI"
+  - "机器学习"
+  - "深度学习"
+  - "大模型"
+  - "区块链"
+  - "云原生"
+  - "微服务"
+  - "serverless"
+  - "GraphQL"
+  - "WebAssembly"
+  - "Rust"
+  - "Kubernetes"
+  - "Docker"
+  - "React"
+  - "Vue3"
+  - "Next.js"
+  - "Spring Boot"
+  - "Redis"
+  - "MongoDB"
+  - "Elasticsearch"
+
+# ==================== 测试覆盖率评分 ====================
+test_coverage:
+  excellent: 0.20                # >= 20% 测试文件占比
+  good: 0.10                     # >= 10% 测试文件占比
+  basic: 0.05                    # >= 5% 测试文件占比
+
+# ==================== 文档质量评分 ====================
+documentation:
+  readme_weight: 0.60            # README质量权重 60%
+  code_comment_weight: 0.30      # 代码注释权重 30%
+  api_doc_weight: 0.10           # API文档权重 10%
+
+  # 注释率评分标准
+  comment_ratio:
+    optimal_min: 0.15            # 最佳注释率下限 15%
+    optimal_max: 0.30            # 最佳注释率上限 30%
+    good: 0.10                   # 良好注释率 >= 10%
+    basic: 0.05                  # 基本注释率 >= 5%
+
+# ==================== 代码行数评分标准 ====================
+code_lines:
+  excellent: 2000                # >= 2000行
+  good: 1000                     # >= 1000行
+  medium: 500                    # >= 500行
+  basic: 200                     # >= 200行
+
+# ==================== 文件数量评分标准 ====================
+file_count:
+  excellent: 20                  # >= 20个文件
+  good: 10                       # >= 10个文件
+  medium: 5                      # >= 5个文件
+  basic: 3                       # >= 3个文件
+
+# ==================== 日志配置 ====================
+logging:
+  detail_level: INFO             # 详细程度: DEBUG, INFO, WARN, ERROR
+  log_ast_metrics: true          # 记录AST度量详情
+  log_score_breakdown: true      # 记录评分明细
+

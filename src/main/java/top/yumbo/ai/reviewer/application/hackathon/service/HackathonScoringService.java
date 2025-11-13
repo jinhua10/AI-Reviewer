@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
 import top.yumbo.ai.reviewer.application.port.output.ASTParserPort;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
+import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScoringConfig;
 import top.yumbo.ai.reviewer.domain.model.Project;
 import top.yumbo.ai.reviewer.domain.model.ReviewReport;
 import top.yumbo.ai.reviewer.domain.model.SourceFile;
@@ -13,6 +14,7 @@ import top.yumbo.ai.reviewer.domain.model.ast.ComplexityMetrics;
 import top.yumbo.ai.reviewer.domain.model.ast.DesignPattern;
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -32,19 +34,17 @@ public class HackathonScoringService {
     // AST解析器工厂
     private final ASTParserPort astParser;
 
-    // 创新技术关键词
-    private static final List<String> INNOVATION_KEYWORDS = List.of(
-        "AI", "机器学习", "深度学习", "大模型", "区块链", "云原生",
-        "微服务", "serverless", "GraphQL", "WebAssembly", "Rust",
-        "Kubernetes", "Docker", "React", "Vue3", "Next.js"
-    );
+    // 评分配置
+    private final HackathonScoringConfig config;
 
     /**
-     * 构造函数
+     * 构造函数（使用默认配置）
      */
     public HackathonScoringService() {
         this.astParser = new ASTParserFactory();
-        log.info("黑客松评分服务初始化完成（AST增强版）");
+        this.config = HackathonScoringConfig.createDefault();
+        log.info("黑客松评分服务初始化完成（AST增强版 + 默认配置）");
+        logConfiguration();
     }
 
     /**
@@ -52,10 +52,42 @@ public class HackathonScoringService {
      */
     public HackathonScoringService(ASTParserPort astParser) {
         this.astParser = astParser;
-        log.info("黑客松评分服务初始化完成（自定义AST解析器）");
+        this.config = HackathonScoringConfig.createDefault();
+        log.info("黑客松评分服务初始化完成（自定义AST解析器 + 默认配置）");
+        logConfiguration();
     }
 
-    // README 质量评分正则
+    /**
+     * 构造函数（完整配置）
+     */
+    public HackathonScoringService(ASTParserPort astParser, HackathonScoringConfig config) {
+        this.astParser = astParser;
+        this.config = config != null ? config : HackathonScoringConfig.createDefault();
+        log.info("黑客松评分服务初始化完成（自定义AST解析器 + 自定义配置）");
+        logConfiguration();
+    }
+
+    /**
+     * 输出配置信息
+     */
+    private void logConfiguration() {
+        log.info("评分维度权重: 代码质量={}, 创新性={}, 完成度={}, 文档={}",
+            config.getCodeQualityWeight(),
+            config.getInnovationWeight(),
+            config.getCompletenessWeight(),
+            config.getDocumentationWeight());
+        log.info("AST深度分析: {}", config.isEnableASTAnalysis() ? "启用" : "禁用");
+    }
+
+    // 创新技术关键词列表
+    private static final List<String> INNOVATION_KEYWORDS = List.of(
+        "AI", "机器学习", "深度学习", "大模型", "区块链", "云原生",
+        "微服务", "serverless", "GraphQL", "WebAssembly", "Rust",
+        "Kubernetes", "Docker", "React", "Vue3", "Next.js",
+        "Spring Boot", "Redis", "MongoDB", "Elasticsearch"
+    );
+
+    // README质量评分正则
     private static final Pattern README_SECTIONS = Pattern.compile(
         "(简介|Introduction|功能|Features|安装|Installation|使用|Usage|API|文档|Documentation)",
         Pattern.CASE_INSENSITIVE
@@ -112,134 +144,177 @@ public class HackathonScoringService {
     }
 
     /**
-     * 计算代码质量分数 (0-100) - AST增强版
+     * 计算代码质量分数 (0-100) - AST增强版 + 配置化
      *
-     * 评分维度：
-     * 1. 基础质量（核心框架评分）40%
-     * 2. 复杂度控制 30%
-     * 3. 代码坏味道 20%
-     * 4. 架构设计 10%
+     * 评分维度（可配置权重）：
+     * 1. 基础质量（核心框架评分）默认40%
+     * 2. 复杂度控制 默认30%
+     * 3. 代码坏味道 默认20%
+     * 4. 架构设计 默认10%
      */
     private int calculateCodeQualityWithAST(ReviewReport reviewReport, CodeInsight codeInsight) {
         // 基础分数（来自核心框架）
         int baseScore = reviewReport.getOverallScore();
 
         // 如果没有AST分析，直接返回基础分数
-        if (codeInsight == null) {
+        if (codeInsight == null || !config.isEnableASTAnalysis()) {
+            log.info("未使用AST分析，返回基础评分: {}", baseScore);
             return baseScore;
         }
 
-        // 1. 基础质量 (40%)
-        int baseQualityScore = (int) (baseScore * 0.4);
+        // 使用配置的权重计算各维度分数
+        double baseQualityScore = baseScore * config.getBaseQualityWeight();
+        double complexityScore = calculateComplexityScoreWithConfig(codeInsight) * config.getComplexityWeight() * 100;
+        double codeSmellScore = calculateCodeSmellScoreWithConfig(codeInsight) * config.getCodeSmellWeight() * 100;
+        double architectureScore = calculateArchitectureScoreWithConfig(codeInsight) * config.getArchitectureWeight() * 100;
 
-        // 2. 复杂度控制 (30%)
-        int complexityScore = calculateComplexityScore(codeInsight);
+        int totalScore = (int) Math.round(baseQualityScore + complexityScore + codeSmellScore + architectureScore);
 
-        // 3. 代码坏味道 (20%)
-        int codeSmellScore = calculateCodeSmellScore(codeInsight);
-
-        // 4. 架构设计 (10%)
-        int architectureScore = calculateArchitectureScore(codeInsight);
-
-        int totalScore = baseQualityScore + complexityScore + codeSmellScore + architectureScore;
-
-        log.debug("代码质量评分明细: 基础={}, 复杂度={}, 坏味道={}, 架构={}, 总计={}",
-            baseQualityScore, complexityScore, codeSmellScore, architectureScore, totalScore);
+        log.info("代码质量评分明细: 基础={}, 复杂度={}, 坏味道={}, 架构={}, 总计={}",
+            (int)baseQualityScore, (int)complexityScore, (int)codeSmellScore, (int)architectureScore, totalScore);
 
         return Math.min(100, totalScore);
     }
 
     /**
-     * 计算复杂度得分 (0-30)
+     * 计算复杂度得分 (0.0-1.0) - 使用配置阈值
      */
-    private int calculateComplexityScore(CodeInsight codeInsight) {
+    private double calculateComplexityScoreWithConfig(CodeInsight codeInsight) {
         ComplexityMetrics metrics = codeInsight.getComplexityMetrics();
         if (metrics == null) {
-            return 15; // 默认中等分数
+            return 0.5; // 默认中等分数
         }
 
-        int score = 30; // 满分
-
-        // 平均圈复杂度评分
+        double score = 1.0; // 满分
         double avgComplexity = metrics.getAvgCyclomaticComplexity();
-        if (avgComplexity > 15) {
-            score -= 15; // 很差
-        } else if (avgComplexity > 10) {
-            score -= 10; // 较差
-        } else if (avgComplexity > 7) {
-            score -= 5;  // 中等
-        } else if (avgComplexity > 5) {
-            score -= 2;  // 良好
-        }
-        // 否则保持满分（优秀）
 
-        // 高复杂度方法数量扣分
+        // 使用配置的复杂度阈值
+        Map<String, Double> thresholds = config.getComplexityThresholds();
+        double excellent = thresholds.getOrDefault("excellent", 5.0);
+        double good = thresholds.getOrDefault("good", 7.0);
+        double medium = thresholds.getOrDefault("medium", 10.0);
+        double poor = thresholds.getOrDefault("poor", 15.0);
+
+        // 根据平均复杂度评分
+        if (avgComplexity < excellent) {
+            score = 1.0; // 优秀
+        } else if (avgComplexity < good) {
+            score = 0.93; // 良好
+        } else if (avgComplexity < medium) {
+            score = 0.83; // 中等
+        } else if (avgComplexity < poor) {
+            score = 0.67; // 较差
+        } else {
+            score = 0.50; // 很差
+        }
+
+        // 高复杂度方法占比扣分
         int highComplexityCount = metrics.getHighComplexityMethodCount();
         int totalMethods = metrics.getTotalMethods();
         if (totalMethods > 0) {
             double highComplexityRatio = (double) highComplexityCount / totalMethods;
-            if (highComplexityRatio > 0.3) {
-                score -= 10; // 超过30%的方法复杂度高
+            if (highComplexityRatio > 0.30) {
+                score -= 0.33; // 危险水平
             } else if (highComplexityRatio > 0.15) {
-                score -= 5;  // 超过15%的方法复杂度高
+                score -= 0.17; // 警戒水平
             }
         }
 
-        return Math.max(0, score);
+        // 长方法扣分
+        int longMethodCount = metrics.getLongMethodCount();
+        if (longMethodCount > 0 && totalMethods > 0) {
+            double longMethodRatio = (double) longMethodCount / totalMethods;
+            if (longMethodRatio > 0.20) {
+                score -= 0.10; // 超过20%的长方法
+            }
+        }
+
+        log.debug("复杂度评分: 平均复杂度={}, 高复杂度方法占比={}%, 长方法数={}, 得分={}",
+            String.format("%.2f", avgComplexity),
+            String.format("%.1f", (double)highComplexityCount/totalMethods*100),
+            longMethodCount,
+            String.format("%.2f", score));
+
+        return Math.max(0.0, Math.min(1.0, score));
     }
 
     /**
-     * 计算代码坏味道得分 (0-20)
+     * 计算代码坏味道得分 (0.0-1.0) - 使用配置的扣分规则
      */
-    private int calculateCodeSmellScore(CodeInsight codeInsight) {
+    private double calculateCodeSmellScoreWithConfig(CodeInsight codeInsight) {
         List<CodeSmell> smells = codeInsight.getCodeSmells();
         if (smells == null || smells.isEmpty()) {
-            return 20; // 无坏味道，满分
+            log.debug("未检测到代码坏味道，满分");
+            return 1.0; // 无坏味道，满分
         }
 
-        double score = 20.0;
+        double maxDeduction = 20.0; // 最大扣分
+        double totalDeduction = 0.0;
 
-        // 根据严重程度扣分
+        // 使用配置的扣分规则
+        Map<String, Integer> penalties = config.getCodeSmellPenalties();
+
+        // 统计各级别坏味道数量
+        int criticalCount = 0, highCount = 0, mediumCount = 0, lowCount = 0;
+
         for (CodeSmell smell : smells) {
+            int penalty = penalties.getOrDefault(smell.getSeverity().name(), 1);
+            totalDeduction += penalty;
+
+            // 统计数量
             switch (smell.getSeverity()) {
-                case CRITICAL -> score -= 3;
-                case HIGH -> score -= 2;
-                case MEDIUM -> score -= 1;
-                case LOW -> score -= 0.5;
+                case CRITICAL -> criticalCount++;
+                case HIGH -> highCount++;
+                case MEDIUM -> mediumCount++;
+                case LOW -> lowCount++;
             }
         }
 
-        return Math.max(0, (int) Math.round(score));
+        log.debug("代码坏味道统计: CRITICAL={}, HIGH={}, MEDIUM={}, LOW={}, 总扣分={}",
+            criticalCount, highCount, mediumCount, lowCount, totalDeduction);
+
+        double score = 1.0 - (totalDeduction / maxDeduction);
+        return Math.max(0.0, Math.min(1.0, score));
     }
 
     /**
-     * 计算架构设计得分 (0-10)
+     * 计算架构设计得分 (0.0-1.0) - 使用配置的架构评分
      */
-    private int calculateArchitectureScore(CodeInsight codeInsight) {
+    private double calculateArchitectureScoreWithConfig(CodeInsight codeInsight) {
         if (codeInsight.getStructure() == null) {
-            return 5; // 默认中等分数
+            log.debug("无项目结构信息，返回默认分数");
+            return 0.5; // 默认中等分数
         }
 
         String architecture = codeInsight.getStructure().getArchitectureStyle();
+        double score = 0.5; // 默认分数
 
         // 根据架构风格评分
         if (architecture != null) {
             if (architecture.contains("六边形") || architecture.contains("Hexagonal")) {
-                return 10; // 六边形架构，满分
-            } else if (architecture.contains("分层") || architecture.contains("Layered")) {
-                return 8; // 分层架构，良好
+                score = 1.0; // 六边形架构，满分
             } else if (architecture.contains("微服务") || architecture.contains("Microservice")) {
-                return 9; // 微服务架构，优秀
+                score = 0.9; // 微服务架构
+            } else if (architecture.contains("分层") || architecture.contains("Layered")) {
+                score = 0.8; // 分层架构
+            } else {
+                score = 0.6; // 其他架构
             }
         }
 
-        // 检查设计模式使用
+        // 检查设计模式使用（加分项）
         if (codeInsight.getDesignPatterns() != null &&
             !codeInsight.getDesignPatterns().getPatterns().isEmpty()) {
-            return 7; // 使用了设计模式，较好
+            int patternCount = codeInsight.getDesignPatterns().getPatterns().size();
+            score += Math.min(0.2, patternCount * 0.05); // 每个模式+5%，最多+20%
         }
 
-        return 5; // 默认分数
+        log.debug("架构评分: 风格={}, 设计模式数={}, 得分={}",
+            architecture,
+            codeInsight.getDesignPatterns() != null ? codeInsight.getDesignPatterns().getPatterns().size() : 0,
+            String.format("%.2f", score));
+
+        return Math.max(0.0, Math.min(1.0, score));
     }
 
     /**
@@ -314,13 +389,16 @@ public class HackathonScoringService {
      */
     private int calculateTechStackInnovation(Project project) {
         String projectContent = collectProjectContent(project);
+        String lowerContent = projectContent.toLowerCase();
 
         long matchCount = INNOVATION_KEYWORDS.stream()
-            .filter(keyword -> projectContent.toLowerCase().contains(keyword.toLowerCase()))
+            .filter(keyword -> lowerContent.contains(keyword.toLowerCase()))
             .count();
 
         // 每个创新关键词 5 分，最高 40 分
-        return Math.min(40, (int) (matchCount * 5));
+        int score = (int) (matchCount * 5);
+        log.debug("技术栈创新性: 匹配关键词数={}, 得分={}", matchCount, score);
+        return Math.min(40, score);
     }
 
     /**
