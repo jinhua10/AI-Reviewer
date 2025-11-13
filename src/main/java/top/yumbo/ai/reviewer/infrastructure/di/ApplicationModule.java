@@ -4,12 +4,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
+import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
 import top.yumbo.ai.reviewer.application.port.output.ASTParserPort;
 import top.yumbo.ai.reviewer.adapter.output.cache.FileCacheAdapter;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GiteeRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.port.input.ProjectAnalysisUseCase;
 import top.yumbo.ai.reviewer.application.port.input.ReportGenerationUseCase;
 import top.yumbo.ai.reviewer.application.port.output.CachePort;
@@ -101,13 +100,7 @@ public class ApplicationModule extends AbstractModule {
      * 注意：这个方法不能直接注入，而是通过工厂类调用
      */
     public static RepositoryPort createRepositoryPort(String url, Path workingDir) {
-        if (url.contains("gitee.com")) {
-            return new GiteeRepositoryAdapter(workingDir);
-        } else if (url.contains("github.com")) {
-            return new GitHubRepositoryAdapter(workingDir);
-        } else {
-            throw new IllegalArgumentException("不支持的仓库 URL: " + url);
-        }
+        return new GitRepositoryAdapter(workingDir);
     }
 }
 

@@ -58,14 +58,17 @@ public class GitHubAdapter implements GitHubPort {
 
 ```java
 // 之前
-import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
 private GitHubRepositoryAdapter gitHubAdapter;
-gitHubAdapter = new GitHubRepositoryAdapter(tempWorkDir);
+gitHubAdapter =new
+
+GitHubRepositoryAdapter(tempWorkDir);
 
 // 之后
 import top.yumbo.ai.reviewer.adapter.input.hackathon.adapter.output.github.GitHubAdapter;
 private GitHubAdapter gitHubAdapter;
-gitHubAdapter = new GitHubAdapter(tempWorkDir);
+gitHubAdapter =new
+
+GitHubAdapter(tempWorkDir);
 ```
 
 ## ✅ 验证结果

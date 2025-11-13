@@ -2,13 +2,12 @@ package top.yumbo.ai.reviewer.application.hackathon.cli;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GiteeRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.hackathon.service.*;
 import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;
 import top.yumbo.ai.reviewer.application.service.ReportGenerationService;
-import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 import top.yumbo.ai.reviewer.domain.model.*;
 
 import java.nio.file.Files;
@@ -279,7 +278,7 @@ public class HackathonInteractiveApp {
     private Path cloneProject(String url) throws RepositoryPort.RepositoryException {
         System.out.println("⏳ 正在克隆项目...");
         Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "hackathon-repos");
-        RepositoryPort repoPort = new GiteeRepositoryAdapter(tempDir);
+        RepositoryPort repoPort = new GitRepositoryAdapter(tempDir);
 
         CloneRequest request = CloneRequest.builder()
                 .url(url)

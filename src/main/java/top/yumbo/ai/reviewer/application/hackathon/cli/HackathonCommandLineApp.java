@@ -5,8 +5,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitHubRepositoryAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GiteeRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonScoringService;
 import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
@@ -373,22 +372,11 @@ public class HackathonCommandLineApp {
     }
 
     /**
-     * 检测仓库适配器（GitHub或Gitee）
+     * 创建Git仓库适配器（支持 GitHub、Gitee、GitLab）
      */
     private RepositoryPort detectGitRepositoryAdapter(String url) {
         Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "hackathon-repos");
-
-        // 根据URL自动选择对应的仓库适配器
-        if (url.contains("github.com")) {
-            log.info("检测到 GitHub 仓库: {}", url);
-            return new GitHubRepositoryAdapter(tempDir);
-        } else if (url.contains("gitee.com")) {
-            log.info("检测到 Gitee 仓库: {}", url);
-            return new GiteeRepositoryAdapter(tempDir);
-        } else {
-            log.warn("无法识别仓库类型，默认使用 Gitee 适配器: {}", url);
-            return new GiteeRepositoryAdapter(tempDir);
-        }
+        return GitRepositoryAdapter.create(tempDir, url);
     }
 
     /**
