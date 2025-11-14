@@ -1,14 +1,14 @@
-package top.yumbo.ai.reviewer.infrastructure.di;
+﻿package top.yumbo.ai.reviewer.infrastructure.di;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.parser.code.ASTParserFactory;
+import top.yumbo.ai.reviewer.adapter.repository.git.GitRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
 import top.yumbo.ai.reviewer.application.port.output.ASTParserPort;
-import top.yumbo.ai.reviewer.adapter.output.cache.FileCacheAdapter;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.cache.FileCacheAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.port.input.ProjectAnalysisUseCase;
 import top.yumbo.ai.reviewer.application.port.input.ReportGenerationUseCase;
 import top.yumbo.ai.reviewer.application.port.output.CachePort;

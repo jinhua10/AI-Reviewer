@@ -1,10 +1,10 @@
-package top.yumbo.ai.reviewer.adapter.input.cli;
+﻿package top.yumbo.ai.reviewer.adapter.input.cli;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.hackathon.cli.HackathonCommandLineApp;
 import top.yumbo.ai.reviewer.application.port.input.ProjectAnalysisUseCase;
 import top.yumbo.ai.reviewer.application.port.input.ReportGenerationUseCase;

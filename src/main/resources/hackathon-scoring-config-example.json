@@ -1,0 +1,80 @@
+{
+  "scoring": {
+    "dimensions": {
+      "code_quality": {
+        "weight": 0.40,
+        "displayName": "代码质量",
+        "description": "评估代码的可读性、可维护性和技术债务",
+        "enabled": true
+      },
+      "innovation": {
+        "weight": 0.30,
+        "displayName": "创新性",
+        "description": "评估解决方案的创新程度和技术先进性",
+        "enabled": true
+      },
+      "completeness": {
+        "weight": 0.20,
+        "displayName": "完成度",
+        "description": "评估项目功能完整性和需求覆盖度",
+        "enabled": true
+      },
+      "documentation": {
+        "weight": 0.10,
+        "displayName": "文档质量",
+        "description": "评估文档完整性和可读性",
+        "enabled": true
+      }
+    },
+    "rules": [
+      {
+        "name": "code-quality-basic",
+        "type": "code_quality",
+        "weight": 1.0,
+        "strategy": "keyword_matching",
+        "description": "基础代码质量规则",
+        "enabled": true,
+        "positiveKeywords": {
+          "单元测试": 20,
+          "集成测试": 15,
+          "注释": 10,
+          "异常处理": 15
+        },
+        "negativeKeywords": {
+          "代码重复": -15,
+          "长方法": -10
+        }
+      },
+      {
+        "name": "innovation-basic",
+        "type": "innovation",
+        "weight": 1.0,
+        "strategy": "keyword_matching",
+        "description": "创新性评分规则",
+        "enabled": true,
+        "positiveKeywords": {
+          "AI": 15,
+          "机器学习": 15,
+          "区块链": 10
+        }
+      }
+    ],
+    "astAnalysis": {
+      "enabled": true,
+      "thresholds": {
+        "long_method": 50,
+        "high_complexity": 10,
+        "god_class_methods": 20,
+        "god_class_fields": 15,
+        "too_many_parameters": 5
+      }
+    },
+    "fileTypeConfigs": {
+      "image": {
+        "enabled": false,
+        "supportedFormats": ["jpg", "png", "gif"],
+        "maxSizeMb": 10
+      }
+    }
+  }
+}

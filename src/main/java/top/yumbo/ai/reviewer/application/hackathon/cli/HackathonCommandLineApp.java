@@ -1,14 +1,14 @@
-package top.yumbo.ai.reviewer.application.hackathon.cli;
+﻿package top.yumbo.ai.reviewer.application.hackathon.cli;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.reviewer.adapter.output.archive.ZipArchiveAdapter;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
-import top.yumbo.ai.reviewer.adapter.output.storage.S3StorageAdapter;
-import top.yumbo.ai.reviewer.adapter.output.storage.S3StorageConfig;
+import top.yumbo.ai.reviewer.adapter.storage.archive.ZipArchiveAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.repository.git.GitRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.s3.S3StorageAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.s3.S3StorageConfig;
 import top.yumbo.ai.reviewer.application.service.S3StorageService;
 import top.yumbo.ai.reviewer.domain.model.*;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonScoringService;

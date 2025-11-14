@@ -1,9 +1,15 @@
 package top.yumbo.ai.reviewer.domain.hackathon.model;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Data;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -358,12 +364,171 @@ public class HackathonScoringConfig {
     }
 
     /**
-     * 从配置文件加载（预留接口）
+     * 从配置文件加载
+     * 支持YAML和JSON格式
+     *
+     * @param configPath 配置文件路径
+     * @return 黑客松评分配置对象
      */
     public static HackathonScoringConfig loadFromFile(String configPath) {
-        // TODO: 实现YAML/JSON配置文件加载
-        log.warn("从配置文件加载尚未实现，使用默认配置");
-        return createDefault();
+        log.info("从配置文件加载评分配置: {}", configPath);
+
+        Path path = Paths.get(configPath);
+        if (!Files.exists(path)) {
+            log.warn("配置文件不存在: {}, 使用默认配置", configPath);
+            return createDefault();
+        }
+
+        // 根据文件扩展名选择解析器
+        if (!configPath.endsWith(".yaml") && !configPath.endsWith(".yml") && !configPath.endsWith(".json")) {
+            throw new IllegalArgumentException("不支持的配置文件格式: " + configPath + "。支持的格式: .yaml, .yml, .json");
+        }
+
+        try {
+            String content = Files.readString(path);
+
+            if (configPath.endsWith(".yaml") || configPath.endsWith(".yml")) {
+                return loadFromYaml(content);
+            } else {
+                return loadFromJson(content);
+            }
+        } catch (IOException e) {
+            log.error("加载配置文件失败: {}", configPath, e);
+            throw new RuntimeException("加载配置文件失败: " + configPath, e);
+        } catch (Exception e) {
+            log.error("解析配置文件失败: {}", configPath, e);
+            throw new RuntimeException("解析配置文件失败: " + configPath, e);
+        }
+    }
+
+    /**
+     * 从YAML内容加载配置
+     */
+    private static HackathonScoringConfig loadFromYaml(String content) throws IOException {
+        log.debug("解析YAML配置文件");
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        HackathonScoringConfigDto dto = mapper.readValue(content, HackathonScoringConfigDto.class);
+        return convertFromDto(dto);
+    }
+
+    /**
+     * 从JSON内容加载配置
+     */
+    private static HackathonScoringConfig loadFromJson(String content) throws IOException {
+        log.debug("解析JSON配置文件");
+        ObjectMapper mapper = new ObjectMapper();
+        HackathonScoringConfigDto dto = mapper.readValue(content, HackathonScoringConfigDto.class);
+        return convertFromDto(dto);
+    }
+
+    /**
+     * 将DTO转换为领域模型
+     */
+    private static HackathonScoringConfig convertFromDto(HackathonScoringConfigDto dto) {
+        if (dto == null || dto.getScoring() == null) {
+            log.warn("配置文件内容为空，使用默认配置");
+            return createDefault();
+        }
+
+        HackathonScoringConfigDto.ScoringDto scoring = dto.getScoring();
+
+        // 构建配置对象
+        HackathonScoringConfig config = HackathonScoringConfig.builder()
+                .dimensionWeights(new LinkedHashMap<>())
+                .dimensionDisplayNames(new HashMap<>())
+                .dimensionDescriptions(new HashMap<>())
+                .scoringRules(new ArrayList<>())
+                .rulesByDimension(new HashMap<>())
+                .build();
+
+        // 转换维度配置
+        if (scoring.getDimensions() != null) {
+            for (Map.Entry<String, HackathonScoringConfigDto.DimensionDto> entry : scoring.getDimensions().entrySet()) {
+                String dimensionKey = entry.getKey();
+                HackathonScoringConfigDto.DimensionDto dimension = entry.getValue();
+
+                // 检查是否启用（默认为true）
+                boolean enabled = dimension.getEnabled() == null || dimension.getEnabled();
+                if (!enabled) {
+                    log.debug("维度 {} 已禁用，跳过", dimensionKey);
+                    continue;
+                }
+
+                if (dimension.getWeight() != null) {
+                    config.getDimensionWeights().put(dimensionKey, dimension.getWeight());
+                }
+                if (dimension.getDisplayName() != null) {
+                    config.getDimensionDisplayNames().put(dimensionKey, dimension.getDisplayName());
+                }
+                if (dimension.getDescription() != null) {
+                    config.getDimensionDescriptions().put(dimensionKey, dimension.getDescription());
+                }
+            }
+        }
+
+        // 转换规则配置
+        if (scoring.getRules() != null) {
+            for (HackathonScoringConfigDto.RuleDto ruleDto : scoring.getRules()) {
+                // 检查是否启用（默认为true）
+                boolean enabled = ruleDto.getEnabled() == null || ruleDto.getEnabled();
+
+                // 跳过禁用的规则
+                if (!enabled) {
+                    log.debug("规则 {} 已禁用，跳过", ruleDto.getName());
+                    continue;
+                }
+
+                ScoringRule.ScoringRuleBuilder ruleBuilder = ScoringRule.builder()
+                        .name(ruleDto.getName())
+                        .type(ruleDto.getType())
+                        .weight(ruleDto.getWeight() != null ? ruleDto.getWeight() : 1.0)
+                        .strategy(ruleDto.getStrategy())
+                        .description(ruleDto.getDescription())
+                        .enabled(enabled);
+
+                if (ruleDto.getPositiveKeywords() != null) {
+                    ruleBuilder.positiveKeywords(ruleDto.getPositiveKeywords());
+                }
+                if (ruleDto.getNegativeKeywords() != null) {
+                    ruleBuilder.negativeKeywords(ruleDto.getNegativeKeywords());
+                }
+
+                config.addScoringRule(ruleBuilder.build());
+            }
+        }
+
+        // 转换AST分析配置
+        if (scoring.getAstAnalysis() != null) {
+            HackathonScoringConfigDto.AstAnalysisDto astDto = scoring.getAstAnalysis();
+            if (astDto.getEnabled() != null) {
+                config.setEnableASTAnalysis(astDto.getEnabled());
+            }
+            if (astDto.getThresholds() != null) {
+                config.setAstThresholds(new HashMap<>(astDto.getThresholds()));
+            }
+        }
+
+        // 使用默认的复杂度阈值和代码坏味道扣分
+        config.setComplexityThresholds(createDefaultComplexityThresholds());
+        config.setCodeSmellPenalties(createDefaultCodeSmellPenalties());
+        config.setDesignPatternBonus(createDefaultDesignPatternBonus());
+
+        // 验证配置（仅警告，不强制要求权重为1.0）
+        if (config.getDimensionWeights().isEmpty()) {
+            log.error("配置文件验证失败：至少需要一个评分维度");
+            throw new IllegalArgumentException("配置文件验证失败，至少需要一个评分维度");
+        }
+
+        // 验证权重总和（仅警告）
+        if (!config.validateWeights()) {
+            log.warn("注意：维度权重总和不为1.0，这可能影响评分结果");
+        }
+
+        log.info("配置文件加载成功: {} 个维度, {} 个规则",
+                config.getDimensionWeights().size(),
+                config.getScoringRules().size());
+
+        return config;
     }
 }
 

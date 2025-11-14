@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.adapter.output.storage;
+package top.yumbo.ai.reviewer.adapter.storage.s3;
 
 import lombok.Builder;
 

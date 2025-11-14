@@ -1,8 +1,8 @@
-package top.yumbo.ai.reviewer.integration.adapter;
+﻿package top.yumbo.ai.reviewer.integration.adapter;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.port.output.FileSystemPort;
 import top.yumbo.ai.reviewer.application.service.ReportGenerationService;
 import top.yumbo.ai.reviewer.domain.model.ReviewReport;

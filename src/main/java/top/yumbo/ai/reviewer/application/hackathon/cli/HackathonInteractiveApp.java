@@ -1,8 +1,8 @@
-package top.yumbo.ai.reviewer.application.hackathon.cli;
+﻿package top.yumbo.ai.reviewer.application.hackathon.cli;
 
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
-import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.repository.git.GitRepositoryAdapter;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonAnalysisService;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonIntegrationService;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonScoringService;

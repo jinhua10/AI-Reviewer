@@ -1,8 +1,8 @@
-package top.yumbo.ai.reviewer.application.hackathon.service;
+﻿package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
+import top.yumbo.ai.reviewer.adapter.parser.code.ASTParserFactory;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
 import top.yumbo.ai.reviewer.domain.model.Project;
 import top.yumbo.ai.reviewer.domain.model.ProjectType;

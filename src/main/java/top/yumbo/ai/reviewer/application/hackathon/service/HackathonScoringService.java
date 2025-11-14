@@ -1,7 +1,7 @@
-package top.yumbo.ai.reviewer.application.hackathon.service;
+﻿package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
+import top.yumbo.ai.reviewer.adapter.parser.code.ASTParserFactory;
 import top.yumbo.ai.reviewer.application.port.output.ASTParserPort;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScoringConfig;

@@ -1,4 +1,4 @@
-package top.yumbo.ai.reviewer.application.hackathon.service;
+﻿package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +8,7 @@ import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonProject;
 import top.yumbo.ai.reviewer.domain.hackathon.model.HackathonScore;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.service.ProjectAnalysisService;
 import top.yumbo.ai.reviewer.domain.hackathon.model.Participant;
 import top.yumbo.ai.reviewer.domain.hackathon.model.Submission;

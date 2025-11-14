@@ -1,10 +1,10 @@
-package top.yumbo.ai.reviewer.adapter.input.api;
+﻿package top.yumbo.ai.reviewer.adapter.input.api;
 
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.reviewer.adapter.output.ai.AIAdapterFactory;
-import top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig;
-import top.yumbo.ai.reviewer.adapter.output.cache.FileCacheAdapter;
-import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
+import top.yumbo.ai.reviewer.adapter.ai.AIAdapterFactory;
+import top.yumbo.ai.reviewer.adapter.ai.config.AIServiceConfig;
+import top.yumbo.ai.reviewer.adapter.storage.cache.FileCacheAdapter;
+import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.application.port.input.ProjectAnalysisUseCase;
 import top.yumbo.ai.reviewer.application.port.input.ReportGenerationUseCase;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;

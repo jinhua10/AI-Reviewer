@@ -1,0 +1,123 @@
+# 黑客松评分配置示例
+# 支持动态配置评分维度、规则和阈值
+
+scoring:
+  # 评分维度配置
+  dimensions:
+    code_quality:
+      weight: 0.40
+      display_name: "代码质量"
+      description: "评估代码的可读性、可维护性和技术债务"
+      enabled: true
+
+    innovation:
+      weight: 0.30
+      display_name: "创新性"
+      description: "评估解决方案的创新程度和技术先进性"
+      enabled: true
+
+    completeness:
+      weight: 0.20
+      display_name: "完成度"
+      description: "评估项目功能完整性和需求覆盖度"
+      enabled: true
+
+    documentation:
+      weight: 0.10
+      display_name: "文档质量"
+      description: "评估文档完整性和可读性"
+      enabled: true
+
+    # 扩展维度示例（未来支持多文件类型）
+    media_quality:
+      weight: 0.15
+      display_name: "媒体质量"
+      description: "评估图片、视频等媒体文件的质量"
+      enabled: false  # 默认禁用
+
+    document_quality:
+      weight: 0.10
+      display_name: "文档规范性"
+      description: "评估PDF、Word文档的规范性"
+      enabled: false  # 默认禁用
+
+  # 评分规则配置
+  rules:
+    - name: "code-quality-basic"
+      type: "code_quality"
+      weight: 1.0
+      strategy: "keyword_matching"
+      description: "基础代码质量规则"
+      enabled: true
+      positive_keywords:
+        "单元测试": 20
+        "集成测试": 15
+        "注释": 10
+        "异常处理": 15
+        "日志记录": 10
+      negative_keywords:
+        "代码重复": -15
+        "长方法": -10
+        "魔法数字": -5
+
+    - name: "innovation-basic"
+      type: "innovation"
+      weight: 1.0
+      strategy: "keyword_matching"
+      description: "创新性评分规则"
+      enabled: true
+      positive_keywords:
+        "AI": 15
+        "机器学习": 15
+        "深度学习": 20
+        "区块链": 10
+        "云原生": 12
+
+    - name: "completeness-basic"
+      type: "completeness"
+      weight: 1.0
+      strategy: "keyword_matching"
+      description: "完成度评分规则"
+      enabled: true
+      positive_keywords:
+        "README": 10
+        "文档": 8
+        "测试": 15
+
+  # AST分析配置
+  ast_analysis:
+    enabled: true
+    thresholds:
+      long_method: 50
+      high_complexity: 10
+      god_class_methods: 20
+      god_class_fields: 15
+      too_many_parameters: 5
+
+  # 未来扩展：文件类型特定配置
+  file_type_configs:
+    image:
+      enabled: false
+      supported_formats: ["jpg", "png", "gif", "svg"]
+      max_size_mb: 10
+      quality_check:
+        min_resolution: [800, 600]
+        max_resolution: [4096, 4096]
+
+    video:
+      enabled: false
+      supported_formats: ["mp4", "avi", "mov"]
+      max_size_mb: 100
+      quality_check:
+        min_duration_seconds: 10
+        max_duration_seconds: 600
+        min_resolution: [720, 480]
+
+    document:
+      enabled: false
+      supported_formats: ["pdf", "docx", "pptx"]
+      max_size_mb: 20
+      quality_check:
+        min_pages: 1
+        max_pages: 100
+

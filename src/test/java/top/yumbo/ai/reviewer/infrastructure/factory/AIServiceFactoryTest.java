@@ -1,7 +1,7 @@
-package top.yumbo.ai.reviewer.infrastructure.factory;
+﻿package top.yumbo.ai.reviewer.infrastructure.factory;
 
 import org.junit.jupiter.api.*;
-import top.yumbo.ai.reviewer.adapter.output.ai.LoggingAIServiceDecorator;
+import top.yumbo.ai.reviewer.adapter.ai.decorator.LoggingAIServiceDecorator;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
 import top.yumbo.ai.reviewer.infrastructure.config.Configuration;
 

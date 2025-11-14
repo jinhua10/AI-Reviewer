@@ -1,8 +1,8 @@
-package top.yumbo.ai.reviewer;
+﻿package top.yumbo.ai.reviewer;
 
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.ASTParserFactory;
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.JavaScriptParserAdapter;
-import top.yumbo.ai.reviewer.adapter.output.ast.parser.PythonParserAdapter;
+import top.yumbo.ai.reviewer.adapter.parser.code.ASTParserFactory;
+import top.yumbo.ai.reviewer.adapter.parser.code.JavaScriptParserAdapter;
+import top.yumbo.ai.reviewer.adapter.parser.code.PythonParserAdapter;
 import top.yumbo.ai.reviewer.application.service.prompt.AIPromptBuilder;
 import top.yumbo.ai.reviewer.domain.model.Project;
 import top.yumbo.ai.reviewer.domain.model.ProjectType;
