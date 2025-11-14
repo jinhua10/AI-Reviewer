@@ -93,5 +93,5 @@ AWS Bedrock 适配器初始化完成 - 模型: arn:aws:bedrock:us-east-1:..., �
 
 ## 详细文档
 
-参考：[doc/AWS-BEDROCK-IAM-SETUP.md](./AWS-BEDROCK-IAM-SETUP.md)
+参考：[doc/AWS-BEDROCK-IAM-SETUP.md](AWS-BEDROCK-IAM-SETUP.md)
 

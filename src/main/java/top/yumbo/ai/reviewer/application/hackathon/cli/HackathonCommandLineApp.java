@@ -4,8 +4,13 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lombok.extern.slf4j.Slf4j;
+import top.yumbo.ai.reviewer.adapter.output.archive.ZipArchiveAdapter;
 import top.yumbo.ai.reviewer.adapter.output.filesystem.LocalFileSystemAdapter;
 import top.yumbo.ai.reviewer.adapter.output.repository.GitRepositoryAdapter;
+import top.yumbo.ai.reviewer.adapter.output.storage.S3StorageAdapter;
+import top.yumbo.ai.reviewer.adapter.output.storage.S3StorageConfig;
+import top.yumbo.ai.reviewer.application.service.S3StorageService;
+import top.yumbo.ai.reviewer.domain.model.S3DownloadResult;
 import top.yumbo.ai.reviewer.application.hackathon.service.HackathonScoringService;
 import top.yumbo.ai.reviewer.application.port.output.CloneRequest;
 import top.yumbo.ai.reviewer.application.port.output.RepositoryPort;
@@ -50,18 +55,28 @@ public class HackathonCommandLineApp {
     private final LocalFileSystemAdapter fileSystemAdapter;
     private final HackathonScoringService scoringService;
     private final HackathonScoringConfig scoringConfig;
+    private final ZipArchiveAdapter zipArchiveAdapter;
+    private final Configuration configuration;
+    private S3StorageService s3StorageService;
 
     @Inject
     public HackathonCommandLineApp(
             ProjectAnalysisService analysisService,
             ReportGenerationService reportService,
-            LocalFileSystemAdapter fileSystemAdapter) {
+            LocalFileSystemAdapter fileSystemAdapter,
+            Configuration configuration) {
         this.analysisService = analysisService;
         this.reportService = reportService;
         this.fileSystemAdapter = fileSystemAdapter;
+        this.configuration = configuration;
         // 初始化黑客松评分服务（动态配置版）
         this.scoringService = new HackathonScoringService();
         this.scoringConfig = HackathonScoringConfig.createDefault();
+        // 初始化 ZIP 解压适配器
+        Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "hackathon-zip-extract");
+        this.zipArchiveAdapter = new ZipArchiveAdapter(tempDir);
+        // 初始化 S3 服务（如果配置了）
+        initializeS3Service();
         log.info("✅ 黑客松评分服务已初始化（动态配置）");
     }
 
@@ -111,7 +126,11 @@ public class HackathonCommandLineApp {
      * 执行黑客松项目评审
      */
     public void execute(HackathonArguments args) {
-        log.info("开始黑客松项目评审: {}", args.gitUrl() != null ? args.gitUrl() : args.directory());
+        log.info("开始黑客松项目评审: {}",
+                args.gitUrl() != null ? args.gitUrl() :
+                args.s3Path() != null ? "s3://" + configuration.getS3BucketName() + "/" + args.s3Path() :
+                args.zipFile() != null ? args.zipFile() :
+                args.directory());
 
         Path projectPath = null;
         boolean needsCleanup = false;
@@ -120,6 +139,12 @@ public class HackathonCommandLineApp {
             // 1. 获取项目路径
             if (args.gitUrl() != null) {
                 projectPath = cloneProject(args);
+                needsCleanup = true;
+            } else if (args.s3Path() != null) {
+                projectPath = downloadFromS3(args);
+                needsCleanup = true;
+            } else if (args.zipFile() != null) {
+                projectPath = extractZipFile(args);
                 needsCleanup = true;
             } else if (args.directory() != null) {
                 projectPath = getLocalProject(args.directory());
@@ -173,6 +198,47 @@ public class HackathonCommandLineApp {
     }
 
     /**
+     * 解压 ZIP 文件
+     */
+    private Path extractZipFile(HackathonArguments args) throws ZipArchiveAdapter.ZipExtractionException {
+        System.out.println("正在解压 ZIP 文件: " + args.zipFile());
+        Path zipPath = Paths.get(args.zipFile());
+
+        if (!Files.exists(zipPath)) {
+            throw new IllegalArgumentException("ZIP 文件不存在: " + args.zipFile());
+        }
+
+        Path projectPath = zipArchiveAdapter.extractZipFile(zipPath);
+        System.out.println("ZIP 文件解压完成: " + projectPath);
+
+        // 如果解压后的目录中只有一个子目录，使用该子目录作为项目根目录
+        projectPath = findProjectRoot(projectPath);
+
+        return projectPath;
+    }
+
+    /**
+     * 查找项目根目录
+     * 如果解压后只有一个子目录，通常该子目录才是真正的项目根目录
+     */
+    private Path findProjectRoot(Path extractedDir) {
+        try (var stream = Files.list(extractedDir)) {
+            List<Path> entries = stream.toList();
+
+            // 如果只有一个子目录，且没有其他文件，使用该子目录
+            if (entries.size() == 1 && Files.isDirectory(entries.get(0))) {
+                Path subDir = entries.get(0);
+                log.info("检测到单一子目录，使用作为项目根: {}", subDir.getFileName());
+                return subDir;
+            }
+        } catch (IOException e) {
+            log.warn("无法检查解压目录结构: {}", e.getMessage());
+        }
+
+        return extractedDir;
+    }
+
+    /**
      * 获取本地项目
      */
     private Path getLocalProject(String directory) {
@@ -182,6 +248,109 @@ public class HackathonCommandLineApp {
         }
         System.out.println("使用本地目录: " + projectPath);
         return projectPath;
+    }
+
+    /**
+     * 初始化 S3 服务
+     */
+    private void initializeS3Service() {
+        if (configuration.getS3BucketName() == null || configuration.getS3BucketName().isBlank()) {
+            log.debug("S3 存储未配置，跳过初始化");
+            return;
+        }
+
+        try {
+            S3StorageConfig s3Config = S3StorageConfig.builder()
+                    .region(configuration.getS3Region())
+                    .bucketName(configuration.getS3BucketName())
+                    .accessKeyId(configuration.getS3AccessKeyId())
+                    .secretAccessKey(configuration.getS3SecretAccessKey())
+                    .maxConcurrency(configuration.getS3MaxConcurrency())
+                    .connectTimeout(configuration.getS3ConnectTimeout())
+                    .readTimeout(configuration.getS3ReadTimeout())
+                    .maxRetries(configuration.getS3MaxRetries())
+                    .retryDelay(configuration.getS3RetryDelay())
+                    .useAccelerateEndpoint(configuration.getS3UseAccelerateEndpoint())
+                    .usePathStyleAccess(configuration.getS3UsePathStyleAccess())
+                    .endpoint(configuration.getS3Endpoint())
+                    .build();
+
+            S3StorageAdapter s3Adapter = new S3StorageAdapter(s3Config);
+            this.s3StorageService = new S3StorageService(s3Adapter);
+            log.info("✅ S3 存储服务已初始化 - Bucket: {}, Region: {}",
+                    configuration.getS3BucketName(), configuration.getS3Region());
+        } catch (Exception e) {
+            log.error("初始化 S3 服务失败: {}", e.getMessage(), e);
+            throw new RuntimeException("初始化 S3 服务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 从 S3 下载项目
+     */
+    private Path downloadFromS3(HackathonArguments args) {
+        if (s3StorageService == null) {
+            throw new IllegalStateException("S3 服务未初始化。请在 config.yaml 中配置 s3Storage.bucketName");
+        }
+
+        System.out.println("正在从 S3 下载项目: " + args.s3Path());
+        System.out.println("Bucket: " + configuration.getS3BucketName());
+        System.out.println("路径: " + args.s3Path());
+
+        // 创建临时目录
+        Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "hackathon-s3-download");
+        try {
+            if (!Files.exists(tempDir)) {
+                Files.createDirectories(tempDir);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("创建临时目录失败: " + e.getMessage(), e);
+        }
+
+        // 从 S3 路径提取项目名称
+        String s3Path = args.s3Path();
+        String projectName = extractProjectNameFromS3Path(s3Path);
+        Path localDir = tempDir.resolve(projectName + "-" + System.currentTimeMillis());
+
+        // 下载
+        S3DownloadResult result = s3StorageService.downloadProjectForReview(
+                configuration.getS3BucketName(),
+                s3Path,
+                localDir
+        );
+
+        if (!result.isSuccess()) {
+            System.err.println("⚠️  部分文件下载失败:");
+            result.getErrors().forEach(error -> System.err.println("  - " + error));
+        }
+
+        System.out.println("S3 项目下载完成:");
+        System.out.println("  - 总文件数: " + result.getTotalFileCount());
+        System.out.println("  - 成功: " + result.getSuccessCount());
+        System.out.println("  - 失败: " + result.getFailureCount());
+        System.out.println("  - 总大小: " + String.format("%.2f MB", result.getTotalSizeInMB()));
+        System.out.println("  - 耗时: " + String.format("%.2f 秒", result.getDurationSeconds()));
+        System.out.println("  - 本地目录: " + localDir);
+
+        // 智能识别项目根目录
+        return findProjectRoot(localDir);
+    }
+
+    /**
+     * 从 S3 路径提取项目名称
+     */
+    private String extractProjectNameFromS3Path(String s3Path) {
+        if (s3Path == null || s3Path.isEmpty()) {
+            return "project";
+        }
+        // 移除尾部的斜杠
+        s3Path = s3Path.replaceAll("/+$", "");
+        // 获取最后一段作为项目名
+        int lastSlash = s3Path.lastIndexOf('/');
+        if (lastSlash >= 0) {
+            return s3Path.substring(lastSlash + 1);
+        }
+        return s3Path;
     }
 
     /**
@@ -437,6 +606,8 @@ public class HackathonCommandLineApp {
         String gitUrl = null;
         String giteeUrl = null;
         String directory = null;
+        String zipFile = null;
+        String s3Path = null;
         String team = "Unknown Team";
         String branch = "";
         String output = null;
@@ -447,6 +618,8 @@ public class HackathonCommandLineApp {
                 case "--github-url", "--git-url" -> gitUrl = args[++i];
                 case "--gitee-url" -> giteeUrl = args[++i];
                 case "--directory", "--dir", "-d" -> directory = args[++i];
+                case "--zip", "-z" -> zipFile = args[++i];
+                case "--s3-path", "--s3", "-s" -> s3Path = args[++i];
                 case "--team", "-t" -> team = args[++i];
                 case "--branch", "-b" -> branch = args[++i];
                 case "--output", "-o" -> output = args[++i];
@@ -462,11 +635,11 @@ public class HackathonCommandLineApp {
         // Gitee URL优先，否则使用Git URL
         String finalUrl = giteeUrl != null ? giteeUrl : gitUrl;
 
-        if (finalUrl == null && directory == null) {
-            throw new IllegalArgumentException("必须指定 Git URL (--github-url/--gitee-url) 或目录 (--directory)");
+        if (finalUrl == null && directory == null && zipFile == null && s3Path == null) {
+            throw new IllegalArgumentException("必须指定 Git URL (--github-url/--gitee-url)、目录 (--directory)、ZIP 文件 (--zip) 或 S3 路径 (--s3-path)");
         }
 
-        return new HackathonArguments(finalUrl, directory, team, branch, output, report);
+        return new HackathonArguments(finalUrl, directory, zipFile, s3Path, team, branch, output, report);
     }
 
     /**
@@ -479,8 +652,12 @@ public class HackathonCommandLineApp {
         System.out.println("\n选项:");
         System.out.println("  --github-url <URL>      GitHub 仓库 URL");
         System.out.println("  --gitee-url <URL>       Gitee 仓库 URL (优先使用)");
-        System.out.println("  --directory <路径>      本地项目目录 (替代 Git URL)");
+        System.out.println("  --directory <路径>      本地项目目录");
         System.out.println("  -d, --dir <路径>        同 --directory");
+        System.out.println("  --zip <文件>            ZIP 压缩包文件路径");
+        System.out.println("  -z <文件>               同 --zip");
+        System.out.println("  --s3-path <路径>        S3 存储路径 (需在 config.yaml 配置 bucket)");
+        System.out.println("  -s <路径>               同 --s3-path");
         System.out.println("  --team <团队名>         团队名称 (默认: Unknown Team)");
         System.out.println("  -t <团队名>             同 --team");
         System.out.println("  --branch <分支>         Git 分支名称 (默认: main)");
@@ -506,6 +683,16 @@ public class HackathonCommandLineApp {
         System.out.println("    -d /path/to/project \\");
         System.out.println("    -t \"Team Awesome\" \\");
         System.out.println("    -o score.json -r report.md");
+        System.out.println("\n  # 使用 ZIP 压缩包");
+        System.out.println("  java -jar hackathon-reviewer.jar \\");
+        System.out.println("    --zip /path/to/project.zip \\");
+        System.out.println("    -t \"Team Awesome\" \\");
+        System.out.println("    -o score.json -r report.md");
+        System.out.println("\n  # 使用 S3 存储路径");
+        System.out.println("  java -jar hackathon-reviewer.jar \\");
+        System.out.println("    --s3-path projects/team-awesome/ \\");
+        System.out.println("    -t \"Team Awesome\" \\");
+        System.out.println("    -o score.json -r report.md");
     }
 
     /**
@@ -514,6 +701,8 @@ public class HackathonCommandLineApp {
     private record HackathonArguments(
             String gitUrl,
             String directory,
+            String zipFile,
+            String s3Path,
             String team,
             String branch,
             String output,

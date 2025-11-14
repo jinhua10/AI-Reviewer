@@ -61,6 +61,20 @@ public class Configuration {
     // ========== 工作目录配置 ==========
     private Path workingDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "ai-reviewer");
 
+    // ========== S3 存储配置 ==========
+    private String s3Region = "us-east-1";
+    private String s3BucketName;
+    private String s3AccessKeyId;
+    private String s3SecretAccessKey;
+    private Integer s3MaxConcurrency = 10;
+    private Integer s3ConnectTimeout = 30000;
+    private Integer s3ReadTimeout = 60000;
+    private Integer s3MaxRetries = 3;
+    private Integer s3RetryDelay = 1000;
+    private Boolean s3UseAccelerateEndpoint = false;
+    private Boolean s3UsePathStyleAccess = false;
+    private String s3Endpoint;
+
     // ========== 黑客松配置 ==========
     private Integer hackathonCloneTimeout = 300;
     private Integer hackathonAnalysisTimeout = 600;

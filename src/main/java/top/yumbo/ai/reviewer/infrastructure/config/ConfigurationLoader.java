@@ -165,6 +165,46 @@ public class ConfigurationLoader {
                 config.setCacheTtlHours(yaml.cache.ttlHours);
             }
         }
+
+        // S3 存储配置
+        if (yaml.s3Storage != null) {
+            if (yaml.s3Storage.region != null) {
+                config.setS3Region(yaml.s3Storage.region);
+            }
+            if (yaml.s3Storage.bucketName != null) {
+                config.setS3BucketName(yaml.s3Storage.bucketName);
+            }
+            if (yaml.s3Storage.accessKeyId != null) {
+                config.setS3AccessKeyId(yaml.s3Storage.accessKeyId);
+            }
+            if (yaml.s3Storage.secretAccessKey != null) {
+                config.setS3SecretAccessKey(yaml.s3Storage.secretAccessKey);
+            }
+            if (yaml.s3Storage.maxConcurrency != null) {
+                config.setS3MaxConcurrency(yaml.s3Storage.maxConcurrency);
+            }
+            if (yaml.s3Storage.connectTimeout != null) {
+                config.setS3ConnectTimeout(yaml.s3Storage.connectTimeout);
+            }
+            if (yaml.s3Storage.readTimeout != null) {
+                config.setS3ReadTimeout(yaml.s3Storage.readTimeout);
+            }
+            if (yaml.s3Storage.maxRetries != null) {
+                config.setS3MaxRetries(yaml.s3Storage.maxRetries);
+            }
+            if (yaml.s3Storage.retryDelay != null) {
+                config.setS3RetryDelay(yaml.s3Storage.retryDelay);
+            }
+            if (yaml.s3Storage.useAccelerateEndpoint != null) {
+                config.setS3UseAccelerateEndpoint(yaml.s3Storage.useAccelerateEndpoint);
+            }
+            if (yaml.s3Storage.usePathStyleAccess != null) {
+                config.setS3UsePathStyleAccess(yaml.s3Storage.usePathStyleAccess);
+            }
+            if (yaml.s3Storage.endpoint != null) {
+                config.setS3Endpoint(yaml.s3Storage.endpoint);
+            }
+        }
     }
 
     /**
@@ -231,6 +271,7 @@ public class ConfigurationLoader {
         private AIServiceYaml aiService;
         private FileSystemYaml fileSystem;
         private CacheYaml cache;
+        private S3StorageYaml s3Storage;
         private Map<String, Object> hackathon;
 
         @Data
@@ -274,6 +315,23 @@ public class ConfigurationLoader {
             private String type;
             private Integer ttlHours;
             private Integer maxSize;
+        }
+
+        @Data
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        static class S3StorageYaml {
+            private String region;
+            private String bucketName;
+            private String accessKeyId;
+            private String secretAccessKey;
+            private Integer maxConcurrency;
+            private Integer connectTimeout;
+            private Integer readTimeout;
+            private Integer maxRetries;
+            private Integer retryDelay;
+            private Boolean useAccelerateEndpoint;
+            private Boolean usePathStyleAccess;
+            private String endpoint;
         }
     }
 }
