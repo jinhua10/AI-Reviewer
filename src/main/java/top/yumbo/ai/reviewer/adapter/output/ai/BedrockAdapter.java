@@ -55,6 +55,10 @@ public class BedrockAdapter implements AIServicePort {
 
         int maxConcurrency = config.maxConcurrency() > 0 ? config.maxConcurrency() : 3;
 
+        // 获取超时配置（代码分析任务需要较长时间）
+        int apiCallTimeout = config.readTimeoutMillis() > 0 ? config.readTimeoutMillis() : 120000; // 默认 120 秒
+        int apiCallAttemptTimeout = apiCallTimeout; // 每次尝试的超时时间
+
         // 初始化 Bedrock 客户端
         var clientBuilder = BedrockRuntimeClient.builder()
                 .region(Region.of(this.region));
@@ -76,7 +80,19 @@ public class BedrockAdapter implements AIServicePort {
             log.info("使用默认 AWS 凭证链");
         }
 
+        // 配置超时时间（解决 Read timeout 问题）
+        clientBuilder.overrideConfiguration(builder -> builder
+                .apiCallTimeout(java.time.Duration.ofMillis(apiCallTimeout))
+                .apiCallAttemptTimeout(java.time.Duration.ofMillis(apiCallAttemptTimeout))
+                .retryPolicy(retry -> retry
+                        .numRetries(maxRetries)
+                )
+        );
+
         this.bedrockClient = clientBuilder.build();
+
+        log.info("AWS Bedrock 客户端超时配置: API调用超时={}ms, 每次尝试超时={}ms",
+                apiCallTimeout, apiCallAttemptTimeout);
 
         // 配置线程池
         this.executorService = Executors.newFixedThreadPool(
