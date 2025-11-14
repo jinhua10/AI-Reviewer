@@ -83,12 +83,15 @@ public class Configuration {
      * 验证配置
      */
     public void validate() {
-        if (aiApiKey == null || aiApiKey.isBlank()) {
-            throw new ConfigurationException("AI API Key 未配置。请设置环境变量或在 config.yaml 中配置");
-        }
-
         if (aiProvider == null || aiProvider.isBlank()) {
             throw new ConfigurationException("AI Provider 未配置");
+        }
+
+        // API Key 验证：Bedrock 使用 IAM 角色，不需要 API Key
+        if (!"bedrock".equalsIgnoreCase(aiProvider)) {
+            if (aiApiKey == null || aiApiKey.isBlank()) {
+                throw new ConfigurationException("AI API Key 未配置。请设置环境变量 AI_API_KEY 或在 config.yaml 中配置");
+            }
         }
 
         if (aiMaxTokens != null && aiMaxTokens <= 0) {
@@ -103,6 +106,11 @@ public class Configuration {
         if ("bedrock".equalsIgnoreCase(aiProvider)) {
             if (awsRegion == null || awsRegion.isBlank()) {
                 throw new ConfigurationException("AWS Region 未配置（Bedrock 必需）");
+            }
+            // Bedrock 使用 IAM 角色认证，不需要 API Key
+            // 但需要确保 model 已配置
+            if (aiModel == null || aiModel.isBlank()) {
+                throw new ConfigurationException("AI Model 未配置（Bedrock 必需）");
             }
         }
     }
