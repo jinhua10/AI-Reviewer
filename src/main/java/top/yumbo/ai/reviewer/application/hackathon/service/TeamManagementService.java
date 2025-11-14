@@ -2,7 +2,6 @@ package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import top.yumbo.ai.reviewer.domain.hackathon.model.*;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -128,7 +127,7 @@ public class TeamManagementService {
         }
 
         // 验证提交者是团队成员
-        if (!project.getTeam().isMember(submitter)) {
+        if (project.getTeam().memberOf(submitter)) {
             throw new IllegalArgumentException("只有团队成员才能提交代码");
         }
 
@@ -173,7 +172,7 @@ public class TeamManagementService {
         }
 
         // 验证提交者是团队成员
-        if (!project.getTeam().isMember(submitter)) {
+        if (project.getTeam().memberOf(submitter)) {
             throw new IllegalArgumentException("只有团队成员才能提交代码");
         }
 

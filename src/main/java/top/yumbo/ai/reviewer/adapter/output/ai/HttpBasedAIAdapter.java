@@ -6,12 +6,19 @@ import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
@@ -27,7 +34,6 @@ import java.util.function.BiFunction;
 public class HttpBasedAIAdapter implements AIServicePort {
 
     private final String providerName;
-    private final String apiKey;
     private final String apiUrl;
     private final String model;
     private final int maxTokens;
@@ -58,7 +64,6 @@ public class HttpBasedAIAdapter implements AIServicePort {
             java.util.function.Function<JSONObject, String> responseParser) {
 
         this.providerName = providerName;
-        this.apiKey = config.apiKey();
         this.apiUrl = config.baseUrl();
         this.model = config.model();
         this.maxTokens = config.maxTokens() > 0 ? config.maxTokens() : 4000;
@@ -68,22 +73,18 @@ public class HttpBasedAIAdapter implements AIServicePort {
 
         int maxConcurrency = config.maxConcurrency() > 0 ? config.maxConcurrency() : 5;
         int connectTimeout = config.connectTimeoutMillis() > 0 ? config.connectTimeoutMillis() : 30000;
-        int readTimeout = config.readTimeoutMillis() > 0 ? config.readTimeoutMillis() : 60000;
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeout))
                 .build();
 
+        final AtomicInteger threadNumber = new AtomicInteger(1);
         this.executorService = Executors.newFixedThreadPool(
                 maxConcurrency,
-                new ThreadFactory() {
-                    private final AtomicInteger threadNumber = new AtomicInteger(1);
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r, providerName.toLowerCase() + "-analyzer-" + threadNumber.getAndIncrement());
-                        t.setDaemon(true);
-                        return t;
-                    }
+                r -> {
+                    Thread t = new Thread(r, providerName.toLowerCase() + "-analyzer-" + threadNumber.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
                 }
         );
 
@@ -132,19 +133,20 @@ public class HttpBasedAIAdapter implements AIServicePort {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public CompletableFuture<String[]> analyzeBatchAsync(String[] prompts) {
-        CompletableFuture<String>[] futures = new CompletableFuture[prompts.length];
-        for (int i = 0; i < prompts.length; i++) {
-            futures[i] = analyzeAsync(prompts[i]);
+        List<CompletableFuture<String>> futures = new ArrayList<>(prompts.length);
+        for (String p : prompts) {
+            futures.add(analyzeAsync(p));
         }
 
-        return CompletableFuture.allOf(futures)
+        CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
+
+        return CompletableFuture.allOf(futuresArray)
                 .thenApply(v -> {
                     String[] results = new String[prompts.length];
                     for (int i = 0; i < prompts.length; i++) {
                         try {
-                            results[i] = futures[i].join();
+                            results[i] = futures.get(i).join();
                         } catch (Exception e) {
                             log.error("批量分析第 {} 个任务失败", i, e);
                             results[i] = "分析失败: " + e.getMessage();
@@ -288,4 +290,3 @@ public class HttpBasedAIAdapter implements AIServicePort {
         }
     }
 }
-

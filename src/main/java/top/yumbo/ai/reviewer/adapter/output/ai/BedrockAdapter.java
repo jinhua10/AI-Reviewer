@@ -16,7 +16,11 @@ import top.yumbo.ai.reviewer.application.port.output.AIServicePort;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -82,7 +86,7 @@ public class BedrockAdapter implements AIServicePort {
                 log.info("使用默认 AWS 凭证链");
             }
         } else {
-            log.info("使用默认 AWS 凭证链");
+            log.info("使用默认 AWS 凭证链.");
         }
 
         // 配置超时时间（解决 Read timeout 问题）
@@ -309,17 +313,15 @@ public class BedrockAdapter implements AIServicePort {
 
                 requestBody.put("messages", new Object[]{message});
                 requestBody.put("max_tokens", maxTokens);
-                requestBody.put("temperature", temperature);
-                requestBody.put("top_p", 0.9);
             } else {
                 // Llama 2 使用旧格式
                 requestBody.put("prompt", prompt);
                 requestBody.put("max_gen_len", maxTokens);
-                requestBody.put("temperature", temperature);
-                requestBody.put("top_p", 0.9);
             }
+            requestBody.put("temperature", temperature);
+            requestBody.put("top_p", 0.9);
 
-        // Mistral AI 模型系列（新增）
+            // Mistral AI 模型系列（新增）
         } else if (actualModelId.contains("mistral")) {
             // Mistral 使用标准的对话格式
             requestBody.put("prompt", "<s>[INST] " + prompt + " [/INST]");

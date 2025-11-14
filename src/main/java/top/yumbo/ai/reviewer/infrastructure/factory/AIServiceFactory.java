@@ -8,7 +8,7 @@ import top.yumbo.ai.reviewer.infrastructure.config.Configuration;
 
 /**
  * AI 服务工厂
- *
+ * <p>
  * 根据配置创建对应的 AI 服务适配器
  *
  * @author AI-Reviewer Team

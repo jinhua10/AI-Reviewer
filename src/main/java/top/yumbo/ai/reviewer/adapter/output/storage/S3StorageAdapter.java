@@ -8,7 +8,18 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import top.yumbo.ai.reviewer.application.port.output.S3StoragePort;
 import top.yumbo.ai.reviewer.domain.model.S3DownloadResult;
@@ -21,7 +32,11 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -89,17 +104,13 @@ public class S3StorageAdapter implements S3StoragePort {
 
         // 初始化线程池
         int maxConcurrency = config.getEffectiveMaxConcurrency();
+        final AtomicInteger threadNumber = new AtomicInteger(1);
         this.executorService = Executors.newFixedThreadPool(
                 maxConcurrency,
-                new ThreadFactory() {
-                    private final AtomicInteger threadNumber = new AtomicInteger(1);
-
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r, "s3-downloader-" + threadNumber.getAndIncrement());
-                        t.setDaemon(true);
-                        return t;
-                    }
+                r -> {
+                    Thread t = new Thread(r, "s3-downloader-" + threadNumber.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
                 }
         );
 
@@ -255,7 +266,7 @@ public class S3StorageAdapter implements S3StoragePort {
                         failureCount.incrementAndGet();
                     }
                 }, executorService))
-                .collect(Collectors.toList());
+                .toList();
 
         // 等待所有下载完成
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -352,7 +363,7 @@ public class S3StorageAdapter implements S3StoragePort {
                         failureCount.incrementAndGet();
                     }
                 }, executorService))
-                .collect(Collectors.toList());
+                .toList();
 
         // 等待所有下载完成
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -421,7 +432,7 @@ public class S3StorageAdapter implements S3StoragePort {
                             () -> downloadFile(bucketName, key),
                             executorService
                     ))
-                    .collect(Collectors.toList());
+                    .toList();
 
             return futures.stream()
                     .map(CompletableFuture::join)
@@ -625,4 +636,3 @@ public class S3StorageAdapter implements S3StoragePort {
         return lastSlash >= 0 ? key.substring(0, lastSlash + 1) : "";
     }
 }
-

@@ -7,6 +7,7 @@ import top.yumbo.ai.reviewer.domain.model.SourceFile;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 语言检测器注册表

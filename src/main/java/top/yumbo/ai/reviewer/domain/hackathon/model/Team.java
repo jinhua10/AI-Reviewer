@@ -1,12 +1,14 @@
 package top.yumbo.ai.reviewer.domain.hackathon.model;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * 团队领域模型
- *
+ * <p>
  * 表示一个参赛团队，包含成员信息和联系方式
  *
  * @author AI-Reviewer Team
@@ -15,11 +17,17 @@ import java.util.UUID;
  */
 public class Team {
 
+    // Getters
+    @Getter
     private final String id;
+    @Getter
     private final String name;
+    @Getter
     private final String description;
     private final List<Participant> members;
+    @Getter
     private final Participant leader;
+    @Getter
     private final String contactEmail;
 
     // 私有构造函数，强制使用Builder
@@ -37,10 +45,10 @@ public class Team {
      */
     public boolean isValid() {
         return name != null && !name.trim().isEmpty()
-            && leader != null
-            && !members.isEmpty()
-            && members.contains(leader)
-            && contactEmail != null && isValidEmail(contactEmail);
+                && leader != null
+                && !members.isEmpty()
+                && members.contains(leader)
+                && isValidEmail(contactEmail);
     }
 
     /**
@@ -53,8 +61,8 @@ public class Team {
     /**
      * 检查是否是团队成员
      */
-    public boolean isMember(Participant participant) {
-        return members.contains(participant);
+    public boolean memberOf(Participant participant) {
+        return !members.contains(participant);
     }
 
     /**
@@ -71,29 +79,8 @@ public class Team {
         return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
 
-    // Getters
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
     public List<Participant> getMembers() {
         return new ArrayList<>(members);
-    }
-
-    public Participant getLeader() {
-        return leader;
-    }
-
-    public String getContactEmail() {
-        return contactEmail;
     }
 
     // Builder
