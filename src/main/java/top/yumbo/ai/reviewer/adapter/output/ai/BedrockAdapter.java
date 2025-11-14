@@ -208,19 +208,24 @@ public class BedrockAdapter implements AIServicePort {
 
     /**
      * 构建请求体（根据模型类型）
+     * 支持 AWS Bedrock 平台上的所有主流模型
      */
     private String buildRequestBody(String prompt) {
         JSONObject requestBody = new JSONObject();
 
-        // 支持 ARN 格式的 model ID（例如：arn:aws:bedrock:us-east-1:xxx:inference-profile/us.anthropic.claude-xxx）
-        if (modelId.contains("anthropic.claude") || modelId.startsWith("anthropic.claude") ||
-            modelId.contains("claude-3") || modelId.contains("claude-sonnet") || modelId.contains("claude-haiku")) {
+        // 提取实际的模型名称（处理 ARN 格式）
+        String actualModelId = extractModelId(modelId);
+
+        // Anthropic Claude 模型系列
+        if (actualModelId.contains("anthropic.claude") || actualModelId.contains("claude-")) {
 
             // 检测是否为 Claude 3+ 模型（需要使用 Messages API）
-            boolean isClaude3Plus = modelId.contains("claude-3") ||
-                                   modelId.contains("claude-sonnet") ||
-                                   modelId.contains("claude-haiku") ||
-                                   modelId.contains("claude-opus");
+            // 包括 Claude 3, Claude 4 及以上版本
+            boolean isClaude3Plus = actualModelId.contains("claude-3") ||
+                                   actualModelId.contains("claude-4") ||
+                                   actualModelId.contains("claude-sonnet") ||
+                                   actualModelId.contains("claude-haiku") ||
+                                   actualModelId.contains("claude-opus");
 
             if (isClaude3Plus) {
                 // Claude 3+ Messages API 格式
@@ -231,9 +236,7 @@ public class BedrockAdapter implements AIServicePort {
                 requestBody.put("anthropic_version", "bedrock-2023-05-31");
                 requestBody.put("max_tokens", maxTokens);
                 requestBody.put("messages", new Object[]{message});
-                // Claude 3+ 只能使用 temperature 或 top_p，不能同时使用
                 requestBody.put("temperature", temperature);
-                // 不添加 top_p
 
             } else {
                 // Claude 2 及以下版本（旧的文本补全格式）
@@ -244,8 +247,8 @@ public class BedrockAdapter implements AIServicePort {
                 requestBody.put("stop_sequences", new String[]{"\n\nHuman:"});
             }
 
-        } else if (modelId.contains("amazon.titan") || modelId.startsWith("amazon.titan")) {
-            // Titan 模型格式
+        // Amazon Titan 模型系列
+        } else if (actualModelId.contains("amazon.titan")) {
             JSONObject textGenerationConfig = new JSONObject();
             textGenerationConfig.put("maxTokenCount", maxTokens);
             textGenerationConfig.put("temperature", temperature);
@@ -254,67 +257,149 @@ public class BedrockAdapter implements AIServicePort {
             requestBody.put("inputText", prompt);
             requestBody.put("textGenerationConfig", textGenerationConfig);
 
-        } else if (modelId.contains("meta.llama") || modelId.startsWith("meta.llama")) {
-            // Llama 模型格式
-            requestBody.put("prompt", prompt);
-            requestBody.put("max_gen_len", maxTokens);
+        // Amazon Nova 模型系列（新增）
+        } else if (actualModelId.contains("amazon.nova")) {
+            // Nova 使用 Messages API 格式（类似 Claude 3+）
+            JSONObject message = new JSONObject();
+            message.put("role", "user");
+
+            // Nova 支持多模态，这里简化为文本
+            JSONObject contentItem = new JSONObject();
+            contentItem.put("text", prompt);
+            message.put("content", new Object[]{contentItem});
+
+            requestBody.put("messages", new Object[]{message});
+            requestBody.put("max_tokens", maxTokens);
+            requestBody.put("temperature", temperature);
+
+            // Nova 特定配置
+            JSONObject inferenceConfig = new JSONObject();
+            inferenceConfig.put("max_new_tokens", maxTokens);
+            inferenceConfig.put("temperature", temperature);
+            inferenceConfig.put("top_p", 0.9);
+            requestBody.put("inferenceConfig", inferenceConfig);
+
+        // Meta Llama 模型系列（包括 Llama 2, Llama 3, Llama 3.1, Llama 3.2）
+        } else if (actualModelId.contains("meta.llama")) {
+            // Llama 3+ 使用新的 Converse API 格式
+            if (actualModelId.contains("llama3") || actualModelId.contains("llama-3")) {
+                // Llama 3 系列使用 Messages 格式
+                JSONObject message = new JSONObject();
+                message.put("role", "user");
+                message.put("content", prompt);
+
+                requestBody.put("messages", new Object[]{message});
+                requestBody.put("max_tokens", maxTokens);
+                requestBody.put("temperature", temperature);
+                requestBody.put("top_p", 0.9);
+            } else {
+                // Llama 2 使用旧格式
+                requestBody.put("prompt", prompt);
+                requestBody.put("max_gen_len", maxTokens);
+                requestBody.put("temperature", temperature);
+                requestBody.put("top_p", 0.9);
+            }
+
+        // Mistral AI 模型系列（新增）
+        } else if (actualModelId.contains("mistral")) {
+            // Mistral 使用标准的对话格式
+            requestBody.put("prompt", "<s>[INST] " + prompt + " [/INST]");
+            requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
             requestBody.put("top_p", 0.9);
+            requestBody.put("top_k", 50);
 
-        } else if (modelId.contains("cohere.command") || modelId.startsWith("cohere.command")) {
-            // Cohere 模型格式
+        // Cohere Command 模型系列
+        } else if (actualModelId.contains("cohere.command")) {
             requestBody.put("prompt", prompt);
             requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
             requestBody.put("p", 0.9);
+            requestBody.put("k", 0);
+            requestBody.put("return_likelihoods", "NONE");
 
-        } else if (modelId.contains("ai21.j2") || modelId.startsWith("ai21.j2")) {
-            // AI21 Jurassic 模型格式
+        // AI21 Jurassic 模型系列
+        } else if (actualModelId.contains("ai21.j2") || actualModelId.contains("ai21.jamba")) {
             requestBody.put("prompt", prompt);
             requestBody.put("maxTokens", maxTokens);
             requestBody.put("temperature", temperature);
             requestBody.put("topP", 0.9);
+            requestBody.put("stopSequences", new String[]{});
+            requestBody.put("countPenalty", new JSONObject().fluentPut("scale", 0));
+            requestBody.put("presencePenalty", new JSONObject().fluentPut("scale", 0));
+            requestBody.put("frequencyPenalty", new JSONObject().fluentPut("scale", 0));
+
+        // Stability AI 模型系列（新增 - 图像生成，但也支持文本）
+        } else if (actualModelId.contains("stability")) {
+            // 如果是文本到图像模型，需要特殊处理
+            // 这里假设是文本生成场景
+            requestBody.put("text_prompts", new Object[]{
+                new JSONObject().fluentPut("text", prompt).fluentPut("weight", 1)
+            });
+            requestBody.put("cfg_scale", 7);
+            requestBody.put("steps", 30);
+            requestBody.put("seed", 0);
 
         } else {
-            // 默认格式（通用）
+            // 默认格式（通用，适用于未知模型）
+            log.warn("使用默认请求格式，模型ID: {}", actualModelId);
             requestBody.put("prompt", prompt);
             requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
+            requestBody.put("top_p", 0.9);
         }
 
         return requestBody.toJSONString();
     }
 
     /**
+     * 从模型 ID 中提取实际的模型名称
+     * 处理 ARN 格式：arn:aws:bedrock:region:account:inference-profile/model-id
+     */
+    private String extractModelId(String modelId) {
+        if (modelId.contains("inference-profile/")) {
+            // 提取 ARN 中的实际模型 ID
+            return modelId.substring(modelId.indexOf("inference-profile/") + 18);
+        } else if (modelId.contains("foundation-model/")) {
+            // 提取基础模型 ID
+            return modelId.substring(modelId.indexOf("foundation-model/") + 17);
+        }
+        return modelId;
+    }
+
+    /**
      * 解析响应（根据模型类型）
+     * 支持 AWS Bedrock 平台上的所有主流模型
      */
     private String parseResponse(String responseBody) {
         try {
             JSONObject response = JSON.parseObject(responseBody);
 
-            // 支持 ARN 格式的 model ID
-            if (modelId.contains("anthropic.claude") || modelId.startsWith("anthropic.claude") ||
-                modelId.contains("claude-3") || modelId.contains("claude-sonnet") || modelId.contains("claude-haiku")) {
+            // 提取实际的模型名称（处理 ARN 格式）
+            String actualModelId = extractModelId(modelId);
 
-                // 检测是否为 Claude 3+ 模型
-                boolean isClaude3Plus = modelId.contains("claude-3") ||
-                                       modelId.contains("claude-sonnet") ||
-                                       modelId.contains("claude-haiku") ||
-                                       modelId.contains("claude-opus");
+            // Anthropic Claude 模型系列
+            if (actualModelId.contains("anthropic.claude") || actualModelId.contains("claude-")) {
+
+                // 检测是否为 Claude 3+ 模型（包括 Claude 3, Claude 4 及以上版本）
+                boolean isClaude3Plus = actualModelId.contains("claude-3") ||
+                                       actualModelId.contains("claude-4") ||
+                                       actualModelId.contains("claude-sonnet") ||
+                                       actualModelId.contains("claude-haiku") ||
+                                       actualModelId.contains("claude-opus");
 
                 if (isClaude3Plus) {
                     // Claude 3+ Messages API 响应格式
                     if (response.containsKey("content")) {
                         var content = response.getJSONArray("content");
-                        if (content != null && content.size() > 0) {
+                        if (content != null && !content.isEmpty()) {
                             return content.getJSONObject(0).getString("text");
                         }
                     }
-                    // 降级处理 - 如果没有 content 字段，尝试 completion
+                    // 降级处理
                     if (response.containsKey("completion")) {
                         return response.getString("completion");
                     }
-                    // 如果都没有，返回原始响应
                     log.warn("Claude 3+ 响应格式无法识别，返回原始响应");
                     return responseBody;
                 } else {
@@ -322,45 +407,148 @@ public class BedrockAdapter implements AIServicePort {
                     return response.getString("completion");
                 }
 
-            } else if (modelId.contains("amazon.titan") || modelId.startsWith("amazon.titan")) {
-                // Titan 响应格式
+            // Amazon Titan 模型系列
+            } else if (actualModelId.contains("amazon.titan")) {
                 return response.getJSONArray("results")
                         .getJSONObject(0)
                         .getString("outputText");
 
-            } else if (modelId.contains("meta.llama") || modelId.startsWith("meta.llama")) {
-                // Llama 响应格式
-                return response.getString("generation");
+            // Amazon Nova 模型系列（新增）
+            } else if (actualModelId.contains("amazon.nova")) {
+                // Nova 使用 Messages 格式响应
+                if (response.containsKey("output")) {
+                    var output = response.getJSONObject("output");
+                    if (output.containsKey("message")) {
+                        var message = output.getJSONObject("message");
+                        if (message.containsKey("content")) {
+                            var content = message.getJSONArray("content");
+                            if (content != null && !content.isEmpty()) {
+                                var firstContent = content.getJSONObject(0);
+                                if (firstContent.containsKey("text")) {
+                                    return firstContent.getString("text");
+                                }
+                            }
+                        }
+                    }
+                }
+                // 降级处理
+                if (response.containsKey("generation")) {
+                    return response.getString("generation");
+                }
+                log.warn("Nova 响应格式无法识别，返回原始响应");
+                return responseBody;
 
-            } else if (modelId.contains("cohere.command") || modelId.startsWith("cohere.command")) {
-                // Cohere 响应格式
+            // Meta Llama 模型系列
+            } else if (actualModelId.contains("meta.llama")) {
+                // Llama 3+ 使用新格式
+                if (actualModelId.contains("llama3") || actualModelId.contains("llama-3")) {
+                    // 尝试 Messages 格式响应
+                    if (response.containsKey("generation")) {
+                        return response.getString("generation");
+                    }
+                    if (response.containsKey("output")) {
+                        return response.getString("output");
+                    }
+                }
+                // Llama 2 使用旧格式
+                if (response.containsKey("generation")) {
+                    return response.getString("generation");
+                }
+                log.warn("Llama 响应格式无法识别，返回原始响应");
+                return responseBody;
+
+            // Mistral AI 模型系列（新增）
+            } else if (actualModelId.contains("mistral")) {
+                // Mistral 响应格式
+                if (response.containsKey("outputs")) {
+                    var outputs = response.getJSONArray("outputs");
+                    if (outputs != null && !outputs.isEmpty()) {
+                        var firstOutput = outputs.getJSONObject(0);
+                        if (firstOutput.containsKey("text")) {
+                            return firstOutput.getString("text");
+                        }
+                    }
+                }
+                // 备选格式
+                if (response.containsKey("completion")) {
+                    return response.getString("completion");
+                }
+                log.warn("Mistral 响应格式无法识别，返回原始响应");
+                return responseBody;
+
+            // Cohere Command 模型系列
+            } else if (actualModelId.contains("cohere.command")) {
                 return response.getJSONArray("generations")
                         .getJSONObject(0)
                         .getString("text");
 
-            } else if (modelId.contains("ai21.j2") || modelId.startsWith("ai21.j2")) {
-                // AI21 响应格式
+            // AI21 Jurassic/Jamba 模型系列
+            } else if (actualModelId.contains("ai21.j2") || actualModelId.contains("ai21.jamba")) {
+                // Jamba 使用新格式
+                if (actualModelId.contains("jamba")) {
+                    if (response.containsKey("outputs")) {
+                        var outputs = response.getJSONArray("outputs");
+                        if (outputs != null && !outputs.isEmpty()) {
+                            return outputs.getJSONObject(0).getString("text");
+                        }
+                    }
+                }
+                // J2 使用旧格式
                 return response.getJSONArray("completions")
                         .getJSONObject(0)
                         .getJSONObject("data")
                         .getString("text");
 
+            // Stability AI 模型系列（新增）
+            } else if (actualModelId.contains("stability")) {
+                // Stability 主要用于图像生成，但如果返回文本
+                if (response.containsKey("artifacts")) {
+                    var artifacts = response.getJSONArray("artifacts");
+                    if (artifacts != null && !artifacts.isEmpty()) {
+                        var firstArtifact = artifacts.getJSONObject(0);
+                        if (firstArtifact.containsKey("base64")) {
+                            return "[图像生成完成，Base64数据已返回]";
+                        }
+                    }
+                }
+                if (response.containsKey("text")) {
+                    return response.getString("text");
+                }
+                log.warn("Stability 响应格式无法识别，返回原始响应");
+                return responseBody;
+
             } else {
-                // 尝试通用字段
+                // 通用响应解析（尝试多个常见字段）
+                log.debug("使用通用响应解析，模型ID: {}", actualModelId);
+
+                // 尝试常见的响应字段
                 if (response.containsKey("completion")) {
                     return response.getString("completion");
+                } else if (response.containsKey("generation")) {
+                    return response.getString("generation");
                 } else if (response.containsKey("text")) {
                     return response.getString("text");
                 } else if (response.containsKey("output")) {
-                    return response.getString("output");
-                } else {
-                    log.warn("无法识别响应格式，返回原始响应");
-                    return responseBody;
+                    var output = response.get("output");
+                    if (output instanceof String) {
+                        return (String) output;
+                    } else if (output instanceof JSONObject) {
+                        return ((JSONObject) output).toJSONString();
+                    }
+                } else if (response.containsKey("content")) {
+                    var content = response.get("content");
+                    if (content instanceof String) {
+                        return (String) content;
+                    }
                 }
+
+                log.warn("无法识别响应格式，返回原始响应。模型ID: {}", actualModelId);
+                return responseBody;
             }
 
         } catch (Exception e) {
             log.error("解析响应失败: {}", e.getMessage(), e);
+            log.debug("原始响应体: {}", responseBody);
             return responseBody; // 返回原始响应
         }
     }
