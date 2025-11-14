@@ -20,16 +20,28 @@ public class AIServiceFactory {
     private static final Logger log = LoggerFactory.getLogger(AIServiceFactory.class);
 
     /**
-     * 根据配置创建 AI 服务
+     * 根据配置创建 AI 服务（带日志装饰器）
      */
     public static AIServicePort create(Configuration.AIServiceConfig config) {
+        return create(config, true);
+    }
+
+    /**
+     * 根据配置创建 AI 服务
+     *
+     * @param config AI 服务配置
+     * @param enableLogging 是否启用日志装饰器
+     * @return AI 服务端口实例
+     */
+    public static AIServicePort create(Configuration.AIServiceConfig config, boolean enableLogging) {
         String provider = config.provider().toLowerCase();
 
-        log.info("创建 AI 服务: provider={}, model={}", provider, config.model());
+        log.info("创建 AI 服务: provider={}, model={}, enableLogging={}",
+                provider, config.model(), enableLogging);
 
         top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig adapterConfig = mapToAdapterConfig(config);
 
-        return switch (provider) {
+        AIServicePort service = switch (provider) {
             case "deepseek" -> createDeepSeek(adapterConfig);
             case "openai" -> createOpenAI(adapterConfig);
             case "claude", "anthropic" -> createClaude(adapterConfig);
@@ -40,6 +52,14 @@ public class AIServiceFactory {
                     "。支持的提供商: deepseek, openai, claude, gemini, bedrock"
             );
         };
+
+        // 使用装饰器模式添加日志功能
+        if (enableLogging) {
+            log.debug("为 AI 服务添加日志装饰器");
+            service = new LoggingAIServiceDecorator(service);
+        }
+
+        return service;
     }
 
     /**
@@ -47,7 +67,7 @@ public class AIServiceFactory {
      */
     private static AIServicePort createDeepSeek(top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig config) {
         log.debug("初始化 DeepSeek AI 适配器");
-        return new DeepSeekAIAdapter(config);
+        return AIAdapterFactory.createDeepSeek(config);
     }
 
     /**
@@ -55,7 +75,7 @@ public class AIServiceFactory {
      */
     private static AIServicePort createOpenAI(top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig config) {
         log.debug("初始化 OpenAI 适配器");
-        return new OpenAIAdapter(config);
+        return AIAdapterFactory.createOpenAI(config);
     }
 
     /**
@@ -63,7 +83,7 @@ public class AIServiceFactory {
      */
     private static AIServicePort createClaude(top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig config) {
         log.debug("初始化 Claude 适配器");
-        return new ClaudeAdapter(config);
+        return AIAdapterFactory.createClaude(config);
     }
 
     /**
@@ -71,7 +91,7 @@ public class AIServiceFactory {
      */
     private static AIServicePort createGemini(top.yumbo.ai.reviewer.adapter.output.ai.AIServiceConfig config) {
         log.debug("初始化 Gemini 适配器");
-        return new GeminiAdapter(config);
+        return AIAdapterFactory.createGemini(config);
     }
 
     /**

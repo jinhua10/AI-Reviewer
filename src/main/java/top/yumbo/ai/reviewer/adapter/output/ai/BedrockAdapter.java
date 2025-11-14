@@ -101,20 +101,16 @@ public class BedrockAdapter implements AIServicePort {
 
     @Override
     public String analyze(String prompt) {
-        log.info("开始同步分析 - 模型: {}", modelId);
-
         try {
             return analyzeWithRetry(prompt, 0);
         } catch (Exception e) {
-            log.error("同步分析失败: {}", e.getMessage(), e);
+            log.error("Bedrock 分析失败: {}", e.getMessage(), e);
             throw new RuntimeException("AWS Bedrock 分析失败: " + e.getMessage(), e);
         }
     }
 
     @Override
     public CompletableFuture<String> analyzeAsync(String prompt) {
-        log.info("开始异步分析 - 模型: {}", modelId);
-
         return CompletableFuture.supplyAsync(() -> {
             try {
                 concurrencyLimiter.acquire();
@@ -129,7 +125,7 @@ public class BedrockAdapter implements AIServicePort {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("分析被中断", e);
             } catch (Exception e) {
-                log.error("异步分析失败: {}", e.getMessage(), e);
+                log.error("Bedrock 异步分析失败: {}", e.getMessage(), e);
                 throw new RuntimeException("AWS Bedrock 异步分析失败: " + e.getMessage(), e);
             }
         }, executorService);
@@ -137,8 +133,6 @@ public class BedrockAdapter implements AIServicePort {
 
     @Override
     public CompletableFuture<String[]> analyzeBatchAsync(String[] prompts) {
-        log.info("开始批量异步分析 - 数量: {}, 模型: {}", prompts.length, modelId);
-
         CompletableFuture<String>[] futures = new CompletableFuture[prompts.length];
         for (int i = 0; i < prompts.length; i++) {
             futures[i] = analyzeAsync(prompts[i]);
@@ -151,7 +145,7 @@ public class BedrockAdapter implements AIServicePort {
                         try {
                             results[i] = futures[i].join();
                         } catch (Exception e) {
-                            log.error("批量分析第 {} 个任务失败: {}", i, e.getMessage());
+                            log.error("批量分析第 {} 个任务失败", i, e);
                             results[i] = "分析失败: " + e.getMessage();
                         }
                     }
