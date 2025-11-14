@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.integration.endtoend;
+package top.yumbo.ai.reviewer.integration.endtoend;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;

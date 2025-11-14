@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.integration.adapter;
+package top.yumbo.ai.reviewer.integration.adapter;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;

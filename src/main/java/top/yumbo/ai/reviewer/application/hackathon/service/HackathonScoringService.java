@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.application.hackathon.service;
+package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.parser.code.ASTParserFactory;

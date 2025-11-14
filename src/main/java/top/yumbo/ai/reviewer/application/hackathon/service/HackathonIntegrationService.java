@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.application.hackathon.service;
+package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import lombok.Getter;
 import lombok.Setter;

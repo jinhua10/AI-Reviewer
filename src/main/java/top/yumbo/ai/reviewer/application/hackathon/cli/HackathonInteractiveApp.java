@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.application.hackathon.cli;
+package top.yumbo.ai.reviewer.application.hackathon.cli;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.storage.local.LocalFileSystemAdapter;

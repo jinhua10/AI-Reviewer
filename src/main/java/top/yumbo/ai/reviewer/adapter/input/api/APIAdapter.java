@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.adapter.input.api;
+package top.yumbo.ai.reviewer.adapter.input.api;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.reviewer.adapter.ai.AIAdapterFactory;

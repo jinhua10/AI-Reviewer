@@ -1,6 +1,7 @@
 package top.yumbo.ai.reviewer.infrastructure.config;
 
 import lombok.Data;
+import top.yumbo.ai.reviewer.adapter.ai.config.AIServiceConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -120,42 +121,21 @@ public class Configuration {
      */
     public AIServiceConfig getAIServiceConfig() {
         return new AIServiceConfig(
-                aiProvider,
                 aiApiKey,
                 aiBaseUrl,
                 aiModel,
-                aiMaxTokens,
-                aiTemperature,
-                aiMaxRetries,
-                aiRetryDelayMillis,
-                aiConnectTimeoutMillis,
-                aiReadTimeoutMillis,
-                aiMaxConcurrency,
-                awsRegion,
-                awsAccessKeyId,
-                awsSecretAccessKey
+                aiMaxTokens != null ? aiMaxTokens : 4000,
+                aiTemperature != null ? aiTemperature : 0.3,
+                aiMaxConcurrency != null ? aiMaxConcurrency : 3,
+                aiMaxRetries != null ? aiMaxRetries : 3,
+                aiRetryDelayMillis != null ? aiRetryDelayMillis : 1000,
+                aiConnectTimeoutMillis != null ? aiConnectTimeoutMillis : 30000,
+                aiReadTimeoutMillis != null ? aiReadTimeoutMillis : 60000,
+                awsRegion
         );
     }
 
-    /**
-     * AI 服务配置记录
-     */
-    public record AIServiceConfig(
-            String provider,
-            String apiKey,
-            String baseUrl,
-            String model,
-            Integer maxTokens,
-            Double temperature,
-            Integer maxRetries,
-            Integer retryDelayMillis,
-            Integer connectTimeoutMillis,
-            Integer readTimeoutMillis,
-            Integer maxConcurrency,
-            String awsRegion,
-            String awsAccessKeyId,
-            String awsSecretAccessKey
-    ) {}
+
 
     /**
      * 配置异常

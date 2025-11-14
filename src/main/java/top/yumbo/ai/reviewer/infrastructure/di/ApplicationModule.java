@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.infrastructure.di;
+package top.yumbo.ai.reviewer.infrastructure.di;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -59,7 +59,7 @@ public class ApplicationModule extends AbstractModule {
     @Provides
     @Singleton
     public AIServicePort provideAIService(Configuration config) {
-        return AIServiceFactory.create(config.getAIServiceConfig());
+        return AIServiceFactory.create(config);
     }
 
     /**

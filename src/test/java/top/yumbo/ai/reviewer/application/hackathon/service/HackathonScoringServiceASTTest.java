@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.application.hackathon.service;
+package top.yumbo.ai.reviewer.application.hackathon.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

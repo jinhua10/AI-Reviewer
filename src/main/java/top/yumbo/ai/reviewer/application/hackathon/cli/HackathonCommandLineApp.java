@@ -1,4 +1,4 @@
-﻿package top.yumbo.ai.reviewer.application.hackathon.cli;
+package top.yumbo.ai.reviewer.application.hackathon.cli;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
