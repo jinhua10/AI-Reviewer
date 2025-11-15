@@ -278,7 +278,7 @@ public class BedrockAdapter implements IAIService {
 
     @Override
     public String getProviderName() {
-        return "";
+        return config.getProvider();
     }
 
 

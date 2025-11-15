@@ -20,6 +20,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +37,7 @@ public class HackathonAutoConfiguration {
     AdapterRegistry registry;
     @Autowired
     AIReviewerProperties properties;
+
     private AIConfig aiConfig;
 
     @PostConstruct
@@ -76,7 +78,7 @@ public class HackathonAutoConfiguration {
             // Merge JVM property -Dspring-boot.run.arguments if provided (used by some wrappers)
             List<String> mergedArgs = new ArrayList<>();
             if (args != null) {
-                for (String a : args) mergedArgs.add(a);
+                mergedArgs.addAll(Arrays.asList(args));
             }
             String prop = System.getProperty("spring-boot.run.arguments");
             if (prop != null && !prop.isBlank()) {
