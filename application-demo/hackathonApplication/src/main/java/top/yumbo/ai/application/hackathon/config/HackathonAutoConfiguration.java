@@ -54,6 +54,7 @@ public class HackathonAutoConfiguration {
                 .maxRetries(properties.getAi().getMaxRetries()).build();
         // remove default parser for hackathon
         registry.clearParsers();
+        registry.clearAIServices();
         registry.registerParser(new HackathonFileParser());
         registry.registerAIService(new BedrockAdapter(aiConfig));
         registry.loadAdaptersFromSPI();
