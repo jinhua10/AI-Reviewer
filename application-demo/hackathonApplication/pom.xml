@@ -12,7 +12,7 @@
     <name>Hackathon Application</name>
     <url>http://maven.apache.org</url>
     <properties>
-        <aws.version>2.21.0</aws.version>
+        <aws.version>2.25.0</aws.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -30,6 +30,11 @@
             <version>1.0</version>
         </dependency>
         <!-- AWS Bedrock Runtime for AI models -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+            <version>${aws.version}</version> <!-- 与bedrockruntime版本严格一致 -->
+        </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>bedrockruntime</artifactId>
