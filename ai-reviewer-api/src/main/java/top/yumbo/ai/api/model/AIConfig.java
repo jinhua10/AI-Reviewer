@@ -30,7 +30,7 @@ public class AIConfig {
     private String endpoint;
     @Builder.Default
     private String sysPrompt = "You are a code review assistant. Analyze the provided code and give constructive feedback.";    @Builder.Default
-    private String userPrompt = "Please review this code:\n\n{}";
+    private String userPrompt = "Please review this code:\n\n%s";
     /**
      * Temperature (0.0 to 2.0)
      */
