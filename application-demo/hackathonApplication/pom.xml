@@ -12,6 +12,18 @@
     <name>Hackathon Application</name>
     <url>http://maven.apache.org</url>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- AWS SDK BOM - 统一管理版本 -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.21.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>top.yumbo.ai</groupId>
