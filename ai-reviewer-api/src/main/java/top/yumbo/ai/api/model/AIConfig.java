@@ -15,6 +15,7 @@ public class AIConfig {
      * AI provider name
      */
     private String provider;
+    private String region;
     /**
      * Model identifier
      */

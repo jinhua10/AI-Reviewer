@@ -19,10 +19,12 @@ ai-reviewer:
       - text
   # AI service configuration
   ai:
-    provider: deepseek
-    model: deepseek-coder
-    api-key: ${AI_API_KEY:your-api-key-here}
-    endpoint: https://api.deepseek.com/v1/chat/completions
+    provider: bedrock
+    region: us-west-1
+    model: "arn:aws:bedrock:us-east-1:590184013141:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+#    model: deepseek-coder
+#    api-key: ${AI_API_KEY:your-api-key-here}
+#    endpoint: https://api.deepseek.com/v1/chat/completions
     sysPrompt: "You are an expert code reviewer. Provide constructive feedback on the following code."
     #use String.format(userPrompt,code/content) to insert code snippet
     userPrompt: |

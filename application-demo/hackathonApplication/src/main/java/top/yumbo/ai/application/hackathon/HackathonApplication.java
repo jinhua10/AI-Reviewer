@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import top.yumbo.ai.api.model.AIConfig;
 import top.yumbo.ai.api.model.ProcessResult;
 import top.yumbo.ai.api.model.ProcessorConfig;
-import top.yumbo.ai.core.AIEngine;
+import top.yumbo.ai.application.hackathon.core.HackathonAIEngine;
 import top.yumbo.ai.core.context.ExecutionContext;
 import top.yumbo.ai.starter.config.AIReviewerProperties;
 
@@ -28,23 +28,24 @@ public class HackathonApplication {
     }
 
     @Bean
-    public CommandLineRunner runner(AIEngine engine, AIReviewerProperties properties) {
+    public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine, AIReviewerProperties properties) {
         return args -> {
-            log.info("AI Reviewer Started - AIEngine bean found: {}", engine != null);
+            log.info("AI Reviewer Started - Hackathon AIEngine bean found: {}", hackathonAIEngine != null);
             log.info("Configuration: {}", properties);
             // Example usage - can be triggered via REST API or CLI
-            if (engine != null && args.length > 0 && args[0].equals("--review")) {
+            if (hackathonAIEngine != null && args.length > 0 && args[0].equals("--review")) {
                 String targetPath = args.length > 1 ? args[1] : "./src";
-                runReview(engine, properties, targetPath);
+                runReview(hackathonAIEngine, properties, targetPath);
             }
         };
     }
 
-    private void runReview(AIEngine engine, AIReviewerProperties properties, String targetPath) {
+    private void runReview(HackathonAIEngine hackathonAIEngine, AIReviewerProperties properties, String targetPath) {
         log.info("Starting code review for: {}", targetPath);
         // Build execution context
         AIConfig aiConfig = AIConfig.builder()
                 .provider(properties.getAi().getProvider())
+                .region(properties.getAi().getRegion())
                 .model(properties.getAi().getModel())
                 .apiKey(properties.getAi().getApiKey())
                 .sysPrompt(properties.getAi().getSysPrompt())
@@ -70,7 +71,7 @@ public class HackathonApplication {
                 .threadPoolSize(properties.getExecutor().getThreadPoolSize())
                 .build();
         // Execute
-        ProcessResult result = engine.execute(context);
+        ProcessResult result = hackathonAIEngine.execute(context);
         if (result.isSuccess()) {
             log.info("Code review completed successfully!");
             log.info("Report saved to: {}", processorConfig.getOutputPath());

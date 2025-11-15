@@ -26,8 +26,9 @@ public class AIReviewerProperties {
     }
     @Data
     public static class AI {
-        private String provider = "openai";
-        private String model = "gpt-4";
+        private String provider = "bedrock";
+        private String model = "arn:aws:bedrock:us-east-1:590184013141:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0";
+        private String region="us-west-1";
         private String apiKey;
         private String endpoint;
         private String sysPrompt;
