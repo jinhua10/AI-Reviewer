@@ -70,7 +70,7 @@ public class HackathonAutoConfiguration {
     }
 
     @Bean
-    public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine, AIReviewerProperties properties) {
+    public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine) {
         return args -> {
             log.info("AI Reviewer Started - Hackathon AIEngine bean found: {}", hackathonAIEngine != null);
             log.info("Configuration: {}", properties);
