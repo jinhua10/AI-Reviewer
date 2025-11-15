@@ -73,12 +73,41 @@ public class ZipArchiveAdapter {
                 int fileCount = 0;
                 long totalSize = 0;
 
+                // 安全限制
+                final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+                final long MAX_TOTAL_SIZE = 1024 * 1024 * 1024; // 1GB
+                final int MAX_FILE_COUNT = 10000;
+
                 while ((entry = zis.getNextEntry()) != null) {
                     Path entryPath = extractDir.resolve(entry.getName());
 
-                    // 安全检查：防止路径遍历攻击
+                    // 安全检查1：防止路径遍历攻击
                     if (!entryPath.normalize().startsWith(extractDir.normalize())) {
                         log.warn("跳过不安全的路径: {}", entry.getName());
+                        continue;
+                    }
+
+                    // 安全检查2：文件数量限制
+                    if (fileCount >= MAX_FILE_COUNT) {
+                        log.error("文件数量超过限制: {}", MAX_FILE_COUNT);
+                        throw new ZipExtractionException("ZIP 文件包含过多文件（超过 " + MAX_FILE_COUNT + "）");
+                    }
+
+                    // 安全检查3：单个文件大小限制
+                    if (entry.getSize() > MAX_FILE_SIZE) {
+                        log.warn("跳过过大的文件: {} ({}  bytes)", entry.getName(), entry.getSize());
+                        continue;
+                    }
+
+                    // 安全检查4：总大小限制
+                    if (totalSize + entry.getSize() > MAX_TOTAL_SIZE) {
+                        log.error("总大小超过限制: {} bytes", MAX_TOTAL_SIZE);
+                        throw new ZipExtractionException("ZIP 总大小超过限制（" + MAX_TOTAL_SIZE / 1024 / 1024 + " MB）");
+                    }
+
+                    // 安全检查5：危险文件扩展名
+                    if (isDangerousFile(entry.getName())) {
+                        log.warn("跳过危险文件类型: {}", entry.getName());
                         continue;
                     }
 
@@ -93,7 +122,7 @@ public class ZipArchiveAdapter {
                         fileCount++;
                         totalSize += entry.getSize();
 
-                        log.trace("解压文件: {}", entry.getName());
+                        log.trace("解压文件: {} ({} bytes)", entry.getName(), entry.getSize());
                     }
 
                     zis.closeEntry();
@@ -156,6 +185,27 @@ public class ZipArchiveAdapter {
             log.warn("无法读取文件头: {}", filePath, e);
         }
 
+        return false;
+    }
+
+    /**
+     * 检查是否为危险文件类型
+     *
+     * @param fileName 文件名
+     * @return 是否为危险文件
+     */
+    private boolean isDangerousFile(String fileName) {
+        String lowerName = fileName.toLowerCase();
+        String[] dangerousExtensions = {
+            ".exe", ".dll", ".bat", ".cmd", ".sh", ".bash",
+            ".ps1", ".vbs", ".scr", ".com", ".pif", ".jar"
+        };
+
+        for (String ext : dangerousExtensions) {
+            if (lowerName.endsWith(ext)) {
+                return true;
+            }
+        }
         return false;
     }
 

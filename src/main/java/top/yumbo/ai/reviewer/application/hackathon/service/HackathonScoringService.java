@@ -748,10 +748,34 @@ public class HackathonScoringService {
 
     /**
      * 计算功能完整性（已废弃，使用calculateFunctionalityWithAST代替）
+     *
+     * <p>废弃原因：
+     * <ul>
+     *   <li>评估维度单一，仅基于文件数量和代码行数</li>
+     *   <li>缺乏代码质量考量</li>
+     *   <li>容易被作弊（增加无意义文件和代码）</li>
+     *   <li>不适用多文件类型（媒体、文档等）</li>
+     * </ul>
+     *
+     * <p>迁移指南：
+     * <pre>{@code
+     * // 旧方式（已废弃）
+     * int score = calculateFunctionality(project);
+     *
+     * // 新方式（推荐）
+     * CodeInsight insight = astAnalysisService.analyzeProject(project);
+     * int score = calculateFunctionalityWithAST(project, insight);
+     * }</pre>
+     *
+     * @param project 项目对象
+     * @return 功能完整性分数
      * @deprecated 使用 {@link #calculateFunctionalityWithAST(Project, CodeInsight)} 代替
+     * @see #calculateFunctionalityWithAST(Project, CodeInsight)
      */
-    @Deprecated
+    @Deprecated(since = "2.0", forRemoval = true)
     private int calculateFunctionality(Project project) {
+        log.warn("使用了已废弃的方法 calculateFunctionality()，请迁移至 calculateFunctionalityWithAST()");
+
         int score = 0;
 
         // 基于文件数量评估
