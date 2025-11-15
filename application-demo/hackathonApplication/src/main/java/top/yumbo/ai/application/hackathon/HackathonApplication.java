@@ -15,6 +15,10 @@ import top.yumbo.ai.starter.config.AIReviewerProperties;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Main application class for AI Reviewer
@@ -32,12 +36,81 @@ public class HackathonApplication {
         return args -> {
             log.info("AI Reviewer Started - Hackathon AIEngine bean found: {}", hackathonAIEngine != null);
             log.info("Configuration: {}", properties);
+
+            // Merge JVM property -Dspring-boot.run.arguments if provided (used by some wrappers)
+            List<String> mergedArgs = new ArrayList<>();
+            if (args != null) {
+                for (String a : args) mergedArgs.add(a);
+            }
+            String prop = System.getProperty("spring-boot.run.arguments");
+            if (prop != null && !prop.isBlank()) {
+                // parse into tokens, supporting quoted values
+                mergedArgs.addAll(parseArgsString(prop));
+                log.debug("Merged args from spring-boot.run.arguments: {}", mergedArgs);
+            }
+
+            // Also handle the case where -Dspring-boot.run.arguments is passed as a normal program arg
+            // (for example when the caller places -D after -jar):
+            // Replace any -Dspring-boot.run.arguments=... token in-place with its parsed tokens
+            List<String> effectiveArgs = new ArrayList<>(mergedArgs);
+            for (int i = 0; i < effectiveArgs.size(); i++) {
+                String a = effectiveArgs.get(i);
+                if (a.startsWith("-Dspring-boot.run.arguments=")) {
+                    String val = a.substring("-Dspring-boot.run.arguments=".length());
+                    List<String> parsed = parseArgsString(val);
+                    // replace the original token with parsed tokens to preserve ordering
+                    effectiveArgs.remove(i);
+                    if (!parsed.isEmpty()) {
+                        effectiveArgs.addAll(i, parsed);
+                        i += parsed.size() - 1; // advance index
+                    } else {
+                        i--; // adjust for removed element
+                    }
+                }
+            }
+            log.debug("Effective args to inspect: {}", effectiveArgs);
+
             // Example usage - can be triggered via REST API or CLI
-            if (hackathonAIEngine != null && args.length > 0 && args[0].equals("--review")) {
-                String targetPath = args.length > 1 ? args[1] : "./src";
-                runReview(hackathonAIEngine, properties, targetPath);
+            if (hackathonAIEngine != null) {
+                String targetPath = null;
+                // look for --review [value] or --review=value
+                for (int i = 0; i < effectiveArgs.size(); i++) {
+                    String a = effectiveArgs.get(i);
+                    if (a.startsWith("--review=")) {
+                        targetPath = a.substring("--review=".length());
+                        break;
+                    }
+                    if ("--review".equals(a)) {
+                        if (i + 1 < effectiveArgs.size()) {
+                            targetPath = effectiveArgs.get(i + 1);
+                        } else {
+                            targetPath = ".";
+                        }
+                        break;
+                    }
+                }
+
+                if (targetPath != null) {
+                    runReview(hackathonAIEngine, properties, targetPath);
+                } else {
+                    log.info("No --review argument provided; application started without running a review.");
+                }
             }
         };
+    }
+
+    // Simple tokenizer: splits on whitespace but respects single or double quoted substrings
+    private static List<String> parseArgsString(String input) {
+        List<String> tokens = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\s*('([^']*)'|\"([^\"]*)\"|([^\s]+))\\s*");
+        Matcher matcher = pattern.matcher(input);
+        while (matcher.find()) {
+            String token = matcher.group(2);
+            if (token == null) token = matcher.group(3);
+            if (token == null) token = matcher.group(4);
+            if (token != null && !token.isEmpty()) tokens.add(token);
+        }
+        return tokens;
     }
 
     private void runReview(HackathonAIEngine hackathonAIEngine, AIReviewerProperties properties, String targetPath) {
