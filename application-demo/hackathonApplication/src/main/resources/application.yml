@@ -25,9 +25,9 @@ ai-reviewer:
 #    model: deepseek-coder
 #    api-key: ${AI_API_KEY:your-api-key-here}
 #    endpoint: https://api.deepseek.com/v1/chat/completions
-    sysPrompt: "You are an expert code reviewer. Provide constructive feedback on the following code."
+    sys-prompt: "You are an expert code reviewer. Provide constructive feedback on the following code."
     #use String.format(userPrompt,code/content) to insert code snippet
-    userPrompt: |
+    user-prompt: |
       Please review this code: %s
     temperature: 0.7
     max-tokens: 2000

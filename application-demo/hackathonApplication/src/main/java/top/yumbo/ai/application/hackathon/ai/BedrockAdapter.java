@@ -234,9 +234,15 @@ public class BedrockAdapter implements IAIService {
             if (data == null || StringUtils.isEmpty(data.getContent())) {
                 return AIResponse.builder().build();
             }
+            String userPrompt = config.getUserPrompt();
+            if (StringUtils.isEmpty(userPrompt)) {
+                log.warn("userPrompt 为空,使用默认提示词");
+                userPrompt = "please analyze:\n%s";
+            }
+
             // 构建请求体（根据不同模型格式会有所不同）
             log.info(config.toString());
-            String requestBody = buildRequestBody(String.format(config.getUserPrompt(), data.getContent()));
+            String requestBody = buildRequestBody(String.format(userPrompt, data.getContent()));
 
             log.debug("调用 Bedrock 模型 - Model ID: {}, Region: {}", modelId, config.getRegion());
             log.debug("请求体: {}", requestBody);
