@@ -235,6 +235,7 @@ public class BedrockAdapter implements IAIService {
                 return AIResponse.builder().build();
             }
             // 构建请求体（根据不同模型格式会有所不同）
+            log.info(config.toString());
             String requestBody = buildRequestBody(String.format(config.getUserPrompt(), data.getContent()));
 
             log.debug("调用 Bedrock 模型 - Model ID: {}, Region: {}", modelId, config.getRegion());
