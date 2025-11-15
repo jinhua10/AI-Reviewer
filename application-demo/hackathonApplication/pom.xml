@@ -11,46 +11,44 @@
     <version>1.0</version>
     <name>Hackathon Application</name>
     <url>http://maven.apache.org</url>
-    <properties>
-        <aws.version>2.25.0</aws.version>
-    </properties>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>software.amazon.awssdk</groupId>
-                <artifactId>bom</artifactId>
-                <version>${aws.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>top.yumbo.ai</groupId>
             <artifactId>ai-reviewer-starter</artifactId>
             <version>1.0</version>
         </dependency>
-        <!-- AWS Bedrock Runtime for AI models -->
+        <!-- AWS SDK BOM - 统一管理版本 -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
-            <artifactId>sdk-core</artifactId>
-            <version>${aws.version}</version> <!-- 与bedrockruntime版本严格一致 -->
+            <artifactId>bom</artifactId>
+            <version>2.21.0</version>
+            <type>pom</type>
+            <scope>import</scope>
         </dependency>
+
+        <!-- Bedrock Runtime -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>bedrockruntime</artifactId>
-            <version>${aws.version}</version>
         </dependency>
+
+        <!-- 必需的核心依赖 -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
-            <artifactId>bedrock</artifactId>
-            <version>${aws.version}</version>
+            <artifactId>aws-core</artifactId>
         </dependency>
+
+        <!-- Metrics 依赖(缺少的类) -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
-            <artifactId>auth</artifactId>
-            <version>${aws.version}</version>
+            <artifactId>metrics-spi</artifactId>
+        </dependency>
+
+        <!-- HTTP Client -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
         </dependency>
 
         <dependency>
@@ -72,6 +70,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <includeSystemScope>true</includeSystemScope>
+                    <layout>ZIP</layout>
                     <mainClass>top.yumbo.ai.application.hackathon.HackathonApplication</mainClass>
                 </configuration>
                 <executions>
