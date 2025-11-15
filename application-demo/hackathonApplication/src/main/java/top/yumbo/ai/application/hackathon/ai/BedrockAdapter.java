@@ -239,6 +239,7 @@ public class BedrockAdapter implements IAIService {
             // 调用模型
             InvokeModelRequest request = InvokeModelRequest.builder()
                     .modelId(config.getModel())
+                    .contentType("application/json")
                     .body(SdkBytes.fromString(requestBody, StandardCharsets.UTF_8))
                     .build();
 
