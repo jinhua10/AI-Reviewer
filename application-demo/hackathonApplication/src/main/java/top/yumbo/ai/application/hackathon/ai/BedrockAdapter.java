@@ -3,6 +3,7 @@ package top.yumbo.ai.application.hackathon.ai;
 
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
@@ -44,7 +45,8 @@ public class BedrockAdapter implements IAIService {
         this.temperature = config.getTemperature();
         // 初始化 Bedrock 客户端
         var clientBuilder = BedrockRuntimeClient.builder()
-                .region(Region.of(config.getRegion()));
+                .region(Region.of(config.getRegion()))
+                .credentialsProvider(DefaultCredentialsProvider.create());
 
         this.modelId = extractModelId(config.getModel());
 
@@ -229,14 +231,14 @@ public class BedrockAdapter implements IAIService {
     public AIResponse invoke(PreProcessedData data, AIConfig config) throws Exception {
         try {
             // 构建请求体（根据不同模型格式会有所不同）
-            String requestBody = buildRequestBody(data.getContent());
+            String requestBody = buildRequestBody(String.format(config.getUserPrompt(), data.getContent()));
 
             log.debug("调用 Bedrock 模型 - Model ID: {}, Region: {}", modelId, config.getRegion());
             log.debug("请求体: {}", requestBody);
 
             // 调用模型
             InvokeModelRequest request = InvokeModelRequest.builder()
-                    .modelId(modelId)
+                    .modelId(config.getModel())
                     .body(SdkBytes.fromString(requestBody, StandardCharsets.UTF_8))
                     .build();
 
