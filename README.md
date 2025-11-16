@@ -1,4 +1,4 @@
-# AI Reviewer - AI-Powered Code Review Engine
+# AI Reviewer - An AI Engine-Driven Document Processing Tool
 
 [![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
