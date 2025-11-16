@@ -29,7 +29,7 @@ ai-reviewer:
     #use String.format(userPrompt,code/content) to insert code snippet
     user-prompt: "Please review the following code:\n\n%s\n\nProvide detailed feedback on: 1. Code structure and design, 2. Potential issues, 3. Improvement suggestions"
     temperature: 0.7
-    max-tokens: 2000
+    max-tokens: 20000
     timeout-seconds: 120
     max-retries: 3
   # Processor configuration
