@@ -13,7 +13,7 @@ import java.util.List;
 public class AIReviewerProperties {
     private Scanner scanner = new Scanner();
     private Parser parser = new Parser();
-    private AIConfig ai;
+    private AIConfig ai = new AIConfig();
     private Processor processor = new Processor();
     private Executor executor = new Executor();
     @Data

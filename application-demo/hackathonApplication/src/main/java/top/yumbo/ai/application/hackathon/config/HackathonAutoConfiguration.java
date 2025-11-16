@@ -45,56 +45,23 @@ public class HackathonAutoConfiguration {
     public void customizeAdapterRegistry() {
         log.info("Customizing AdapterRegistry for Hackathon");
 
-        // Debug: 打印从配置文件读取的原始值
+        // 直接使用配置文件中的 AIConfig
+        this.aiConfig = properties.getAi();
+
+        // Debug: 打印配置信息
         log.info("========== 配置加载调试信息 ==========");
-        log.info("Provider: {}", properties.getAi().getProvider());
-        log.info("Region: {}", properties.getAi().getRegion());
-        log.info("Model: {}", properties.getAi().getModel());
-        log.info("Temperature: {}", properties.getAi().getTemperature());
-        log.info("MaxTokens: {}", properties.getAi().getMaxTokens());
-        log.info("TimeoutSeconds: {}", properties.getAi().getTimeoutSeconds());
-        log.info("MaxRetries: {}", properties.getAi().getMaxRetries());
-        log.info("SysPrompt is null: {}", properties.getAi().getSysPrompt() == null);
-        log.info("SysPrompt length: {}", properties.getAi().getSysPrompt() != null ? properties.getAi().getSysPrompt().length() : 0);
-        log.info("SysPrompt (first 50 chars): '{}'",
-                properties.getAi().getSysPrompt() != null && properties.getAi().getSysPrompt().length() > 0
-                        ? properties.getAi().getSysPrompt().substring(0, Math.min(50, properties.getAi().getSysPrompt().length()))
-                        : "NULL or EMPTY");
-        log.info("UserPrompt is null: {}", properties.getAi().getUserPrompt() == null);
-        log.info("UserPrompt length: {}", properties.getAi().getUserPrompt() != null ? properties.getAi().getUserPrompt().length() : 0);
-        log.info("UserPrompt (first 50 chars): '{}'",
-                properties.getAi().getUserPrompt() != null && properties.getAi().getUserPrompt().length() > 0
-                        ? properties.getAi().getUserPrompt().substring(0, Math.min(50, properties.getAi().getUserPrompt().length()))
-                        : "NULL or EMPTY");
+        log.info("Provider: {}", aiConfig.getProvider());
+        log.info("Region: {}", aiConfig.getRegion());
+        log.info("Model: {}", aiConfig.getModel());
+        log.info("Temperature: {}", aiConfig.getTemperature());
+        log.info("MaxTokens: {}", aiConfig.getMaxTokens());
+        log.info("TimeoutSeconds: {}", aiConfig.getTimeoutSeconds());
+        log.info("MaxRetries: {}", aiConfig.getMaxRetries());
+        log.info("SysPrompt: {}", aiConfig.getSysPrompt() != null ?
+                aiConfig.getSysPrompt().substring(0, Math.min(50, aiConfig.getSysPrompt().length())) : "null");
+        log.info("UserPrompt: {}", aiConfig.getUserPrompt() != null ?
+                aiConfig.getUserPrompt().substring(0, Math.min(50, aiConfig.getUserPrompt().length())) : "null");
         log.info("=====================================");
-
-        // 确保 userPrompt 不为空,提供默认值
-        String userPrompt = properties.getAi().getUserPrompt();
-        if (userPrompt == null || userPrompt.trim().isEmpty()) {
-            log.warn("userPrompt 未配置,使用默认提示词");
-            userPrompt = "Please review the following code:\n\n%s\n\nProvide your analysis.";
-        }
-
-        String sysPrompt = properties.getAi().getSysPrompt();
-        if (sysPrompt == null || sysPrompt.trim().isEmpty()) {
-            log.warn("sysPrompt 未配置,使用默认系统提示词");
-            sysPrompt = "You are an expert code reviewer.";
-        }
-
-        // Build execution context
-        this.aiConfig = AIConfig.builder()
-                .provider(properties.getAi().getProvider())
-                .region(properties.getAi().getRegion())
-                .model(properties.getAi().getModel())
-                .apiKey(properties.getAi().getApiKey())
-                .sysPrompt(sysPrompt)
-                .userPrompt(userPrompt)
-                .endpoint(properties.getAi().getEndpoint())
-                .temperature(properties.getAi().getTemperature())
-                .maxTokens(properties.getAi().getMaxTokens())
-                .timeoutSeconds(properties.getAi().getTimeoutSeconds())
-                .maxRetries(properties.getAi().getMaxRetries())
-                .build();
 
         // remove default parser for hackathon
         registry.clearParsers();

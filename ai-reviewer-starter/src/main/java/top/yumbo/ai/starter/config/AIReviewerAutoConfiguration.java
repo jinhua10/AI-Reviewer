@@ -28,18 +28,8 @@ public class AIReviewerAutoConfiguration {
 
     @Bean
     public AdapterRegistry adapterRegistry() {
-        AIConfig aiConfig = AIConfig.builder()
-                .provider(properties.getAi().getProvider())
-                .model(properties.getAi().getModel())
-                .apiKey(properties.getAi().getApiKey())
-                .sysPrompt(properties.getAi().getSysPrompt())
-                .userPrompt(properties.getAi().getUserPrompt())
-                .endpoint(properties.getAi().getEndpoint())
-                .temperature(properties.getAi().getTemperature())
-                .maxTokens(properties.getAi().getMaxTokens())
-                .timeoutSeconds(properties.getAi().getTimeoutSeconds())
-                .maxRetries(properties.getAi().getMaxRetries())
-                .build();
+        // 直接使用从配置文件绑定的 AIConfig
+        AIConfig aiConfig = properties.getAi();
         log.info("Initializing AdapterRegistry");
         AdapterRegistry registry = new AdapterRegistry();
         registry.registerParser(new JavaFileParser());
