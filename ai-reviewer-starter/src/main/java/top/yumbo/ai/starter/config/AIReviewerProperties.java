@@ -18,24 +18,26 @@ public class AIReviewerProperties {
     private Executor executor = new Executor();
     @Data
     public static class Scanner {
-        private List<String> includePatterns = new ArrayList<>();
-        private List<String> excludePatterns = new ArrayList<>();
-        private String maxFileSize = "10MB";
+        private List<String> includePatterns;
+        private List<String> excludePatterns;
+        private String maxFileSize;
     }
+
     @Data
     public static class Parser {
-        private List<String> enabledParsers = List.of("java", "text");
+        private List<String> enabledParsers;
     }
 
     @Data
     public static class Processor {
-        private String type = "code-review";
-        private String outputFormat = "markdown";
-        private String outputPath = "./reports";
+        private String type;
+        private String outputFormat;
+        private String outputPath;
     }
+
     @Data
     public static class Executor {
-        private Integer threadPoolSize = 10;
-        private Integer maxQueueSize = 100;
+        private Integer threadPoolSize;
+        private Integer maxQueueSize;
     }
 }

@@ -35,27 +35,27 @@ public class AIConfig {
     /**
      * System prompt
      */
-    private String sysPrompt = "You are a code review assistant. Analyze the provided code and give constructive feedback.";
+    private String sysPrompt;
     /**
      * User prompt template
      */
-    private String userPrompt = "Please review this code:\n\n%s";
+    private String userPrompt;
     /**
      * Temperature (0.0 to 2.0)
      */
-    private Double temperature = 0.7;
+    private Double temperature;
     /**
      * Max tokens to generate
      */
-    private Integer maxTokens = 2000;
+    private Integer maxTokens;
     /**
      * Timeout in seconds
      */
-    private Integer timeoutSeconds = 30;
+    private Integer timeoutSeconds;
     /**
      * Max retry attempts
      */
-    private Integer maxRetries = 3;
+    private Integer maxRetries;
     /**
      * Custom parameters
      */
