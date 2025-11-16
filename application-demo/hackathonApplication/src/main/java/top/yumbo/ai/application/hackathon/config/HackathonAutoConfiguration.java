@@ -12,6 +12,7 @@ import top.yumbo.ai.api.model.ProcessorConfig;
 import top.yumbo.ai.application.hackathon.ai.BedrockAdapter;
 import top.yumbo.ai.application.hackathon.core.HackathonAIEngine;
 import top.yumbo.ai.application.hackathon.parser.HackathonFileParser;
+import top.yumbo.ai.application.hackathon.processor.HackathonCodeReviewProcessor;
 import top.yumbo.ai.core.context.ExecutionContext;
 import top.yumbo.ai.core.registry.AdapterRegistry;
 import top.yumbo.ai.starter.config.AIReviewerProperties;
@@ -98,8 +99,10 @@ public class HackathonAutoConfiguration {
         // remove default parser for hackathon
         registry.clearParsers();
         registry.clearAIServices();
+        registry.clearProcessors();
         registry.registerParser(new HackathonFileParser());
         registry.registerAIService(new BedrockAdapter(aiConfig));
+        registry.registerProcessor(new HackathonCodeReviewProcessor());
         registry.loadAdaptersFromSPI();
     }
 

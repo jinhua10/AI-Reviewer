@@ -29,14 +29,15 @@ public class HackathonAIEngine extends AIEngine {
         String content = preProcessedData.getContent();
         FileMetadata metadata = preProcessedData.getMetadata();
         String fileName = metadata.getFileName();
+        Path filePath = metadata.getFilePath();
         return String.format("""
-                file name: %s
+                file path: %s
                 file content:
                 ```
                 %s
                 ```
                 
-                """, fileName, content);
+                """, filePath, content);
     }
 
     /**

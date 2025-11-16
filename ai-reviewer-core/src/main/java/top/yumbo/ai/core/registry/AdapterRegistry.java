@@ -99,6 +99,10 @@ public class AdapterRegistry {
         log.info("Cleared all registered AI services");
     }
 
+    public void clearProcessors() {
+        processors.clear();
+        log.info("Cleared all registered processors");
+    }
     /**
      * Load adapters using SPI
      */
