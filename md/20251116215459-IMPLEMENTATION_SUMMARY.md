@@ -76,7 +76,14 @@
    - 元数据支持
    - 优先级 40
 
-4. ✅ 更新 SPI 配置包含所有实现
+4. ✅ 实现 `ZipFileSource`
+   - 支持 ZIP/JAR/WAR 压缩包
+   - 读取压缩包内文件
+   - 内存缓存机制
+   - 支持嵌套目录
+   - 优先级 70
+
+5. ✅ 更新 SPI 配置包含所有实现
 
 ---
 
@@ -111,9 +118,10 @@ ai-reviewer-adaptor-source/
 │   ├── LocalFileSource.java               (145 行)
 │   ├── SftpFileSource.java                (203 行)
 │   ├── GitFileSource.java                 (233 行)
-│   └── S3FileSource.java                  (223 行)
+│   ├── S3FileSource.java                  (223 行)
+│   └── ZipFileSource.java                 (267 行)
 └── src/main/resources/META-INF/services/
-    └── top.yumbo.ai.api.source.IFileSource (4 行)
+    └── top.yumbo.ai.api.source.IFileSource (5 行)
 ```
 
 ### 项目配置文件修改
@@ -152,7 +160,8 @@ ai-reviewer-starter/pom.xml      (修改) - 添加依赖
     ├─ LocalFileSource ✅
     ├─ SftpFileSource ✅
     ├─ GitFileSource ✅
-    └─ S3FileSource ✅
+    ├─ S3FileSource ✅
+    └─ ZipFileSource ✅
 ```
 
 ### 依赖关系图
@@ -206,6 +215,7 @@ FileSourceConfig config = FileSourceConfig.builder()
 | 文件源 | 优先级 | 说明 |
 |--------|--------|------|
 | LocalFileSource | 100 | 最高优先级，默认实现 |
+| ZipFileSource | 70 | ZIP/JAR/WAR 压缩包支持 |
 | GitFileSource | 60 | Git 仓库支持 |
 | SftpFileSource | 50 | 远程 SFTP 服务器 |
 | S3FileSource | 40 | 云存储支持 |
@@ -219,7 +229,8 @@ META-INF/services/top.yumbo.ai.api.source.IFileSource
 ├── top.yumbo.ai.adaptor.source.LocalFileSource
 ├── top.yumbo.ai.adaptor.source.SftpFileSource
 ├── top.yumbo.ai.adaptor.source.GitFileSource
-└── top.yumbo.ai.adaptor.source.S3FileSource
+├── top.yumbo.ai.adaptor.source.S3FileSource
+└── top.yumbo.ai.adaptor.source.ZipFileSource
 ```
 
 ---
@@ -260,7 +271,7 @@ META-INF/services/top.yumbo.ai.api.source.IFileSource
 - ✅ 10 个模块全部编译成功
 - ✅ 0 个编译错误
 - ⚠️ 少量警告（未使用的方法，已过时的 API）
-- 📦 4 个新的文件源适配器类
+- 📦 5 个新的文件源适配器类
 - 📄 3 个新的 API 接口/模型类
 
 ---
@@ -351,6 +362,48 @@ ExecutionContext context = ExecutionContext.builder()
 ProcessResult result = aiEngine.execute(context);
 ```
 
+### 示例5: 使用 ZIP 文件源
+
+```java
+// 审查 ZIP 压缩包中的代码
+FileSourceConfig config = FileSourceConfig.builder()
+    .sourceType("zip")
+    .basePath("D:/archives/my-project-v1.0.zip")
+    .build();
+
+ExecutionContext context = ExecutionContext.builder()
+    .fileSourceConfig(config)
+    .includePatterns(List.of("**/*.java", "**/*.js"))
+    .excludePatterns(List.of("**/test/**"))
+    .aiConfig(aiConfig)
+    .processorConfig(processorConfig)
+    .build();
+
+ProcessResult result = aiEngine.execute(context);
+```
+
+### 示例6: 审查 JAR 包中的代码
+
+```java
+// 审查 JAR 文件，指定内部路径
+FileSourceConfig config = FileSourceConfig.builder()
+    .sourceType("zip")
+    .basePath("D:/libs/mylib-1.0.jar")
+    .build();
+
+// 可以使用自定义参数指定 ZIP 内的基础路径
+config.putCustomParam("zipBasePath", "com/example/mylib");
+
+ExecutionContext context = ExecutionContext.builder()
+    .fileSourceConfig(config)
+    .includePatterns(List.of("**/*.class", "**/*.java"))
+    .aiConfig(aiConfig)
+    .processorConfig(processorConfig)
+    .build();
+
+ProcessResult result = aiEngine.execute(context);
+```
+
 ---
 
 ## ⚠️ 注意事项
@@ -367,7 +420,14 @@ ProcessResult result = aiEngine.execute(context);
 
 Git 文件源会创建临时克隆目录，使用完毕后会自动清理。
 
-### 4. 安全考虑
+### 4. ZIP 文件源特性
+
+- ✅ 支持 ZIP、JAR、WAR 格式
+- ✅ 使用内存缓存提高性能
+- ✅ 自动处理嵌套目录结构
+- ⚠️ 大型压缩包可能占用较多内存
+
+### 5. 安全考虑
 
 - ⚠️ 不要在代码中硬编码凭证
 - ✅ 使用环境变量存储敏感信息
@@ -392,7 +452,8 @@ Git 文件源会创建临时克隆目录，使用完毕后会自动清理。
   - [ ] 并行文件下载
 - [ ] 增强功能
   - [ ] 添加更多文件源（FTP, Azure Blob, Alibaba OSS）
-  - [ ] 支持压缩文件（ZIP, TAR）
+  - [ ] 支持更多压缩格式（TAR, GZ, 7Z）
+  - [ ] ZIP 文件流式处理（减少内存占用）
   - [ ] 添加文件过滤器增强
 - [ ] 测试完善
   - [ ] 单元测试
@@ -405,12 +466,12 @@ Git 文件源会创建临时克隆目录，使用完毕后会自动清理。
 
 | 指标 | 数量 |
 |------|------|
-| 新增 Java 类 | 7 个 |
-| 新增代码行数 | ~1,100 行 |
+| 新增 Java 类 | 8 个 |
+| 新增代码行数 | ~1,370 行 |
 | 新增模块 | 1 个 |
 | 修改的类 | 2 个 |
 | 新增依赖 | 3 个 |
-| 编译时间 | ~11 秒 |
+| 编译时间 | ~5 秒 |
 
 ---
 
@@ -432,10 +493,11 @@ Git 文件源会创建临时克隆目录，使用完毕后会自动清理。
 我们成功完成了 AI-Reviewer 项目的文件来源扩展架构实施，主要成就包括：
 
 1. **统一抽象**: 创建了 `IFileSource` 接口，统一了不同文件来源的访问方式
-2. **多源支持**: 实现了 4 种文件源（本地、SFTP、Git、S3）
-3. **向后兼容**: 保持了与现有代码的兼容性
-4. **可扩展性**: 通过 SPI 机制轻松添加新的文件源
-5. **生产就绪**: 完整的错误处理、日志记录和资源管理
+2. **多源支持**: 实现了 5 种文件源（本地、SFTP、Git、S3、ZIP）
+3. **压缩包支持**: 可直接审查 ZIP/JAR/WAR 压缩包内的代码
+4. **向后兼容**: 保持了与现有代码的兼容性
+5. **可扩展性**: 通过 SPI 机制轻松添加新的文件源
+6. **生产就绪**: 完整的错误处理、日志记录和资源管理
 
 现在 AI-Reviewer 可以从多种来源获取文件进行审查，大大提升了系统的灵活性和适用场景！
 
