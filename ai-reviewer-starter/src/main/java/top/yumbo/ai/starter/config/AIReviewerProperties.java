@@ -35,7 +35,7 @@ public class AIReviewerProperties {
         private String userPrompt;
         private Double temperature = 0.7;
         private Integer maxTokens = 2000;
-        private Integer timeoutSeconds = 30;
+        private Integer timeoutSeconds = 120;
         private Integer maxRetries = 3;
     }
     @Data

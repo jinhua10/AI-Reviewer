@@ -44,6 +44,17 @@ public class HackathonAutoConfiguration {
     public void customizeAdapterRegistry() {
         log.info("Customizing AdapterRegistry for Hackathon");
 
+        // Debug: 打印从配置文件读取的原始值
+        log.info("========== 配置加载调试信息 ==========");
+        log.info("Provider: {}", properties.getAi().getProvider());
+        log.info("Region: {}", properties.getAi().getRegion());
+        log.info("Model: {}", properties.getAi().getModel());
+        log.info("Temperature: {}", properties.getAi().getTemperature());
+        log.info("MaxTokens: {}", properties.getAi().getMaxTokens());
+        log.info("TimeoutSeconds: {}", properties.getAi().getTimeoutSeconds());
+        log.info("MaxRetries: {}", properties.getAi().getMaxRetries());
+        log.info("=====================================");
+
         // 确保 userPrompt 不为空,提供默认值
         String userPrompt = properties.getAi().getUserPrompt();
         if (userPrompt == null || userPrompt.trim().isEmpty()) {

@@ -125,6 +125,14 @@
                                 <exclude>META-INF/*.RSA</exclude>
                             </excludes>
                         </filter>
+                        <!-- 排除 starter 的 application.yml，使用本地的配置文件 -->
+                        <filter>
+                            <artifact>top.yumbo.ai:ai-reviewer-starter</artifact>
+                            <excludes>
+                                <exclude>application.yml</exclude>
+                                <exclude>application-*.yml</exclude>
+                            </excludes>
+                        </filter>
                     </filters>
                 </configuration>
                 <executions>
