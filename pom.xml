@@ -39,6 +39,11 @@
         <mockito.version>5.8.0</mockito.version>
         <javaparser.version>3.27.0</javaparser.version>
         <okhttp.version>4.12.0</okhttp.version>
+        <!-- Centralized versions added -->
+        <jsch.version>0.1.55</jsch.version>
+        <jgit.version>6.7.0.202309050840-r</jgit.version>
+        <aws.sdk.version>2.21.0</aws.sdk.version>
+        <fastjson2.version>2.0.52</fastjson2.version>
     </properties>
 
     <dependencyManagement>
@@ -48,6 +53,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- AWS SDK BOM -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -86,6 +100,11 @@
             <dependency>
                 <groupId>top.yumbo.ai</groupId>
                 <artifactId>ai-reviewer-adaptor-source</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.yumbo.ai</groupId>
+                <artifactId>ai-reviewer-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -136,6 +155,31 @@
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp</artifactId>
                 <version>${okhttp.version}</version>
+            </dependency>
+
+            <!-- Centralized third-party dependency versions -->
+            <dependency>
+                <groupId>com.jcraft</groupId>
+                <artifactId>jsch</artifactId>
+                <version>${jsch.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>${jgit.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>s3</artifactId>
+                <version>${aws.sdk.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
             </dependency>
 
             <!-- Testing -->

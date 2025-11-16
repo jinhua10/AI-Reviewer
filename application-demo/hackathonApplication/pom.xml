@@ -8,51 +8,14 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <artifactId>hackathonApplication</artifactId>
-    <version>1.0</version>
+    <!-- inherit parent version -->
     <name>Hackathon Application</name>
     <url>http://maven.apache.org</url>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>software.amazon.awssdk</groupId>
-                <artifactId>bom</artifactId>
-                <version>2.21.0</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
             <groupId>top.yumbo.ai</groupId>
             <artifactId>ai-reviewer-starter</artifactId>
-            <version>1.0</version>
-        </dependency>
-
-        <!-- AWS SDK 依赖 -->
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>bedrockruntime</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>aws-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>metrics-spi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>apache-client</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.fastjson2</groupId>
-            <artifactId>fastjson2</artifactId>
-            <version>2.0.52</version>
         </dependency>
 
         <dependency>
@@ -69,7 +32,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.2.0</version>
+                <!-- version inherited from parent pluginManagement -->
                 <configuration>
                     <mainClass>top.yumbo.ai.application.hackathon.HackathonApplication</mainClass>
                     <!-- 只排除 provided scope 的依赖 -->

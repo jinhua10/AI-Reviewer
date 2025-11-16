@@ -10,7 +10,7 @@
     </parent>
     <artifactId>ai-reviewer-starter</artifactId>
     <packaging>jar</packaging>
-    <version>1.0</version>
+    <!-- inherit parent version -->
     <name>AI Reviewer Starter</name>
     <description>Starter module with Spring Boot auto-configuration</description>
     <dependencies>
@@ -45,6 +45,34 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- AWS SDK 依赖 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>bedrockruntime</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>metrics-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+        </dependency>
+
+        <!-- SFTP Support (JSch) - Required since it's optional in adaptor-source -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
