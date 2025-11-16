@@ -23,7 +23,7 @@ public class HackathonApplication {
         log.info("Classpath: {}", System.getProperty("java.class.path"));
 
         SpringApplication app = new SpringApplication(HackathonApplication.class);
-        // 确保加载 application.yml
+        // 确保加载 application-example.yml
         app.setAdditionalProfiles(); // 使用默认 profile
         app.run(args);
     }
