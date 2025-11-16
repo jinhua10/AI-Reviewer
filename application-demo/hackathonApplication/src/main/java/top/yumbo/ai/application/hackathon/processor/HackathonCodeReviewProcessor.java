@@ -44,10 +44,6 @@ public class HackathonCodeReviewProcessor implements IResultProcessor {
                 report.append("**Model:** ").append(response.getModel()).append("\n");
                 report.append("**Provider:** ").append(response.getProvider()).append("\n");
 
-                if (response.getTokenUsage() != null) {
-                    report.append("**Tokens Used:** ").append(response.getTokenUsage().getTotalTokens()).append("\n");
-                }
-
                 if (response.getProcessingTimeMs() != null) {
                     report.append("**Processing Time:** ").append(response.getProcessingTimeMs()).append(" ms\n");
                 }
