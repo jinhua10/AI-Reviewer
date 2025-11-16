@@ -24,10 +24,10 @@ import java.util.zip.ZipFile;
 
 /**
  * ZIP archive file source implementation
- *
+ * <p>
  * Provides access to files within ZIP archives for code review.
  * Supports nested directories within the ZIP file.
- *
+ * <p>
  * Features:
  * - Read files from local ZIP archives
  * - Support for nested directory structures
@@ -45,6 +45,10 @@ public class ZipFileSource implements IFileSource {
     private String basePath;
     private Map<String, byte[]> fileCache;
     private boolean initialized = false;
+
+    public ZipFileSource() {
+        // Default constructor
+    }
 
     @Override
     public String getSourceName() {
@@ -95,7 +99,7 @@ public class ZipFileSource implements IFileSource {
         this.initialized = true;
 
         log.info("ZIP file source initialized: {} (entries: {})",
-            zipFilePath, zipFile.size());
+                zipFilePath, zipFile.size());
     }
 
     private void validateConfig(FileSourceConfig config) throws FileSourceException {
@@ -117,8 +121,8 @@ public class ZipFileSource implements IFileSource {
 
         // Construct full path within ZIP
         String searchPath = path == null || path.trim().isEmpty()
-            ? basePath
-            : (basePath.isEmpty() ? path : basePath + "/" + path);
+                ? basePath
+                : (basePath.isEmpty() ? path : basePath + "/" + path);
 
         // Normalize path
         searchPath = searchPath.replace("\\", "/");
@@ -149,8 +153,8 @@ public class ZipFileSource implements IFileSource {
 
             // Calculate relative path
             String relativePath = basePath.isEmpty()
-                ? entryName
-                : entryName.substring(basePath.length() + 1);
+                    ? entryName
+                    : entryName.substring(basePath.length() + 1);
 
             // Extract file name
             String fileName = entryName.substring(entryName.lastIndexOf('/') + 1);
@@ -164,16 +168,16 @@ public class ZipFileSource implements IFileSource {
             metadata.put("crc", entry.getCrc());
 
             SourceFile sourceFile = SourceFile.builder()
-                .fileId(entry.getName()) // Use entry name as ID
-                .relativePath(relativePath)
-                .fileName(fileName)
-                .fileSize(entry.getSize())
-                .lastModified(LocalDateTime.ofInstant(
-                    entry.getLastModifiedTime().toInstant(),
-                    ZoneId.systemDefault()))
-                .metadata(metadata)
-                .source(this)
-                .build();
+                    .fileId(entry.getName()) // Use entry name as ID
+                    .relativePath(relativePath)
+                    .fileName(fileName)
+                    .fileSize(entry.getSize())
+                    .lastModified(LocalDateTime.ofInstant(
+                            entry.getLastModifiedTime().toInstant(),
+                            ZoneId.systemDefault()))
+                    .metadata(metadata)
+                    .source(this)
+                    .build();
 
             result.add(sourceFile);
         }

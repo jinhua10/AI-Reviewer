@@ -24,10 +24,10 @@ import java.util.stream.Stream;
 
 /**
  * Git repository file source implementation
- *
+ * <p>
  * Clones Git repositories (GitHub, GitLab, Gitee, etc.) to a temporary location
  * and provides access to files in the repository.
- *
+ * <p>
  * Supports:
  * - HTTPS and SSH URLs
  * - Branch selection
@@ -43,6 +43,10 @@ public class GitFileSource implements IFileSource {
     private Repository repository;
     private Path localClonePath;
     private boolean initialized = false;
+
+    public GitFileSource() {
+
+    }
 
     @Override
     public String getSourceName() {
@@ -64,13 +68,13 @@ public class GitFileSource implements IFileSource {
 
         // Configure clone command
         CloneCommand cloneCommand = Git.cloneRepository()
-            .setURI(config.getRepositoryUrl())
-            .setDirectory(localClonePath.toFile());
+                .setURI(config.getRepositoryUrl())
+                .setDirectory(localClonePath.toFile());
 
         // Set branch if specified
         String branch = config.getBranch() != null && !config.getBranch().trim().isEmpty()
-            ? config.getBranch()
-            : "main"; // Default to main
+                ? config.getBranch()
+                : "main"; // Default to main
         cloneCommand.setBranch(branch);
 
         // Configure authentication
@@ -107,14 +111,14 @@ public class GitFileSource implements IFileSource {
         // Access token authentication (for HTTPS)
         if (config.getAccessToken() != null && !config.getAccessToken().trim().isEmpty()) {
             cloneCommand.setCredentialsProvider(
-                new UsernamePasswordCredentialsProvider(config.getAccessToken(), ""));
+                    new UsernamePasswordCredentialsProvider(config.getAccessToken(), ""));
             log.debug("Using token authentication");
         }
         // Username/password authentication
         else if (config.getUsername() != null && config.getPassword() != null) {
             cloneCommand.setCredentialsProvider(
-                new UsernamePasswordCredentialsProvider(
-                    config.getUsername(), config.getPassword()));
+                    new UsernamePasswordCredentialsProvider(
+                            config.getUsername(), config.getPassword()));
             log.debug("Using username/password authentication");
         }
         // SSH authentication is handled by JGit automatically via SSH config
@@ -123,8 +127,8 @@ public class GitFileSource implements IFileSource {
     private long countFiles(Path path) throws IOException {
         try (Stream<Path> stream = Files.walk(path)) {
             return stream.filter(Files::isRegularFile)
-                         .filter(p -> !p.toString().contains(".git"))
-                         .count();
+                    .filter(p -> !p.toString().contains(".git"))
+                    .count();
         }
     }
 
@@ -135,8 +139,8 @@ public class GitFileSource implements IFileSource {
         }
 
         Path basePath = path == null || path.trim().isEmpty()
-            ? localClonePath
-            : localClonePath.resolve(path);
+                ? localClonePath
+                : localClonePath.resolve(path);
 
         if (!Files.exists(basePath)) {
             throw new FileSourceException("Path does not exist: " + path);
@@ -146,25 +150,25 @@ public class GitFileSource implements IFileSource {
 
         try (Stream<Path> stream = Files.walk(basePath)) {
             stream.filter(Files::isRegularFile)
-                  .filter(p -> !p.toString().contains(".git")) // Exclude .git directory
-                  .forEach(p -> {
-                      try {
-                          SourceFile sourceFile = SourceFile.builder()
-                              .fileId(p.toString())
-                              .relativePath(localClonePath.relativize(p).toString().replace("\\", "/"))
-                              .fileName(p.getFileName().toString())
-                              .fileSize(Files.size(p))
-                              .lastModified(LocalDateTime.ofInstant(
-                                  Files.getLastModifiedTime(p).toInstant(),
-                                  ZoneId.systemDefault()))
-                              .source(this)
-                              .build();
+                    .filter(p -> !p.toString().contains(".git")) // Exclude .git directory
+                    .forEach(p -> {
+                        try {
+                            SourceFile sourceFile = SourceFile.builder()
+                                    .fileId(p.toString())
+                                    .relativePath(localClonePath.relativize(p).toString().replace("\\", "/"))
+                                    .fileName(p.getFileName().toString())
+                                    .fileSize(Files.size(p))
+                                    .lastModified(LocalDateTime.ofInstant(
+                                            Files.getLastModifiedTime(p).toInstant(),
+                                            ZoneId.systemDefault()))
+                                    .source(this)
+                                    .build();
 
-                          result.add(sourceFile);
-                      } catch (IOException e) {
-                          log.warn("Failed to process file: {}", p, e);
-                      }
-                  });
+                            result.add(sourceFile);
+                        } catch (IOException e) {
+                            log.warn("Failed to process file: {}", p, e);
+                        }
+                    });
         }
 
         log.info("Listed {} files from Git repository path: {}", result.size(), path);

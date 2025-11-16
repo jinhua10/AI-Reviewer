@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  * AWS S3 file source implementation
- *
+ * <p>
  * Provides access to files stored in AWS S3 buckets.
  * Also compatible with S3-compatible services (MinIO, Ceph, etc.)
  *
@@ -37,6 +37,10 @@ public class S3FileSource implements IFileSource {
     private String bucket;
     private String prefix;
     private boolean initialized = false;
+
+    public S3FileSource() {
+        // Default constructor
+    }
 
     @Override
     public String getSourceName() {
@@ -54,14 +58,14 @@ public class S3FileSource implements IFileSource {
 
         // Configure AWS credentials
         AwsCredentials credentials = AwsBasicCredentials.create(
-            config.getAccessKey(),
-            config.getSecretKey()
+                config.getAccessKey(),
+                config.getSecretKey()
         );
 
         // Build S3 client
         var clientBuilder = S3Client.builder()
-            .region(Region.of(config.getRegion()))
-            .credentialsProvider(StaticCredentialsProvider.create(credentials));
+                .region(Region.of(config.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials));
 
         // Configure custom endpoint if provided (for S3-compatible services)
         if (config.getEndpoint() != null && !config.getEndpoint().trim().isEmpty()) {
@@ -83,7 +87,7 @@ public class S3FileSource implements IFileSource {
 
         this.initialized = true;
         log.info("S3 client initialized: bucket={}, region={}, prefix={}",
-            bucket, config.getRegion(), prefix);
+                bucket, config.getRegion(), prefix);
     }
 
     private void validateConfig(FileSourceConfig config) throws FileSourceException {
@@ -104,8 +108,8 @@ public class S3FileSource implements IFileSource {
     private void verifyBucketAccess() throws FileSourceException {
         try {
             HeadBucketRequest headBucketRequest = HeadBucketRequest.builder()
-                .bucket(bucket)
-                .build();
+                    .bucket(bucket)
+                    .build();
             s3Client.headBucket(headBucketRequest);
             log.debug("Bucket access verified: {}", bucket);
         } catch (Exception e) {
@@ -121,8 +125,8 @@ public class S3FileSource implements IFileSource {
 
         // Construct full prefix
         String fullPrefix = path == null || path.trim().isEmpty()
-            ? prefix
-            : (prefix + "/" + path).replace("//", "/");
+                ? prefix
+                : (prefix + "/" + path).replace("//", "/");
 
         // Remove leading slash
         if (fullPrefix.startsWith("/")) {
@@ -132,7 +136,7 @@ public class S3FileSource implements IFileSource {
         List<SourceFile> result = new ArrayList<>();
 
         ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
-            .bucket(bucket);
+                .bucket(bucket);
 
         // Only set prefix if not empty
         if (!fullPrefix.isEmpty()) {
@@ -155,23 +159,23 @@ public class S3FileSource implements IFileSource {
 
                 // Calculate relative path
                 String relativePath = prefix.isEmpty()
-                    ? key
-                    : key.substring(prefix.length() + 1);
+                        ? key
+                        : key.substring(prefix.length() + 1);
 
                 Map<String, Object> metadata = new HashMap<>();
                 metadata.put("etag", s3Object.eTag());
                 metadata.put("storageClass", s3Object.storageClassAsString());
 
                 SourceFile sourceFile = SourceFile.builder()
-                    .fileId(key)
-                    .relativePath(relativePath)
-                    .fileName(Paths.get(key).getFileName().toString())
-                    .fileSize(s3Object.size())
-                    .lastModified(LocalDateTime.ofInstant(
-                        s3Object.lastModified(), ZoneId.systemDefault()))
-                    .metadata(metadata)
-                    .source(this)
-                    .build();
+                        .fileId(key)
+                        .relativePath(relativePath)
+                        .fileName(Paths.get(key).getFileName().toString())
+                        .fileSize(s3Object.size())
+                        .lastModified(LocalDateTime.ofInstant(
+                                s3Object.lastModified(), ZoneId.systemDefault()))
+                        .metadata(metadata)
+                        .source(this)
+                        .build();
 
                 result.add(sourceFile);
             }
@@ -179,8 +183,8 @@ public class S3FileSource implements IFileSource {
             // Handle pagination
             if (response.isTruncated()) {
                 request = request.toBuilder()
-                    .continuationToken(response.nextContinuationToken())
-                    .build();
+                        .continuationToken(response.nextContinuationToken())
+                        .build();
             }
 
         } while (response.isTruncated());
@@ -197,9 +201,9 @@ public class S3FileSource implements IFileSource {
 
         try {
             GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(file.getFileId())
-                .build();
+                    .bucket(bucket)
+                    .key(file.getFileId())
+                    .build();
 
             return s3Client.getObject(request);
         } catch (Exception e) {

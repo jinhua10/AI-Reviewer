@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 
 /**
  * Local file system source implementation
- *
+ * <p>
  * This is the default file source that reads files from the local file system.
  * It provides backward compatibility with the original file scanning approach.
  *
@@ -31,6 +31,10 @@ public class LocalFileSource implements IFileSource {
 
     private Path basePath;
     private boolean initialized = false;
+
+    public LocalFileSource() {
+        // Default constructor
+    }
 
     @Override
     public String getSourceName() {
@@ -73,8 +77,8 @@ public class LocalFileSource implements IFileSource {
         }
 
         Path targetPath = path == null || path.trim().isEmpty()
-            ? basePath
-            : basePath.resolve(path);
+                ? basePath
+                : basePath.resolve(path);
 
         if (!Files.exists(targetPath)) {
             throw new FileSourceException("Path does not exist: " + targetPath);
@@ -84,24 +88,24 @@ public class LocalFileSource implements IFileSource {
 
         try (Stream<Path> stream = Files.walk(targetPath)) {
             stream.filter(Files::isRegularFile)
-                  .forEach(p -> {
-                      try {
-                          SourceFile sourceFile = SourceFile.builder()
-                              .fileId(p.toString())
-                              .relativePath(basePath.relativize(p).toString().replace("\\", "/"))
-                              .fileName(p.getFileName().toString())
-                              .fileSize(Files.size(p))
-                              .lastModified(LocalDateTime.ofInstant(
-                                  Files.getLastModifiedTime(p).toInstant(),
-                                  ZoneId.systemDefault()))
-                              .source(this)
-                              .build();
+                    .forEach(p -> {
+                        try {
+                            SourceFile sourceFile = SourceFile.builder()
+                                    .fileId(p.toString())
+                                    .relativePath(basePath.relativize(p).toString().replace("\\", "/"))
+                                    .fileName(p.getFileName().toString())
+                                    .fileSize(Files.size(p))
+                                    .lastModified(LocalDateTime.ofInstant(
+                                            Files.getLastModifiedTime(p).toInstant(),
+                                            ZoneId.systemDefault()))
+                                    .source(this)
+                                    .build();
 
-                          result.add(sourceFile);
-                      } catch (IOException e) {
-                          log.warn("Failed to process file: {}", p, e);
-                      }
-                  });
+                            result.add(sourceFile);
+                        } catch (IOException e) {
+                            log.warn("Failed to process file: {}", p, e);
+                        }
+                    });
         }
 
         log.info("Listed {} files from local path: {}", result.size(), targetPath);
