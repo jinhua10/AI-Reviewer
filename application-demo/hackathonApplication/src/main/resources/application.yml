@@ -21,7 +21,8 @@ ai-reviewer:
   ai:
     provider: bedrock
     region: us-east-1
-    model: "arn:aws:bedrock:us-east-1:590184013141:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    model: "us.amazon.nova-premier-v1:0:1000k"
+#    model: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 #    model: deepseek-coder
 #    api-key: ${AI_API_KEY:your-api-key-here}
 #    endpoint: https://api.deepseek.com/v1/chat/completions

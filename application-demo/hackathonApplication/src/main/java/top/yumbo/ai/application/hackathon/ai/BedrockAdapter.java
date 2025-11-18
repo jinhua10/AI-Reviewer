@@ -151,11 +151,10 @@ public class BedrockAdapter implements IAIService {
             contentItem.put("text", prompt);
             message.put("content", new Object[]{contentItem});
 
+            // 将对话消息放在顶层，但把生成相关的参数放到 inferenceConfig 中
             requestBody.put("messages", new Object[]{message});
-            requestBody.put("max_tokens", maxTokens);
-            requestBody.put("temperature", temperature);
 
-            // Nova 特定配置
+            // Nova 特定配置：把所有生成设置放在 inferenceConfig 下，避免向顶层添加不被允许的键（例如 temperature）
             JSONObject inferenceConfig = new JSONObject();
             inferenceConfig.put("max_new_tokens", maxTokens);
             inferenceConfig.put("temperature", temperature);
