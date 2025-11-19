@@ -223,10 +223,13 @@ public class BedrockAdapter implements IAIService {
         } else {
             // 默认格式（通用，适用于未知模型）
             log.warn("使用默认请求格式，模型ID: {}", actualModelId);
-            requestBody.put("prompt", prompt);
+            JSONObject message = new JSONObject();
+            message.put("role", "user");
+            message.put("content", prompt);
+            requestBody.put("messages", new Object[]{message});
             requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
-            requestBody.put("top_p", 0.9);
+//            requestBody.put("top_p", 0.9);
         }
 
         return requestBody.toJSONString();

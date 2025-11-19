@@ -74,7 +74,7 @@ ai-reviewer:
       【Overall Comment】
       (Summary evaluation within 200 words)
     temperature: 0.7
-    max-tokens: 20000
+    max-tokens: 8190 # 生成的最大内容限制
     timeout-seconds: 600
     max-retries: 3
   # Processor configuration
