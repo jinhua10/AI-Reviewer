@@ -19,6 +19,8 @@ import top.yumbo.ai.api.model.PreProcessedData;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * AWS Bedrock AI服务适配器
@@ -272,13 +274,28 @@ public class BedrockAdapter implements IAIService {
             JSONObject responseBody = JSONObject.parseObject(response.body().asUtf8String());
             log.debug("响应体: {}", responseBody);
             // Parse response
-            JSONArray contentArray = responseBody.getJSONArray("content");
+            JSONArray contentArray;
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < contentArray.size(); i++) {
-                JSONObject contentObj = contentArray.getJSONObject(i);
-                String type = contentObj.getString("type");
-                String content = contentObj.getString(type);
-                sb.append(content).append("\n");
+            if (modelId.contains("writer.palmyra")) {
+                contentArray = responseBody.getJSONArray("choices");
+                JSONObject[] msgArr = new JSONObject[contentArray.size()];
+                for (int i = 0; i < contentArray.size(); i++) {
+                    JSONObject msg = contentArray.getJSONObject(i);
+                    Integer index = msg.getInteger("index");
+                    msgArr[index] = msg;
+                }
+                for (JSONObject contentObj : msgArr) {
+                    String content = contentObj.getJSONObject("message").getString("content");
+                    sb.append(content).append("\n");
+                }
+            } else {
+                contentArray = responseBody.getJSONArray("content");
+                for (int i = 0; i < contentArray.size(); i++) {
+                    JSONObject contentObj = contentArray.getJSONObject(i);
+                    String type = contentObj.getString("type");
+                    String content = contentObj.getString(type);
+                    sb.append(content).append("\n");
+                }
             }
 
             JSONObject usage = responseBody.getJSONObject("usage");

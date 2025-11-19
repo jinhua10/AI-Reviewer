@@ -20,8 +20,10 @@ ai-reviewer:
   # AI service configuration
   ai:
     provider: bedrock
-    region: us-east-1
-    model: "us.amazon.nova-premier-v1:0:1000k"
+#    region: us-east-1
+    region: us-west-2
+    model: "us.writer.palmyra-x5-v1:0"
+#    model: "us.amazon.nova-premier-v1:0"
 #    model: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 #    model: deepseek-coder
 #    api-key: ${AI_API_KEY:your-api-key-here}
@@ -37,8 +39,6 @@ ai-reviewer:
       3. Completeness (20 Points) - Functionality completeness and code completeness
       4. Practicality (15 Points) - Practical application value of the project
       5. Code Standards (15 Points) - Code style, comments, and maintainability
-
-      Project source code: %s
       
       Please ensure your output conforms to the following format.
       【Total Score】: X/100 points
@@ -73,6 +73,9 @@ ai-reviewer:
 
       【Overall Comment】
       (Summary evaluation within 200 words)
+      
+      【Please begin analyze】
+      Project source code: %s
     temperature: 0.7
     max-tokens: 8190 # 生成的最大内容限制
     timeout-seconds: 600
