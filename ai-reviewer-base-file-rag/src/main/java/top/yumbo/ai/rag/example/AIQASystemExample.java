@@ -7,10 +7,9 @@ import top.yumbo.ai.rag.example.llm.MockLLMClient;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
 import top.yumbo.ai.rag.model.SearchResult;
+import top.yumbo.ai.rag.optimization.SmartContextBuilder;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -22,10 +21,18 @@ public class AIQASystemExample {
 
     private final LocalFileRAG rag;
     private final LLMClient llmClient;
+    private final SmartContextBuilder contextBuilder;
 
     public AIQASystemExample(LocalFileRAG rag, LLMClient llmClient) {
         this.rag = rag;
         this.llmClient = llmClient;
+        // 初始化智能上下文构建器
+        this.contextBuilder = SmartContextBuilder.builder()
+            .maxContextLength(8000)  // 8000字符总上下文
+            .maxDocLength(2000)      // 单个文档最多2000字符
+            .build();
+
+        log.info("AIQASystem initialized with smart context builder");
     }
 
     /**
@@ -49,8 +56,14 @@ public class AIQASystemExample {
                 searchResult.getTotalHits(),
                 searchResult.getQueryTimeMs());
 
-            // 步骤3: 构建上下文
-            String context = buildContext(searchResult.getDocuments());
+            // 步骤3: 构建智能上下文（优化：提取最相关片段）
+            String context = contextBuilder.buildSmartContext(
+                question,
+                searchResult.getDocuments()
+            );
+
+            log.info("Context stats: {}",
+                contextBuilder.getContextStats(context));
 
             // 步骤4: 构建Prompt
             String prompt = buildPrompt(question, context);
@@ -94,8 +107,16 @@ public class AIQASystemExample {
     }
 
     /**
-     * 构建文档上下文
+     * 构建文档上下文（旧实现 - 已被SmartContextBuilder替代）
+     *
+     * 问题：
+     * 1. 简单拼接所有文档内容，可能超出LLM上下文限制
+     * 2. 未考虑文档相关性，可能包含无关内容
+     * 3. 未优化内容提取，可能错过关键信息
+     *
+     * 已替换为：SmartContextBuilder.buildSmartContext()
      */
+    @Deprecated
     private String buildContext(List<top.yumbo.ai.rag.model.Document> documents) {
         return documents.stream()
             .map(doc -> String.format(
