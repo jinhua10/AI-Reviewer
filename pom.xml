@@ -22,6 +22,7 @@
         <module>ai-reviewer-adaptor-source</module>
         <module>ai-reviewer-starter</module>
         <module>application-demo/hackathonApplication</module>
+        <module>application-demo/AWS-S3-Download-Util</module>
     </modules>
 
     <properties>

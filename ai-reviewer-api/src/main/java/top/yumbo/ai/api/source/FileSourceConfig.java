@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * Configuration for file sources
- *
+ * <p>
  * This class contains all necessary configuration for different types of file sources.
  * Each source type uses a subset of these fields.
  *

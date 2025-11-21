@@ -21,7 +21,14 @@ public class HackathonFileParser implements IFileParser {
         return Stream.of(
                 Constants.JAVA_FILE_EXTENSION,
                 Constants.JS_FILE_EXTENSION,
-                Constants.PYTHON_FILE_EXTENSION
+                Constants.PYTHON_FILE_EXTENSION,
+                Constants.JSX_FILE_EXTENSION,
+                Constants.TS_FILE_EXTENSION,
+                Constants.TSX_FILE_EXTENSION,
+                Constants.MJS_FILE_EXTENSION,
+                Constants.CJS_FILE_EXTENSION,
+                Constants.XML_FILE_EXTENSION,
+                Constants.MD_FILE_EXTENSION
         ).anyMatch(ext -> file.getName().endsWith(ext));
     }
 
