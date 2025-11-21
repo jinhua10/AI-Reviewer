@@ -80,10 +80,13 @@ public class SearchResult {
     }
 
     /**
-     * 获取带分数的文档列表
+     * 获取带分数的文档列表（不可变）
+     * 如需修改，请创建副本
      */
     public List<ScoredDocument> getScoredDocuments() {
-        return this.documents;
+        return this.documents == null ?
+            java.util.Collections.emptyList() :
+            java.util.Collections.unmodifiableList(this.documents);
     }
 }
 

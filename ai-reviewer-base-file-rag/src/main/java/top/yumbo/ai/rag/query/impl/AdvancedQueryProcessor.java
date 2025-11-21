@@ -117,6 +117,7 @@ public class AdvancedQueryProcessor implements QueryProcessor {
      * 应用分数过滤
      */
     private SearchResult applyScoreFilter(SearchResult result, float minScore) {
+        // getScoredDocuments()返回不可变列表，需要通过stream创建新列表
         List<ScoredDocument> filtered = result.getScoredDocuments().stream()
                 .filter(scored -> scored.getScore() >= minScore)
                 .collect(Collectors.toList());
@@ -134,6 +135,7 @@ public class AdvancedQueryProcessor implements QueryProcessor {
      */
     private SearchResult applyCustomSort(SearchResult result, String sortField,
                                         QueryRequest.SortOrder sortOrder) {
+        // getScoredDocuments()返回不可变列表，创建可变副本用于排序
         List<ScoredDocument> sorted = new ArrayList<>(result.getScoredDocuments());
 
         Comparator<ScoredDocument> comparator = null;
@@ -171,6 +173,7 @@ public class AdvancedQueryProcessor implements QueryProcessor {
      * 应用分页
      */
     private SearchResult applyPagination(SearchResult result, int offset, int limit) {
+        // getScoredDocuments()返回不可变列表，subList创建视图（不复制数据）
         List<ScoredDocument> docs = result.getScoredDocuments();
 
         int fromIndex = Math.min(offset, docs.size());
