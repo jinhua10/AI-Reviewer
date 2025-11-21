@@ -223,6 +223,20 @@ public class LocalFileRAG implements Closeable {
     }
 
     /**
+     * 获取索引引擎（用于高级查询处理）
+     */
+    public IndexEngine getIndexEngine() {
+        return indexEngine;
+    }
+
+    /**
+     * 获取缓存引擎（用于高级查询处理）
+     */
+    public CacheEngine getCacheEngine() {
+        return cacheEngine;
+    }
+
+    /**
      * 关闭资源
      */
     @Override
