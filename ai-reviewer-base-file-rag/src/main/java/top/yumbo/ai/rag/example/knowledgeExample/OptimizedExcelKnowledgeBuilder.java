@@ -235,45 +235,83 @@ public class OptimizedExcelKnowledgeBuilder {
 
     /**
      * 扫描Excel文件
+     * 支持：
+     * 1. 单个Excel文件路径（直接处理该文件）
+     * 2. 文件夹路径（递归扫描文件夹中的所有Excel文件）
      */
     private List<File> scanExcelFiles() throws IOException {
         List<File> excelFiles = new ArrayList<>();
-        Path startPath = Paths.get(excelFolderPath);
+        File inputFile = new File(excelFolderPath);
 
-        if (!Files.exists(startPath)) {
-            log.warn("Excel folder does not exist: {}", excelFolderPath);
+        // 检查路径是否存在
+        if (!inputFile.exists()) {
+            log.warn("❌ Path does not exist: {}", excelFolderPath);
+            log.info("💡 提示：请检查路径是否正确，注意中文路径编码");
             return excelFiles;
         }
 
-        Files.walkFileTree(startPath, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                String fileName = file.getFileName().toString().toLowerCase();
+        // 情况1：如果是单个文件，直接处理
+        if (inputFile.isFile()) {
+            String fileName = inputFile.getName().toLowerCase();
 
-                // 检查文件扩展名
-                if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
-                    // 排除临时文件
-                    if (!fileName.startsWith("~$")) {
-                        File f = file.toFile();
+            if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+                if (!fileName.startsWith("~$")) {
+                    if (inputFile.length() > MAX_FILE_SIZE) {
+                        log.warn("⚠️ File too large: {} ({}MB), max allowed: {}MB",
+                            inputFile.getName(),
+                            inputFile.length() / 1024 / 1024,
+                            MAX_FILE_SIZE / 1024 / 1024);
+                    } else {
+                        log.info("✓ Found single Excel file: {} ({}KB)",
+                            inputFile.getName(),
+                            inputFile.length() / 1024);
+                        excelFiles.add(inputFile);
+                    }
+                } else {
+                    log.warn("⚠️ Skipping temporary file: {}", inputFile.getName());
+                }
+            } else {
+                log.warn("⚠️ File is not an Excel file (.xls/.xlsx): {}", inputFile.getName());
+            }
 
-                        // 检查文件大小
-                        if (f.length() > MAX_FILE_SIZE) {
-                            log.warn("⚠️ File too large, skipping: {} ({}MB)",
-                                f.getName(), f.length() / 1024 / 1024);
-                        } else {
-                            excelFiles.add(f);
+            return excelFiles;
+        }
+
+        // 情况2：如果是文件夹，递归扫描
+        if (inputFile.isDirectory()) {
+            log.info("📂 Scanning directory: {}", excelFolderPath);
+            Path startPath = inputFile.toPath();
+
+            Files.walkFileTree(startPath, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    String fileName = file.getFileName().toString().toLowerCase();
+
+                    // 检查文件扩展名
+                    if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx")) {
+                        // 排除临时文件
+                        if (!fileName.startsWith("~$")) {
+                            File f = file.toFile();
+
+                            // 检查文件大小
+                            if (f.length() > MAX_FILE_SIZE) {
+                                log.warn("⚠️ File too large, skipping: {} ({}MB)",
+                                    f.getName(), f.length() / 1024 / 1024);
+                            } else {
+                                excelFiles.add(f);
+                            }
                         }
                     }
+                    return FileVisitResult.CONTINUE;
                 }
-                return FileVisitResult.CONTINUE;
-            }
 
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) {
-                log.warn("Cannot access file: {}", file, exc);
-                return FileVisitResult.CONTINUE;
-            }
-        });
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) {
+                    log.warn("Cannot access file: {}", file, exc);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
 
         return excelFiles;
     }
@@ -285,15 +323,19 @@ public class OptimizedExcelKnowledgeBuilder {
         ProcessFileResult result = new ProcessFileResult();
 
         try {
-            log.debug("Processing: {} ({}KB)", file.getName(), file.length() / 1024);
+            log.info("📄 Processing: {} ({}KB)", file.getName(), file.length() / 1024);
 
             // 1. 提取Excel内容
+            log.info("   ⏳ Extracting content from Excel file...");
             String content = extractExcelContent(file);
 
             if (content == null || content.trim().isEmpty()) {
-                result.error = "Empty content";
+                result.error = "Empty content - Excel文件可能是空的或解析失败";
+                log.error("   ❌ Failed: {}", result.error);
                 return result;
             }
+
+            log.info("   ✓ Extracted {} characters", content.length());
 
             // 2. 检查内容大小限制
             if (content.length() > MAX_CONTENT_SIZE) {
@@ -356,9 +398,12 @@ public class OptimizedExcelKnowledgeBuilder {
             result.documentsCreated = documentsToIndex.size();
             result.estimatedMemory = content.length() * 2L; // 估算内存占用（约2倍）
 
+            log.info("   ✅ Successfully processed: {} documents created", result.documentsCreated);
+
         } catch (Exception e) {
-            log.error("Failed to process Excel file: {}", file.getName(), e);
-            result.error = e.getMessage();
+            log.error("   ❌ Failed to process Excel file: {}", file.getName(), e);
+            log.error("   Error details: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+            result.error = e.getClass().getSimpleName() + ": " + e.getMessage();
         }
 
         return result;

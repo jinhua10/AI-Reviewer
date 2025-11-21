@@ -203,8 +203,15 @@ public class ExcelKnowledgeQASystem {
     public static void main(String[] args) {
         // 配置路径
         String knowledgeBasePath = "./data/excel-qa-system";
-        String excelFolderPath = "./data/excel-files";
-        excelFolderPath="E:\\月度数据.xls";
+        String excelFolderPath = "E:\\excel";
+
+        // 💡 可以指定单个Excel文件（支持中文路径）
+        // excelFolderPath = "E:\\月度数据.xls";
+
+        // 💡 或者指定包含Excel文件的文件夹
+        // excelFolderPath = "E:\\";
+        // excelFolderPath = "./data/excel-files";
+
         // 从命令行参数读取（可选）
         if (args.length >= 1) {
             knowledgeBasePath = args[0];
