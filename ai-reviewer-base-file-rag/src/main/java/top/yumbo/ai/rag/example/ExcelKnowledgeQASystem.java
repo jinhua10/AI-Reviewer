@@ -264,7 +264,7 @@ public class ExcelKnowledgeQASystem {
         log.info("\n📝 运行演示问题...\n");
 
         String[] demoQuestions = {
-            "进出口总值累计值"
+            "基于检索的文档中找出城市性别比例最高的前三个城市是哪些？"
         };
 
         system.askBatch(demoQuestions);
