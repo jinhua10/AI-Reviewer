@@ -139,10 +139,12 @@ public class TikaDocumentParser implements DocumentParser {
         ParseContext context = new ParseContext();
         context.set(Parser.class, parser);
 
-        // 如果需要提取图片元数据，使用自定义处理器
-        if (extractImageMetadata || includeImagePlaceholders) {
-            handler = new EnhancedContentHandler(handler, metadata, includeImagePlaceholders);
-        }
+        // 注意：暂时禁用 EnhancedContentHandler，因为它可能导致内容丢失
+        // 特别是对于包含图片的Excel文件
+        // TODO: 未来改进图片处理逻辑
+        // if (extractImageMetadata || includeImagePlaceholders) {
+        //     handler = new EnhancedContentHandler(handler, metadata, includeImagePlaceholders);
+        // }
 
         // 执行解析
         parser.parse(stream, handler, metadata, context);
