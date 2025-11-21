@@ -170,7 +170,7 @@ mvn clean package
 
 # 运行构建工具
 java -cp target/ai-reviewer-base-file-rag-1.0.jar \
-    top.yumbo.ai.rag.example.ExcelKnowledgeBuilder \
+    top.yumbo.ai.rag.example.knowledgeExample.ExcelKnowledgeBuilder \
     D:/knowledge-base \
     D:/my-excel-files
 ```

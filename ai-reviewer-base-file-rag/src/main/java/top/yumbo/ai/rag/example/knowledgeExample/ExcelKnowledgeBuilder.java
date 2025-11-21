@@ -1,4 +1,4 @@
-package top.yumbo.ai.rag.example;
+package top.yumbo.ai.rag.example.knowledgeExample;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Excel知识库构建工具

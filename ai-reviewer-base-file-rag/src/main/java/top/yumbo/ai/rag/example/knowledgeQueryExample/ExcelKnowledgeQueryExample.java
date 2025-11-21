@@ -1,4 +1,4 @@
-package top.yumbo.ai.rag.example;
+package top.yumbo.ai.rag.example.knowledgeQueryExample;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
