@@ -24,6 +24,24 @@ public final class Constants {
     public static final String CSHARP_FILE_EXTENSION = ".cs";
     public static final String CSPROJ_FILE_EXTENSION = ".csproj";
     public static final String SLN_FILE_EXTENSION = ".sln";
+    // C / C++ related
+    public static final String C_FILE_EXTENSION = ".c";
+    public static final String CPP_FILE_EXTENSION = ".cpp";
+    public static final String CPP_CC_FILE_EXTENSION = ".cc";
+    public static final String CPP_CXX_FILE_EXTENSION = ".cxx";
+    public static final String H_FILE_EXTENSION = ".h";
+    public static final String HPP_FILE_EXTENSION = ".hpp";
+    public static final String HH_FILE_EXTENSION = ".hh";
+    public static final String HXX_FILE_EXTENSION = ".hxx";
+    // Other common languages
+    public static final String GO_FILE_EXTENSION = ".go";
+    public static final String RUBY_FILE_EXTENSION = ".rb";
+    public static final String PHP_FILE_EXTENSION = ".php";
+    public static final String KOTLIN_FILE_EXTENSION = ".kt";
+    public static final String SWIFT_FILE_EXTENSION = ".swift";
+    public static final String SCALA_FILE_EXTENSION = ".scala";
+    public static final String RUST_FILE_EXTENSION = ".rs";
+    public static final String SHELL_FILE_EXTENSION = ".sh";
     // AI related
     public static final int DEFAULT_MAX_TOKENS = 2000;
     public static final double DEFAULT_TEMPERATURE = 0.7;

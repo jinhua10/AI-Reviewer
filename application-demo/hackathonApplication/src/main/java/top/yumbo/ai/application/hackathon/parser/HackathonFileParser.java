@@ -32,10 +32,28 @@ public class HackathonFileParser implements IFileParser {
                 Constants.CJS_FILE_EXTENSION,
                 Constants.XML_FILE_EXTENSION,
                 Constants.MD_FILE_EXTENSION,
-                // C# extensions
+                // C#
                 Constants.CSHARP_FILE_EXTENSION,
                 Constants.CSPROJ_FILE_EXTENSION,
-                Constants.SLN_FILE_EXTENSION
+                Constants.SLN_FILE_EXTENSION,
+                // C / C++
+                Constants.C_FILE_EXTENSION,
+                Constants.CPP_FILE_EXTENSION,
+                Constants.CPP_CC_FILE_EXTENSION,
+                Constants.CPP_CXX_FILE_EXTENSION,
+                Constants.H_FILE_EXTENSION,
+                Constants.HPP_FILE_EXTENSION,
+                Constants.HH_FILE_EXTENSION,
+                Constants.HXX_FILE_EXTENSION,
+                // Other common languages
+                Constants.GO_FILE_EXTENSION,
+                Constants.RUBY_FILE_EXTENSION,
+                Constants.PHP_FILE_EXTENSION,
+                Constants.KOTLIN_FILE_EXTENSION,
+                Constants.SWIFT_FILE_EXTENSION,
+                Constants.SCALA_FILE_EXTENSION,
+                Constants.RUST_FILE_EXTENSION,
+                Constants.SHELL_FILE_EXTENSION
         ).anyMatch(name::endsWith);
     }
 
@@ -87,6 +105,28 @@ public class HackathonFileParser implements IFileParser {
             fileType = "csharp";
         } else if (fileNameLower.endsWith(Constants.SLN_FILE_EXTENSION)) {
             fileType = "sln";
+        } else if (fileNameLower.endsWith(Constants.C_FILE_EXTENSION)) {
+            fileType = "c";
+        } else if (fileNameLower.endsWith(Constants.CPP_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CPP_CC_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CPP_CXX_FILE_EXTENSION)) {
+            fileType = "cpp";
+        } else if (fileNameLower.endsWith(Constants.H_FILE_EXTENSION) || fileNameLower.endsWith(Constants.HPP_FILE_EXTENSION) || fileNameLower.endsWith(Constants.HH_FILE_EXTENSION) || fileNameLower.endsWith(Constants.HXX_FILE_EXTENSION)) {
+            fileType = "header";
+        } else if (fileNameLower.endsWith(Constants.GO_FILE_EXTENSION)) {
+            fileType = "go";
+        } else if (fileNameLower.endsWith(Constants.RUBY_FILE_EXTENSION)) {
+            fileType = "ruby";
+        } else if (fileNameLower.endsWith(Constants.PHP_FILE_EXTENSION)) {
+            fileType = "php";
+        } else if (fileNameLower.endsWith(Constants.KOTLIN_FILE_EXTENSION)) {
+            fileType = "kotlin";
+        } else if (fileNameLower.endsWith(Constants.SWIFT_FILE_EXTENSION)) {
+            fileType = "swift";
+        } else if (fileNameLower.endsWith(Constants.SCALA_FILE_EXTENSION)) {
+            fileType = "scala";
+        } else if (fileNameLower.endsWith(Constants.RUST_FILE_EXTENSION)) {
+            fileType = "rust";
+        } else if (fileNameLower.endsWith(Constants.SHELL_FILE_EXTENSION)) {
+            fileType = "shell";
         }
         return fileType;
     }
