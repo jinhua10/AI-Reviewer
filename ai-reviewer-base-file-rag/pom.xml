@@ -20,6 +20,10 @@
         <!-- Internal Dependencies -->
         <dependency>
             <groupId>top.yumbo.ai</groupId>
+            <artifactId>ai-reviewer-adaptor-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>top.yumbo.ai</groupId>
             <artifactId>ai-reviewer-common</artifactId>
         </dependency>
 
