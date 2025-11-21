@@ -42,23 +42,28 @@ public class OptimizedExcelKnowledgeBuilder {
     private static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
     private static final long MAX_CONTENT_SIZE = 10 * 1024 * 1024; // 10MB
 
+    // 自动分块阈值 - 当文档内容超过此大小时自动启用分块
+    private static final long AUTO_CHUNK_THRESHOLD = 2 * 1024 * 1024; // 2MB
+
     // 文档分块
     private final DocumentChunker chunker;
     private final boolean enableChunking;
+    private final boolean autoChunking; // 自动分块模式
 
     // 性能配置
     private static final double GC_TRIGGER_THRESHOLD = 80.0; // 80%内存使用时触发GC
 
     /**
-     * 构造函数
+     * 构造函数（推荐使用Builder模式）
      *
      * @param storagePath 知识库存储路径
      * @param excelFolderPath Excel文件夹路径
-     * @param enableChunking 是否启用文档分块
+     * @param enableChunking 是否启用文档分块（true=总是分块，false=根据文件大小自动判断）
      */
     public OptimizedExcelKnowledgeBuilder(String storagePath, String excelFolderPath, boolean enableChunking) {
         this.excelFolderPath = excelFolderPath;
         this.enableChunking = enableChunking;
+        this.autoChunking = !enableChunking; // 如果不强制启用，则使用自动模式
         this.memoryMonitor = new MemoryMonitor();
         this.chunker = DocumentChunker.builder()
             .chunkSize(2000)      // 2000字符每块
@@ -78,7 +83,7 @@ public class OptimizedExcelKnowledgeBuilder {
         log.info("=".repeat(80));
         log.info("Storage Path: {}", storagePath);
         log.info("Excel Folder: {}", excelFolderPath);
-        log.info("Chunking Enabled: {}", enableChunking);
+        log.info("Chunking Mode: {}", enableChunking ? "Always Enabled" : "Auto (threshold: " + AUTO_CHUNK_THRESHOLD / 1024 / 1024 + "MB)");
         log.info("Max File Size: {}MB", MAX_FILE_SIZE / 1024 / 1024);
         log.info("Max Content Size: {}MB", MAX_CONTENT_SIZE / 1024 / 1024);
         log.info("Batch Memory Threshold: {}MB", BATCH_MEMORY_THRESHOLD / 1024 / 1024);
@@ -88,6 +93,18 @@ public class OptimizedExcelKnowledgeBuilder {
         memoryMonitor.logMemoryUsage("Initialization");
 
         checkExistingIndex();
+    }
+
+    /**
+     * 创建自动分块模式的构建器（推荐）
+     * 自动识别大文件（>2MB）并分块处理
+     *
+     * @param storagePath 知识库存储路径
+     * @param excelFolderPath Excel文件夹路径
+     * @return 构建器实例
+     */
+    public static OptimizedExcelKnowledgeBuilder createWithAutoChunking(String storagePath, String excelFolderPath) {
+        return new OptimizedExcelKnowledgeBuilder(storagePath, excelFolderPath, false);
     }
 
     /**
@@ -168,8 +185,8 @@ public class OptimizedExcelKnowledgeBuilder {
                     // 进度报告
                     if (processedCount % 10 == 0) {
                         double progress = (double) processedCount / result.totalFiles * 100;
-                        log.info("Progress: {}/{} ({:.1f}%) - Success: {}, Failed: {}",
-                            processedCount, result.totalFiles, progress,
+                        log.info("Progress: {}/{} ({} %) - Success: {}, Failed: {}",
+                            processedCount, result.totalFiles, String.format("%.1f", progress),
                             result.successCount, result.failedCount);
                         memoryMonitor.logMemoryUsage("Processing");
                     }
@@ -298,14 +315,33 @@ public class OptimizedExcelKnowledgeBuilder {
                 .metadata(metadata)
                 .build();
 
-            // 5. 分块处理（如果启用）
+            // 5. 智能分块处理
             List<Document> documentsToIndex;
-            if (enableChunking && content.length() > DocumentChunker.DEFAULT_CHUNK_SIZE) {
+            boolean shouldChunk = false;
+            String chunkReason = "";
+
+            // 判断是否需要分块
+            if (enableChunking) {
+                // 强制启用分块模式
+                shouldChunk = content.length() > DocumentChunker.DEFAULT_CHUNK_SIZE;
+                chunkReason = "Force enabled";
+            } else if (autoChunking) {
+                // 自动模式：根据内容大小判断
+                if (content.length() > AUTO_CHUNK_THRESHOLD) {
+                    shouldChunk = true;
+                    chunkReason = String.format("Large file auto-detected (%dMB > %dMB)",
+                        content.length() / 1024 / 1024,
+                        AUTO_CHUNK_THRESHOLD / 1024 / 1024);
+                }
+            }
+
+            if (shouldChunk) {
                 documentsToIndex = chunker.chunk(document);
-                log.debug("Document chunked: {} -> {} chunks",
-                    file.getName(), documentsToIndex.size());
+                log.info("📄 Document chunked: {} -> {} chunks ({})",
+                    file.getName(), documentsToIndex.size(), chunkReason);
             } else {
                 documentsToIndex = List.of(document);
+                log.debug("Document indexed without chunking: {}", file.getName());
             }
 
             // 6. 索引文档
@@ -331,7 +367,7 @@ public class OptimizedExcelKnowledgeBuilder {
     /**
      * 提取Excel内容
      */
-    private String extractExcelContent(File file) throws IOException {
+    private String extractExcelContent(File file) {
         return new top.yumbo.ai.rag.impl.parser.TikaDocumentParser().parse(file);
     }
 
@@ -366,18 +402,18 @@ public class OptimizedExcelKnowledgeBuilder {
         log.info("📊 Knowledge Base Construction Report");
         log.info("=".repeat(80));
         log.info("✓ Total Files: {}", result.totalFiles);
-        log.info("✓ Successful: {} ({:.1f}%)",
+        log.info("✓ Successful: {} ({}%)",
             result.successCount,
-            result.totalFiles > 0 ? (double) result.successCount / result.totalFiles * 100 : 0);
-        log.info("✗ Failed: {} ({:.1f}%)",
+            result.totalFiles > 0 ? String.format("%.1f", (double) result.successCount / result.totalFiles * 100) : "0");
+        log.info("✗ Failed: {} ({}%)",
             result.failedCount,
-            result.totalFiles > 0 ? (double) result.failedCount / result.totalFiles * 100 : 0);
+            result.totalFiles > 0 ? String.format("%.1f", (double) result.failedCount / result.totalFiles * 100) : "0");
         log.info("📄 Total Documents Created: {}", result.totalDocuments);
-        log.info("⏱️  Total Time: {:.2f} seconds", result.buildTimeMs / 1000.0);
+        log.info("⏱️  Total Time: {} seconds", String.format("%.2f", result.buildTimeMs / 1000.0));
 
         if (result.totalFiles > 0) {
-            log.info("📈 Average Time per File: {:.2f} ms",
-                (double) result.buildTimeMs / result.totalFiles);
+            log.info("📈 Average Time per File: {} ms",
+                String.format("%.2f", (double) result.buildTimeMs / result.totalFiles));
         }
 
         memoryMonitor.logMemoryUsage("Final");
@@ -427,7 +463,7 @@ public class OptimizedExcelKnowledgeBuilder {
     public static void main(String[] args) {
         String storagePath = "./data/excel-knowledge-base-optimized";
         String excelFolder = "./data/excel-files";
-        boolean enableChunking = true;
+        String mode = "auto"; // auto, force, disable
 
         // 从命令行参数读取
         if (args.length >= 1) {
@@ -437,28 +473,49 @@ public class OptimizedExcelKnowledgeBuilder {
             excelFolder = args[1];
         }
         if (args.length >= 3) {
-            enableChunking = Boolean.parseBoolean(args[2]);
+            mode = args[2]; // auto/force/disable
         }
 
-        log.info("Starting optimized Excel knowledge base builder...");
-        log.info("JVM Max Memory: {}MB",
+        log.info("🚀 Starting optimized Excel knowledge base builder...");
+        log.info("📊 JVM Max Memory: {}MB",
             Runtime.getRuntime().maxMemory() / 1024 / 1024);
 
-        OptimizedExcelKnowledgeBuilder builder = new OptimizedExcelKnowledgeBuilder(
-            storagePath,
-            excelFolder,
-            enableChunking
-        );
+        OptimizedExcelKnowledgeBuilder builder;
+
+        // 根据模式创建构建器
+        switch (mode.toLowerCase()) {
+            case "force":
+                log.info("📝 Mode: Force chunking (all files will be chunked)");
+                builder = new OptimizedExcelKnowledgeBuilder(storagePath, excelFolder, true);
+                break;
+            case "disable":
+                log.info("📝 Mode: Chunking disabled");
+                builder = new OptimizedExcelKnowledgeBuilder(storagePath, excelFolder, false) {
+                    // 特殊模式：完全禁用分块
+                };
+                break;
+            case "auto":
+            default:
+                log.info("📝 Mode: Auto chunking (large files >2MB will be chunked automatically)");
+                builder = createWithAutoChunking(storagePath, excelFolder);
+                break;
+        }
 
         try {
             BuildResult result = builder.buildKnowledgeBase();
 
             if (result.error != null) {
-                log.error("Build failed: {}", result.error);
+                log.error("❌ Build failed: {}", result.error);
                 System.exit(1);
             }
 
-            log.info("✅ Knowledge base built successfully!");
+            log.info("\n✅ Knowledge base built successfully!");
+            log.info("📊 Statistics:");
+            log.info("   - Total files: {}", result.totalFiles);
+            log.info("   - Success: {}", result.successCount);
+            log.info("   - Failed: {}", result.failedCount);
+            log.info("   - Total documents: {}", result.totalDocuments);
+            log.info("   - Time: {}s", String.format("%.2f", result.buildTimeMs / 1000.0));
 
         } finally {
             builder.close();
