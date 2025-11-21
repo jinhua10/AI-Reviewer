@@ -7,6 +7,7 @@ import top.yumbo.ai.rag.core.IndexEngine;
 import top.yumbo.ai.rag.core.StorageEngine;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
+import top.yumbo.ai.rag.model.ScoredDocument;
 import top.yumbo.ai.rag.model.SearchResult;
 
 import java.io.Closeable;
@@ -101,11 +102,32 @@ public class LocalFileRAG implements Closeable {
             }
         }
 
-        // 2. 执行搜索
+        // 2. 执行搜索（索引中只有元数据）
         SearchResult result = indexEngine.search(query);
+
+        // 3. 为每个文档加载完整内容
+        // 重要：Lucene 索引中只存储了文档元数据，content 需要从 StorageEngine 加载
+        for (ScoredDocument scoredDoc : result.getScoredDocuments()) {
+            Document doc = scoredDoc.getDocument();
+
+            // 如果文档没有 content（从索引返回的通常没有），从存储加载
+            if (doc.getContent() == null || doc.getContent().isEmpty()) {
+                Document fullDoc = storageEngine.retrieve(doc.getId());
+                if (fullDoc != null) {
+                    // 替换为包含完整内容的文档
+                    scoredDoc.setDocument(fullDoc);
+
+                    log.trace("Loaded content for document: {}, length: {}",
+                        doc.getId(), fullDoc.getContent() != null ? fullDoc.getContent().length() : 0);
+                } else {
+                    log.warn("Failed to load content for document: {}", doc.getId());
+                }
+            }
+        }
+
         result.setQueryTimeMs(System.currentTimeMillis() - startTime);
 
-        // 3. 缓存结果
+        // 4. 缓存结果
         if (configuration.getCache().isEnabled()) {
             cacheEngine.putQueryResult(queryKey, result);
         }

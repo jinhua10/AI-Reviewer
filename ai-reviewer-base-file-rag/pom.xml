@@ -16,6 +16,13 @@
     <name>AI Reviewer Base File RAG</name>
     <description>本地文件存储RAG替代框架 - 基于Lucene的高性能文档检索系统</description>
 
+    <!-- 编码配置 - 解决中文乱码 -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+    </properties>
+
     <dependencies>
         <!-- Internal Dependencies -->
         <dependency>
@@ -168,6 +175,7 @@
 
     <build>
         <plugins>
+            <!-- Maven 编译插件 - UTF-8 编码 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -176,21 +184,38 @@
                     <source>17</source>
                     <target>17</target>
                     <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <arg>-Dfile.encoding=UTF-8</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
+
+            <!-- Maven 资源插件 - UTF-8 编码 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- Maven 测试插件 - UTF-8 编码 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <argLine>-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8</argLine>
+                    <argLine>-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</argLine>
                 </configuration>
             </plugin>
+            <!-- Exec Maven 插件 - UTF-8 编码 -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.6.2</version>
                 <configuration>
+                    <!-- 确保运行时使用 UTF-8 编码 -->
                     <systemProperties>
                         <systemProperty>
                             <key>file.encoding</key>
@@ -202,6 +227,10 @@
                         </systemProperty>
                         <systemProperty>
                             <key>sun.stderr.encoding</key>
+                            <value>UTF-8</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <key>console.encoding</key>
                             <value>UTF-8</value>
                         </systemProperty>
                     </systemProperties>

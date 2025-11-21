@@ -169,8 +169,12 @@ public class LuceneIndexEngine implements IndexEngine {
                 ScoreDoc scoreDoc = topDocs.scoreDocs[i];
                 org.apache.lucene.document.Document luceneDoc = searcher.doc(scoreDoc.doc);
 
-                // 转换为我们的Document模型
+                // 转换为我们的Document模型（仅包含元数据，不包含content）
                 top.yumbo.ai.rag.model.Document doc = convertFromLuceneDocument(luceneDoc);
+
+                // 注意：索引中只存储元数据，不存储 content
+                // content 由 LocalFileRAG 从 StorageEngine 加载
+                log.trace("Document {} retrieved from index (metadata only, no content)", doc.getId());
 
                 // 创建带评分的文档
                 ScoredDocument scoredDoc = ScoredDocument.builder()

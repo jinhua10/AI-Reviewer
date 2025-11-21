@@ -89,6 +89,8 @@ public class MockLLMClient implements LLMClient {
         // 构建请求体
         String requestBody = buildRequestBody(prompt);
 
+        // 打印发给ai的内容
+        log.info(prompt);
         // 创建HTTP请求
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(DEEPSEEK_API_URL))

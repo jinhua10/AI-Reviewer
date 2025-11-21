@@ -264,8 +264,7 @@ public class ExcelKnowledgeQASystem {
         log.info("\n📝 运行演示问题...\n");
 
         String[] demoQuestions = {
-            "这些Excel文件中包含哪些主要数据？",
-            "有哪些重要的统计指标？"
+            "进出口总值累计值"
         };
 
         system.askBatch(demoQuestions);
