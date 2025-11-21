@@ -3,6 +3,8 @@ package top.yumbo.ai.rag.example;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
+import top.yumbo.ai.rag.example.llm.LLMClient;
+import top.yumbo.ai.rag.example.llm.MockLLMClient;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
 import top.yumbo.ai.rag.model.SearchResult;

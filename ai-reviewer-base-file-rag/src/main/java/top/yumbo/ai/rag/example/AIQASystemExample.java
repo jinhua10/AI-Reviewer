@@ -2,6 +2,8 @@ package top.yumbo.ai.rag.example;
 
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
+import top.yumbo.ai.rag.example.llm.LLMClient;
+import top.yumbo.ai.rag.example.llm.MockLLMClient;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
 import top.yumbo.ai.rag.model.SearchResult;
@@ -347,23 +349,4 @@ class KnowledgeDoc {
     public Map<String, Object> getMetadata() { return metadata; }
 }
 
-/**
- * LLM客户端接口
- */
-interface LLMClient {
-    String generate(String prompt);
-}
-
-/**
- * 模拟LLM客户端（用于演示）
- * 实际使用时替换为真实的LLM客户端（OpenAI, 本地模型等）
- */
-class MockLLMClient implements LLMClient {
-    @Override
-    public String generate(String prompt) {
-        // 这里应该调用真实的LLM API
-        // 例如：OpenAI GPT-4, Claude, 或本地Llama模型
-        return "基于提供的文档内容，这是一个模拟的AI回答。在实际使用中，这里会调用真实的LLM生成详细、准确的答案。";
-    }
-}
 
