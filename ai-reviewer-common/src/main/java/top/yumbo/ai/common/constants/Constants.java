@@ -20,6 +20,10 @@ public final class Constants {
     public static final String CJS_FILE_EXTENSION = ".cjs";
     public static final String XML_FILE_EXTENSION = ".xml";
     public static final String MD_FILE_EXTENSION = ".md";
+    // C# related
+    public static final String CSHARP_FILE_EXTENSION = ".cs";
+    public static final String CSPROJ_FILE_EXTENSION = ".csproj";
+    public static final String SLN_FILE_EXTENSION = ".sln";
     // AI related
     public static final int DEFAULT_MAX_TOKENS = 2000;
     public static final double DEFAULT_TEMPERATURE = 0.7;
