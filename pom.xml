@@ -16,6 +16,7 @@
         <module>ai-reviewer-api</module>
         <module>ai-reviewer-common</module>
         <module>ai-reviewer-core</module>
+        <module>ai-reviewer-base-file-rag</module>
         <module>ai-reviewer-adaptor-parser</module>
         <module>ai-reviewer-adaptor-ai</module>
         <module>ai-reviewer-adaptor-processor</module>
@@ -45,6 +46,12 @@
         <jgit.version>6.7.0.202309050840-r</jgit.version>
         <aws.sdk.version>2.21.0</aws.sdk.version>
         <fastjson2.version>2.0.52</fastjson2.version>
+        <!-- Base File RAG Dependencies -->
+        <lucene.version>9.9.1</lucene.version>
+        <tika.version>2.9.1</tika.version>
+        <caffeine.version>3.1.8</caffeine.version>
+        <sqlite.version>3.44.1.0</sqlite.version>
+        <netty.version>4.1.104.Final</netty.version>
     </properties>
 
     <dependencyManagement>
@@ -101,6 +108,11 @@
             <dependency>
                 <groupId>top.yumbo.ai</groupId>
                 <artifactId>ai-reviewer-adaptor-source</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>top.yumbo.ai</groupId>
+                <artifactId>ai-reviewer-base-file-rag</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -181,6 +193,48 @@
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
                 <version>${fastjson2.version}</version>
+            </dependency>
+
+            <!-- Base File RAG Dependencies -->
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-core</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-queryparser</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-analysis-common</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tika</groupId>
+                <artifactId>tika-core</artifactId>
+                <version>${tika.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tika</groupId>
+                <artifactId>tika-parsers-standard-package</artifactId>
+                <version>${tika.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial</groupId>
+                <artifactId>sqlite-jdbc</artifactId>
+                <version>${sqlite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
             </dependency>
 
             <!-- Testing -->
