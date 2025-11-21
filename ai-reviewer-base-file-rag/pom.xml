@@ -106,6 +106,12 @@
             <artifactId>logback-classic</artifactId>
             <version>1.4.14</version>
         </dependency>
+        <!-- Ensure logback-core matches classic to avoid NoSuchMethodError -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.4.14</version>
+        </dependency>
 
         <!-- Testing -->
         <dependency>
@@ -141,4 +147,3 @@
     </build>
 
 </project>
-

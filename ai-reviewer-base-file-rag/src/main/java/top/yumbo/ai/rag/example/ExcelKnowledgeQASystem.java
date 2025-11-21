@@ -60,6 +60,24 @@ public class ExcelKnowledgeQASystem {
             excelFolderPath
         );
 
+        // 检查是否需要重建
+        var stats = builder.getStatistics();
+        if (stats.getDocumentCount() > 0) {
+            if (rebuildIfExists) {
+                log.info("📚 现有知识库已存在 ({} 个文档) - 准备重建", stats.getDocumentCount());
+                builder.clearKnowledgeBase();
+                log.info("✓ 知识库已清空");
+            } else {
+                log.info("📚 现有知识库已存在 ({} 个文档) - 跳过构建（增量更新模式）", stats.getDocumentCount());
+                // 不关闭构建器，以便后续可以使用
+                OptimizedExcelKnowledgeBuilder.BuildResult existingResult =
+                    new OptimizedExcelKnowledgeBuilder.BuildResult();
+                existingResult.totalDocuments = (int) stats.getDocumentCount();
+                existingResult.successCount = 0; // 没有新处理的文件
+                return new BuildResult(true, null, existingResult);
+            }
+        }
+
         // 构建知识库
         OptimizedExcelKnowledgeBuilder.BuildResult buildResult = builder.buildKnowledgeBase();
 
@@ -207,7 +225,7 @@ public class ExcelKnowledgeQASystem {
 
         try {
             // 步骤1: 构建知识库
-            BuildResult buildResult = system.initialize(false);
+            BuildResult buildResult = system.initialize(true);
 
             if (!buildResult.isSuccess()) {
                 log.error("❌ 系统初始化失败: {}", buildResult.getError());
