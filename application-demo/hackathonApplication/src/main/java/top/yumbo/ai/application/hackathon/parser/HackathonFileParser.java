@@ -1,6 +1,7 @@
 package top.yumbo.ai.application.hackathon.parser;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import top.yumbo.ai.api.model.FileMetadata;
 import top.yumbo.ai.api.model.PreProcessedData;
 import top.yumbo.ai.api.parser.IFileParser;
@@ -35,7 +36,7 @@ public class HackathonFileParser implements IFileParser {
                 Constants.CSHARP_FILE_EXTENSION,
                 Constants.CSPROJ_FILE_EXTENSION,
                 Constants.SLN_FILE_EXTENSION
-        ).anyMatch(ext -> name.endsWith(ext));
+        ).anyMatch(name::endsWith);
     }
 
     @Override
@@ -44,25 +45,7 @@ public class HackathonFileParser implements IFileParser {
         try {
             String content = FileUtil.readFileToString(file);
             // Determine file type from extension
-            String fileNameLower = file.getName().toLowerCase(Locale.ROOT);
-            String fileType = "unknown";
-            if (fileNameLower.endsWith(Constants.JAVA_FILE_EXTENSION)) {
-                fileType = "java";
-            } else if (fileNameLower.endsWith(Constants.PYTHON_FILE_EXTENSION)) {
-                fileType = "python";
-            } else if (fileNameLower.endsWith(Constants.JS_FILE_EXTENSION) || fileNameLower.endsWith(Constants.MJS_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CJS_FILE_EXTENSION)) {
-                fileType = "javascript";
-            } else if (fileNameLower.endsWith(Constants.JSX_FILE_EXTENSION) || fileNameLower.endsWith(Constants.TSX_FILE_EXTENSION) || fileNameLower.endsWith(Constants.TS_FILE_EXTENSION)) {
-                fileType = "typescript";
-            } else if (fileNameLower.endsWith(Constants.XML_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CSPROJ_FILE_EXTENSION)) {
-                fileType = "xml";
-            } else if (fileNameLower.endsWith(Constants.MD_FILE_EXTENSION)) {
-                fileType = "markdown";
-            } else if (fileNameLower.endsWith(Constants.CSHARP_FILE_EXTENSION)) {
-                fileType = "csharp";
-            } else if (fileNameLower.endsWith(Constants.SLN_FILE_EXTENSION)) {
-                fileType = "sln";
-            }
+            String fileType = getFileType(file);
 
             // Build metadata
             FileMetadata metadata = FileMetadata.builder()
@@ -82,6 +65,30 @@ public class HackathonFileParser implements IFileParser {
             log.error("Error parsing file: {}", file.getName(), e);
             throw new ParseException("Parse error: " + file.getName(), e);
         }
+    }
+
+    @NotNull
+    private static String getFileType(File file) {
+        String fileNameLower = file.getName().toLowerCase(Locale.ROOT);
+        String fileType = "unknown";
+        if (fileNameLower.endsWith(Constants.JAVA_FILE_EXTENSION)) {
+            fileType = "java";
+        } else if (fileNameLower.endsWith(Constants.PYTHON_FILE_EXTENSION)) {
+            fileType = "python";
+        } else if (fileNameLower.endsWith(Constants.JS_FILE_EXTENSION) || fileNameLower.endsWith(Constants.MJS_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CJS_FILE_EXTENSION)) {
+            fileType = "javascript";
+        } else if (fileNameLower.endsWith(Constants.JSX_FILE_EXTENSION) || fileNameLower.endsWith(Constants.TSX_FILE_EXTENSION) || fileNameLower.endsWith(Constants.TS_FILE_EXTENSION)) {
+            fileType = "typescript";
+        } else if (fileNameLower.endsWith(Constants.XML_FILE_EXTENSION) || fileNameLower.endsWith(Constants.CSPROJ_FILE_EXTENSION)) {
+            fileType = "xml";
+        } else if (fileNameLower.endsWith(Constants.MD_FILE_EXTENSION)) {
+            fileType = "markdown";
+        } else if (fileNameLower.endsWith(Constants.CSHARP_FILE_EXTENSION)) {
+            fileType = "csharp";
+        } else if (fileNameLower.endsWith(Constants.SLN_FILE_EXTENSION)) {
+            fileType = "sln";
+        }
+        return fileType;
     }
 
     @Override
