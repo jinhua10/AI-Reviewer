@@ -1,0 +1,18 @@
+# 极简配置 - 只需这3行就能运行！
+spring:
+  application:
+    name: simple-rag-app
+
+# LocalFileRAG 配置（可选，使用默认值即可）
+local-file-rag:
+  enabled: true                    # 启用 RAG（默认true）
+  storage-path: ./data/simple-rag  # 数据存储路径（默认 ./data/rag）
+  enable-cache: true               # 启用缓存（默认true）
+  auto-qa-service: true            # 自动创建问答服务（默认false）
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    top.yumbo.ai.rag: DEBUG
+

@@ -1,7 +1,8 @@
 package top.yumbo.ai.rag.test;
 
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.rag.example.application.model.OptimizedExcelKnowledgeBuilder;
+import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
+import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
 
 /**
  * 向量检索功能测试
@@ -18,28 +19,36 @@ public class VectorSearchTest {
         log.info("🧪 向量检索功能测试");
         log.info("=".repeat(80));
 
-        String storagePath = "./data/test-knowledge-base";
-        String excelFolder = "./data/excel-files";
+        String indexPath = "./data/test-vector-index";
 
-        log.info("📍 知识库路径: {}", storagePath);
-        log.info("📍 Excel文件夹: {}", excelFolder);
+        log.info("📍 向量索引路径: {}", indexPath);
         log.info("");
 
+        LocalEmbeddingEngine embeddingEngine = null;
+        SimpleVectorIndexEngine vectorIndexEngine = null;
+
         try {
-            log.info("🚀 创建 OptimizedExcelKnowledgeBuilder（启用向量检索）...");
-            OptimizedExcelKnowledgeBuilder builder = new OptimizedExcelKnowledgeBuilder(
-                storagePath,
-                excelFolder,
-                false, // 自动分块
-                true   // 启用向量检索
+            log.info("🚀 初始化向量嵌入引擎...");
+            embeddingEngine = new LocalEmbeddingEngine();
+
+            log.info("✅ 向量嵌入引擎初始化成功");
+            log.info("   - 模型: {}", embeddingEngine.getModelName());
+            log.info("   - 维度: {}", embeddingEngine.getEmbeddingDim());
+            log.info("");
+
+            log.info("🚀 初始化向量索引引擎...");
+            vectorIndexEngine = new SimpleVectorIndexEngine(
+                indexPath,
+                embeddingEngine.getEmbeddingDim()
             );
 
+            log.info("✅ 向量索引引擎初始化成功");
+            log.info("   - 索引路径: {}", indexPath);
+            log.info("   - 向量数量: {}", vectorIndexEngine.size());
             log.info("");
+
             log.info("✅ 测试成功！向量检索引擎初始化正常");
             log.info("=".repeat(80));
-
-            // 清理资源
-            builder.close();
 
         } catch (Exception e) {
             log.error("❌ 测试失败", e);
@@ -50,11 +59,17 @@ public class VectorSearchTest {
             log.error("   3. ONNX Runtime 依赖问题");
             log.error("");
             log.error("🔧 解决方法：");
-            log.error("   1. 将模型文件放到 src/main/resources/models/text2vec-base-chinese/model.onnx");
-            log.error("   2. 或放到 ./models/text2vec-base-chinese/model.onnx");
+            log.error("   1. 将模型文件放到 src/main/resources/models/ 目录");
+            log.error("   2. 支持的模型: bge-m3, paraphrase-multilingual, 等");
             log.error("   3. 检查日志中的详细错误信息");
             log.error("=".repeat(80));
             System.exit(1);
+        } finally {
+            // 清理资源
+            if (embeddingEngine != null) {
+                embeddingEngine.close();
+                log.info("🔄 向量嵌入引擎已关闭");
+            }
         }
     }
 }

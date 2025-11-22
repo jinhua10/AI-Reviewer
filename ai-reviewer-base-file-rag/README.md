@@ -55,7 +55,11 @@
 
 ## 🚀 快速开始
 
-### 1. 添加依赖
+### 方式1：极简模式（Spring Boot Starter）⭐ 推荐
+
+**只需 3 步，5 分钟搭建！**
+
+#### 1. 添加依赖
 
 ```xml
 <dependency>
@@ -65,7 +69,53 @@
 </dependency>
 ```
 
-### 2. 创建实例
+#### 2. 配置（可选）
+
+```yaml
+# application.yml - 甚至可以不配置！
+local-file-rag:
+  storage-path: ./data/rag
+  auto-qa-service: true
+```
+
+#### 3. 使用（一行代码）
+
+```java
+@RestController
+public class MyController {
+    
+    @Autowired
+    private SimpleRAGService rag;  // 自动注入
+    
+    @PostMapping("/index")
+    public String index(@RequestBody String content) {
+        return rag.index("标题", content);  // 一行代码索引
+    }
+    
+    @GetMapping("/search")
+    public List<Document> search(@RequestParam String q) {
+        return rag.search(q);  // 一行代码搜索
+    }
+}
+```
+
+**完整示例：[QUICK-START.md](QUICK-START.md)**
+
+---
+
+### 方式2：原生 API（灵活可控）
+
+#### 1. 添加依赖
+
+```xml
+<dependency>
+    <groupId>top.yumbo.ai</groupId>
+    <artifactId>ai-reviewer-base-file-rag</artifactId>
+    <version>1.0</version>
+</dependency>
+```
+
+#### 2. 创建实例
 
 ```java
 // 使用Builder模式创建
