@@ -56,8 +56,8 @@ public class AIQASystemExample {
 
         // 初始化智能上下文构建器
         this.contextBuilder = SmartContextBuilder.builder()
-            .maxContextLength(8000)  // 8000字符总上下文
-            .maxDocLength(2000)      // 单个文档最多2000字符
+            .maxContextLength(20000)  // 🔧 增加到20000字符总上下文（支持大文件检索）
+            .maxDocLength(5000)       // 🔧 增加到5000字符单个文档
             .build();
 
         log.info("AIQASystem initialized with smart context builder");
@@ -82,19 +82,28 @@ public class AIQASystemExample {
             } else {
                 // 步骤1: 提取关键词
                 String keywords = extractKeywords(question);
-                log.info("Extracted keywords: {}", keywords);
+                log.info("🔍 提取关键词: {}", keywords);
 
                 // 步骤2B: 纯关键词检索
                 SearchResult searchResult = rag.search(Query.builder()
                     .queryText(keywords)
-                    .limit(5)  // Top-5最相关文档
+                    .limit(20)  // 🔧 增加到 Top-20 相关文档
                     .build());
 
-                log.info("Found {} relevant documents in {}ms",
-                    searchResult.getTotalHits(),
-                    searchResult.getQueryTimeMs());
+                log.info("📚 Found {} relevant documents in {}ms (total hits: {})",
+                    searchResult.getDocuments().size(),
+                    searchResult.getQueryTimeMs(),
+                    searchResult.getTotalHits());
 
                 documents = searchResult.getDocuments();
+
+                // 显示找到的文档
+                if (!documents.isEmpty()) {
+                    log.info("   Top-10 文档:");
+                    documents.stream().limit(10).forEach(doc ->
+                        log.info("      - {} ({}字符)", doc.getTitle(), doc.getContent().length())
+                    );
+                }
             }
 
             // 步骤3: 构建智能上下文（优化：提取最相关片段）
@@ -140,21 +149,45 @@ public class AIQASystemExample {
         try {
             long startTime = System.currentTimeMillis();
 
-            // 1. Lucene关键词检索（快速粗筛 Top-20）
+            // 1. Lucene关键词检索（快速粗筛 Top-50）
             String keywords = extractKeywords(question);
+            log.info("🔍 提取关键词: {}", keywords);
+
             SearchResult luceneResult = rag.search(Query.builder()
                 .queryText(keywords)
-                .limit(20)
+                .limit(50)  // 🔧 增加到 50 个文档
                 .build());
 
-            log.debug("Lucene找到 {} 个文档", luceneResult.getDocuments().size());
+            log.info("📚 Lucene检索找到 {} 个文档 (总命中: {})",
+                luceneResult.getDocuments().size(),
+                luceneResult.getTotalHits());
+
+            // 显示Lucene找到的文档
+            if (!luceneResult.getDocuments().isEmpty()) {
+                log.info("   Lucene Top-10 文档:");
+                luceneResult.getDocuments().stream().limit(10).forEach(doc ->
+                    log.info("      - {} ({}字符)", doc.getTitle(), doc.getContent().length())
+                );
+            }
 
             // 2. 向量检索（语义精排）
             float[] queryVector = embeddingEngine.embed(question);
             List<SimpleVectorIndexEngine.VectorSearchResult> vectorResults =
-                vectorIndexEngine.search(queryVector, 20, 0.6f);  // 相似度 >= 0.6
+                vectorIndexEngine.search(queryVector, 50, 0.4f);  // 🔧 增加到50个，降低阈值到 0.4
 
-            log.debug("向量检索找到 {} 个文档", vectorResults.size());
+            log.info("🎯 向量检索找到 {} 个文档", vectorResults.size());
+
+            // 显示向量找到的文档
+            if (!vectorResults.isEmpty()) {
+                log.info("   向量 Top-10 文档:");
+                vectorResults.stream().limit(10).forEach(result -> {
+                    Document doc = rag.getDocument(result.getDocId());
+                    if (doc != null) {
+                        log.info("      - {} (相似度: {})",
+                            doc.getTitle(), String.format("%.3f", result.getSimilarity()));
+                    }
+                });
+            }
 
             // 3. 混合评分：融合两种检索结果
             Map<String, Double> hybridScores = new HashMap<>();
@@ -176,24 +209,36 @@ public class AIQASystemExample {
                 hybridScores.put(docId, currentScore + 0.7 * result.getSimilarity());
             }
 
-            // 4. 按混合分数排序，取Top-5
-            List<String> topDocIds = hybridScores.entrySet().stream()
+            // 4. 按混合分数排序，取Top-20（增加到20个）
+            List<Map.Entry<String, Double>> sortedScores = hybridScores.entrySet().stream()
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
-                .limit(5)
-                .map(Map.Entry::getKey)
+                .limit(20)  // 🔧 增加到20个文档
                 .toList();
+
+            log.info("🎲 混合评分 Top-20:");
+            for (int i = 0; i < Math.min(sortedScores.size(), 15); i++) {  // 显示前15个
+                var entry = sortedScores.get(i);
+                Document doc = rag.getDocument(entry.getKey());
+                if (doc != null) {
+                    log.info("   {}. {} (混合分数: {})",
+                        i + 1, doc.getTitle(), String.format("%.3f", entry.getValue()));
+                }
+            }
+            if (sortedScores.size() > 15) {
+                log.info("   ... 还有 {} 个文档", sortedScores.size() - 15);
+            }
 
             // 5. 从RAG获取完整文档
             List<Document> finalDocs = new ArrayList<>();
-            for (String docId : topDocIds) {
-                Document doc = rag.getDocument(docId);
+            for (var entry : sortedScores) {
+                Document doc = rag.getDocument(entry.getKey());
                 if (doc != null) {
                     finalDocs.add(doc);
                 }
             }
 
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("混合检索完成: 找到 {} 个文档，耗时 {}ms", finalDocs.size(), elapsed);
+            log.info("✅ 混合检索完成: 返回 {} 个文档，耗时 {}ms", finalDocs.size(), elapsed);
 
             return finalDocs;
 
@@ -203,7 +248,7 @@ public class AIQASystemExample {
             String keywords = extractKeywords(question);
             SearchResult fallbackResult = rag.search(Query.builder()
                 .queryText(keywords)
-                .limit(5)
+                .limit(20)  // 🔧 回退模式也返回20个文档
                 .build());
             return fallbackResult.getDocuments();
         }

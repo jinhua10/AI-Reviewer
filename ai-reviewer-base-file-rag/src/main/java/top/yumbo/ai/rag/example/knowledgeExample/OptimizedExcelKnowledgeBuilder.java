@@ -46,9 +46,9 @@ public class OptimizedExcelKnowledgeBuilder {
     private static final long BATCH_MEMORY_THRESHOLD = 100 * 1024 * 1024; // 100MB
     private long currentBatchMemory = 0;
 
-    // 文件大小限制
-    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-    private static final long MAX_CONTENT_SIZE = 10 * 1024 * 1024; // 10MB
+    // 🔧 优化：文件大小限制
+    private static final long MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB（从100MB增加）
+    private static final long MAX_CONTENT_SIZE = 50 * 1024 * 1024; // 50MB（从10MB增加）- 触发强制分块的阈值
 
     // 自动分块阈值 - 当文档内容超过此大小时自动启用分块
     private static final long AUTO_CHUNK_THRESHOLD = 2 * 1024 * 1024; // 2MB
@@ -126,8 +126,8 @@ public class OptimizedExcelKnowledgeBuilder {
             } catch (OrtException | IOException e) {
                 log.error("❌ 向量检索引擎初始化失败，将使用纯关键词检索模式", e);
                 log.warn("💡 提示：如需启用向量检索，请确保模型文件已下载");
-                log.warn("   方式1: 放到 resources/models/text2vec-base-chinese/model.onnx");
-                log.warn("   方式2: 放到 ./models/text2vec-base-chinese/model.onnx");
+                log.warn("   方式1: 放到 resources/models/paraphrase-multilingual/model.onnx");
+                log.warn("   方式2: 放到 ./models/paraphrase-multilingual/model.onnx");
 
                 // 清理已创建的资源
                 if (tempEmbedding != null) {
@@ -182,81 +182,143 @@ public class OptimizedExcelKnowledgeBuilder {
     /**
      * 从 resources 或文件系统获取模型文件路径
      * 优先级：
-     * 1. resources/models/text2vec-base-chinese/model.onnx（打包后可用）
-     * 2. ./models/text2vec-base-chinese/model.onnx（开发环境）
+     * 1. resources/models/paraphrase-multilingual/model.onnx（打包后可用）
+     * 2. ./models/paraphrase-multilingual/model.onnx（开发环境）
      *
      * @return 模型文件路径
      * @throws IOException 如果模型文件不存在
      */
     private String getModelPathFromResourcesOrFileSystem() throws IOException {
+        // 🔧 支持多种模型文件，按优先级查找
+        // 支持推荐的新模型: BGE-M3, E5-Large, GTE-Large, Jina等
+        String[] modelFiles = {
+            "model.onnx",                    // 标准模型（推荐，兼容性最好）
+            "model_O2.onnx",                 // 优化模型（性能提升）
+            "model_O3.onnx",                 // 高级优化
+            "model_quantized.onnx",          // 通用量化模型
+            "model_quint8_avx2.onnx",        // AVX2 量化（大多数CPU支持）
+            "model_qint8_avx512.onnx",       // AVX-512 量化
+            "model_qint8_avx512_vnni.onnx",  // AVX-512 VNNI 量化
+            "model_qint8_arm64.onnx"         // ARM64 量化（Mac M1/M2）
+        };
+
+        // 🔧 支持多个模型目录
+        String[] modelDirs = {
+            "bge-m3",                    // BGE-M3（推荐，2024最新）
+            "e5-large",                  // E5-Large（微软，性能优秀）
+            "multilingual-e5-large",     // Multilingual E5-Large
+            "bge-large-zh",              // BGE-Large-ZH（中文最佳）
+            "gte-large-zh",              // GTE-Large-ZH（阿里达摩院）
+            "jina-v2",                   // Jina v2（支持长文本）
+            "paraphrase-multilingual",   // 当前默认模型
+            "text2vec-base-chinese"      // 旧版中文模型
+        };
+
         // 方式1：尝试从 classpath/resources 加载（支持打包后运行）
-        String resourcePath = "/models/text2vec-base-chinese/model.onnx";
-        java.net.URL resourceUrl = getClass().getResource(resourcePath);
+        for (String modelDir : modelDirs) {
+            for (String modelFile : modelFiles) {
+                String resourcePath = "/models/" + modelDir + "/" + modelFile;
+                java.net.URL resourceUrl = getClass().getResource(resourcePath);
 
-        if (resourceUrl != null) {
-            try {
-                // 如果是 jar 包内资源，需要提取到临时文件
-                if (resourceUrl.getProtocol().equals("jar")) {
-                    log.info("📦 检测到 JAR 包内模型，提取到临时目录...");
+                if (resourceUrl != null) {
+                    try {
+                        // 如果是 jar 包内资源，需要提取到临时文件
+                        if (resourceUrl.getProtocol().equals("jar")) {
+                            log.info("📦 检测到 JAR 包内模型: {}/{}", modelDir, modelFile);
 
-                    java.io.InputStream is = getClass().getResourceAsStream(resourcePath);
-                    if (is == null) {
-                        throw new IOException("无法读取资源: " + resourcePath);
-                    }
+                            java.io.InputStream is = getClass().getResourceAsStream(resourcePath);
+                            if (is == null) {
+                                continue; // 尝试下一个
+                            }
 
-                    // 创建临时文件
-                    Path tempFile = Files.createTempFile("text2vec-model-", ".onnx");
-                    tempFile.toFile().deleteOnExit(); // JVM 退出时删除
+                            // 创建临时文件
+                            Path tempFile = Files.createTempFile("embedding-model-", ".onnx");
+                            tempFile.toFile().deleteOnExit();
 
-                    // 复制到临时文件
-                    Files.copy(is, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    is.close();
+                            // 复制到临时文件
+                            Files.copy(is, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            is.close();
 
-                    log.info("✅ 模型已提取到: {}", tempFile);
-                    return tempFile.toString();
+                            log.info("✅ 模型已提取: {}/{}", modelDir, modelFile);
+                            return tempFile.toString();
 
-                } else {
-                    // 如果是文件系统资源（开发环境）
-                    Path modelPath = Paths.get(resourceUrl.toURI());
-                    if (Files.exists(modelPath)) {
-                        log.info("✅ 从 resources 加载模型: {}", modelPath);
-                        return modelPath.toString();
+                        } else {
+                            // 如果是文件系统资源（开发环境）
+                            Path modelPath = Paths.get(resourceUrl.toURI());
+                            if (Files.exists(modelPath)) {
+                                log.info("✅ 从 resources 加载模型: {}/{}", modelDir, modelFile);
+                                log.info("   路径: {}", modelPath);
+                                return modelPath.toString();
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("尝试 {}/{} 失败: {}", modelDir, modelFile, e.getMessage());
+                        // 继续尝试下一个
                     }
                 }
-            } catch (Exception e) {
-                log.warn("从 resources 加载模型失败: {}", e.getMessage());
             }
         }
 
         // 方式2：尝试从文件系统加载（开发环境备用）
-        String fileSystemPath = "./models/text2vec-base-chinese/model.onnx";
-        Path fsPath = Paths.get(fileSystemPath);
-        if (Files.exists(fsPath)) {
-            log.info("✅ 从文件系统加载模型: {}", fsPath.toAbsolutePath());
-            return fsPath.toString();
+        for (String modelDir : modelDirs) {
+            for (String modelFile : modelFiles) {
+                String fileSystemPath = "./models/" + modelDir + "/" + modelFile;
+                Path fsPath = Paths.get(fileSystemPath);
+                if (Files.exists(fsPath)) {
+                    log.info("✅ 从文件系统加载模型: {}/{}", modelDir, modelFile);
+                    log.info("   路径: {}", fsPath.toAbsolutePath());
+                    return fsPath.toString();
+                }
+            }
         }
 
         // 方式3：检查绝对路径（用户自定义）
-        String absolutePath = "models/text2vec-base-chinese/model.onnx";
-        Path absPath = Paths.get(absolutePath);
-        if (Files.exists(absPath)) {
-            log.info("✅ 从绝对路径加载模型: {}", absPath.toAbsolutePath());
-            return absPath.toString();
+        for (String modelDir : modelDirs) {
+            for (String modelFile : modelFiles) {
+                String absolutePath = "models/" + modelDir + "/" + modelFile;
+                Path absPath = Paths.get(absolutePath);
+                if (Files.exists(absPath)) {
+                    log.info("✅ 从绝对路径加载模型: {}/{}", modelDir, modelFile);
+                    log.info("   路径: {}", absPath.toAbsolutePath());
+                    return absPath.toString();
+                }
+            }
         }
 
         // 所有方式都失败
+        StringBuilder searchedDirs = new StringBuilder();
+        searchedDirs.append("已搜索的模型目录（按优先级）：\n");
+        for (int i = 0; i < modelDirs.length; i++) {
+            searchedDirs.append("  ").append(i + 1).append(". models/").append(modelDirs[i]).append("/\n");
+        }
+
+        StringBuilder searchedFiles = new StringBuilder();
+        searchedFiles.append("\n已尝试的文件名：\n");
+        for (String file : modelFiles) {
+            searchedFiles.append("  - ").append(file).append("\n");
+        }
+
         throw new IOException(
-            "模型文件不存在！\n" +
-            "已尝试以下路径：\n" +
-            "  1. resources" + resourcePath + "\n" +
-            "  2. " + fsPath.toAbsolutePath() + "\n" +
-            "  3. " + absPath.toAbsolutePath() + "\n\n" +
-            "请下载模型文件并放到以下任一位置：\n" +
-            "  - src/main/resources/models/text2vec-base-chinese/model.onnx（推荐，支持打包）\n" +
-            "  - ./models/text2vec-base-chinese/model.onnx（开发环境）\n\n" +
-            "模型下载地址：\n" +
-            "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
-            "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+            "❌ 嵌入模型文件不存在！\n\n" +
+            searchedDirs + searchedFiles + "\n" +
+            "📥 推荐的模型（按性能排序）：\n\n" +
+            "  1️⃣  BGE-M3 ⭐⭐⭐⭐⭐ （2024最新，性能最佳）\n" +
+            "      https://huggingface.co/BAAI/bge-m3\n" +
+            "      目录: ./models/bge-m3/model.onnx\n\n" +
+            "  2️⃣  Multilingual-E5-Large ⭐⭐⭐⭐ （微软出品，平衡）\n" +
+            "      https://huggingface.co/intfloat/multilingual-e5-large\n" +
+            "      目录: ./models/multilingual-e5-large/model.onnx\n\n" +
+            "  3️⃣  BGE-Large-ZH ⭐⭐⭐⭐ （中文最佳）\n" +
+            "      https://huggingface.co/BAAI/bge-large-zh-v1.5\n" +
+            "      目录: ./models/bge-large-zh/model.onnx\n\n" +
+            "  4️⃣  Paraphrase-Multilingual ⭐⭐⭐ （轻量兼容）\n" +
+            "      https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
+            "      目录: ./models/paraphrase-multilingual/model.onnx\n\n" +
+            "💡 快速开始：\n" +
+            "  1. 下载任一模型的 model.onnx 文件\n" +
+            "  2. 放到对应目录（如 ./models/bge-m3/model.onnx）\n" +
+            "  3. 系统会自动检测并使用\n\n" +
+            "📖 详细对比请查看: 更好的嵌入模型推荐.md"
         );
     }
 
@@ -332,7 +394,8 @@ public class OptimizedExcelKnowledgeBuilder {
                         currentBatchMemory += fileResult.estimatedMemory;
                     } else {
                         result.failedCount++;
-                        result.failedFiles.add(file.getName() + " (" + fileResult.error + ")");
+                        result.failedFiles.add(file.getName());
+                        result.fileErrors.put(file.getName(), fileResult.error);  // 存储错误信息
                     }
 
                     // 进度报告
@@ -359,7 +422,9 @@ public class OptimizedExcelKnowledgeBuilder {
                 } catch (Exception e) {
                     log.error("❌ Failed to process file: {}", file.getName(), e);
                     result.failedCount++;
-                    result.failedFiles.add(file.getName() + " (Exception: " + e.getMessage() + ")");
+                    String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    result.failedFiles.add(file.getName());
+                    result.fileErrors.put(file.getName(), errorMsg);  // 存储错误信息
                 }
             }
 
@@ -488,20 +553,26 @@ public class OptimizedExcelKnowledgeBuilder {
                 return result;
             }
 
-            log.info("   ✓ Extracted {} characters", content.length());
+            log.info("   ✓ Extracted {} characters ({} MB)",
+                content.length(),
+                String.format("%.2f", content.length() / 1024.0 / 1024.0));
 
-            // 2. 检查内容大小限制
-            if (content.length() > MAX_CONTENT_SIZE) {
-                log.warn("⚠️ Content too large: {} ({}MB), truncating to {}MB",
+            // 2. 🔧 优化：检查超大内容，强制分块而不是截断
+            boolean isLargeContent = content.length() > MAX_CONTENT_SIZE;
+            if (isLargeContent) {
+                log.warn("⚠️ Large content detected: {} ({} MB > {} MB)",
                     file.getName(),
-                    content.length() / 1024 / 1024,
+                    String.format("%.2f", content.length() / 1024.0 / 1024.0),
                     MAX_CONTENT_SIZE / 1024 / 1024);
-
-                content = content.substring(0, (int) MAX_CONTENT_SIZE);
+                log.info("   ✅ 将使用智能分块处理（而不是截断）以保留完整数据");
             }
 
             // 3. 构建文档元数据
             Map<String, Object> metadata = buildMetadata(file);
+            if (isLargeContent) {
+                metadata.put("isLargeFile", true);
+                metadata.put("originalSize", content.length());
+            }
 
             // 4. 创建文档
             Document document = Document.builder()
@@ -510,13 +581,19 @@ public class OptimizedExcelKnowledgeBuilder {
                 .metadata(metadata)
                 .build();
 
-            // 5. 智能分块处理
+            // 5. 🔧 优化：智能分块处理（超大文件强制分块）
             List<Document> documentsToIndex;
             boolean shouldChunk = false;
             String chunkReason = "";
 
             // 判断是否需要分块
-            if (enableChunking) {
+            if (isLargeContent) {
+                // 🔧 新增：超大内容（>10MB）强制分块
+                shouldChunk = true;
+                chunkReason = String.format("Large content auto-chunking (%.2f MB > %d MB) - 保留完整数据",
+                    content.length() / 1024.0 / 1024.0,
+                    MAX_CONTENT_SIZE / 1024 / 1024);
+            } else if (enableChunking) {
                 // 强制启用分块模式
                 shouldChunk = content.length() > DocumentChunker.DEFAULT_CHUNK_SIZE;
                 chunkReason = "Force enabled";
@@ -524,9 +601,9 @@ public class OptimizedExcelKnowledgeBuilder {
                 // 自动模式：根据内容大小判断
                 if (content.length() > AUTO_CHUNK_THRESHOLD) {
                     shouldChunk = true;
-                    chunkReason = String.format("Large file auto-detected (%dMB > %dMB)",
-                        content.length() / 1024 / 1024,
-                        AUTO_CHUNK_THRESHOLD / 1024 / 1024);
+                    chunkReason = String.format("Auto-detected (%.2f MB > %.2f MB)",
+                        content.length() / 1024.0 / 1024.0,
+                        AUTO_CHUNK_THRESHOLD / 1024.0 / 1024.0);
                 }
             }
 
@@ -580,19 +657,68 @@ public class OptimizedExcelKnowledgeBuilder {
             log.info("   ✅ Successfully processed: {} documents created", result.documentsCreated);
 
         } catch (Exception e) {
-            log.error("   ❌ Failed to process Excel file: {}", file.getName(), e);
-            log.error("   Error details: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-            result.error = e.getClass().getSimpleName() + ": " + e.getMessage();
+            // 友好的错误处理
+            String errorType = e.getClass().getSimpleName();
+            String errorMsg = e.getMessage();
+
+            log.error("   ❌ Failed to process Excel file: {}", file.getName());
+
+            // 根据错误类型提供更友好的提示
+            if (e instanceof org.apache.tika.exception.TikaException) {
+                Throwable cause = e.getCause();
+                if (cause instanceof java.lang.ArrayIndexOutOfBoundsException) {
+                    log.error("   💡 原因: Excel文件可能已损坏或格式不兼容");
+                    log.error("   📝 建议: ");
+                    log.error("      1. 尝试用 Excel 打开并另存为新文件");
+                    log.error("      2. 检查文件是否完整下载");
+                    log.error("      3. 如果是旧版 Excel 文件(.xls)，尝试转换为 .xlsx");
+                    result.error = "文件损坏或格式不兼容 (ArrayIndexOutOfBoundsException)";
+                } else {
+                    log.error("   💡 原因: Tika 解析错误 - {}", cause != null ? cause.getMessage() : errorMsg);
+                    result.error = "Tika解析失败: " + errorMsg;
+                }
+            } else if (e instanceof java.io.IOException) {
+                log.error("   💡 原因: 文件读取错误 - {}", errorMsg);
+                log.error("   📝 建议: 检查文件权限和路径");
+                result.error = "IO错误: " + errorMsg;
+            } else {
+                log.error("   💡 原因: {} - {}", errorType, errorMsg);
+                result.error = errorType + ": " + errorMsg;
+            }
+
+            log.info("   ⏭️  跳过此文件，继续处理其他文件...");
         }
 
         return result;
     }
 
     /**
-     * 提取Excel内容
+     * 提取Excel内容（带错误处理）
      */
     private String extractExcelContent(File file) {
-        return new top.yumbo.ai.rag.impl.parser.TikaDocumentParser().parse(file);
+        try {
+            // 尝试使用 Tika 解析
+            String content = new top.yumbo.ai.rag.impl.parser.TikaDocumentParser().parse(file);
+
+            if (content != null && !content.trim().isEmpty()) {
+                return content;
+            }
+
+            log.warn("   ⚠️  Tika 解析返回空内容");
+            return null;
+
+        } catch (Exception e) {
+            // Tika 解析失败，记录详细错误
+            log.error("   ❌ Tika 解析失败: {}", e.getMessage());
+
+            // 如果是特定的错误类型，提供更详细的信息
+            if (e.getCause() instanceof java.lang.ArrayIndexOutOfBoundsException) {
+                log.error("   💡 这通常表示 Excel 文件已损坏或使用了不兼容的格式");
+            }
+
+            // 重新抛出异常，让上层处理
+            throw new RuntimeException("Excel解析失败: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -642,9 +768,18 @@ public class OptimizedExcelKnowledgeBuilder {
 
         memoryMonitor.logMemoryUsage("Final");
 
+        // 显示失败文件的详细信息
         if (!result.failedFiles.isEmpty()) {
-            log.warn("\n⚠️  Failed Files:");
-            result.failedFiles.forEach(f -> log.warn("  - {}", f));
+            log.warn("\n⚠️  Failed Files Details:");
+            log.warn("-".repeat(80));
+            for (String failedFile : result.failedFiles) {
+                log.warn("  ❌ {}", failedFile);
+                // 查找对应的错误信息
+                String errorMsg = result.fileErrors.getOrDefault(failedFile, "Unknown error");
+                log.warn("     💡 原因: {}", errorMsg);
+            }
+            log.warn("-".repeat(80));
+            log.warn("💡 建议: 损坏的文件将被跳过，不影响其他文件的处理");
         }
 
         log.info("=".repeat(80) + "\n");
@@ -732,6 +867,7 @@ public class OptimizedExcelKnowledgeBuilder {
         public long buildTimeMs = 0;
         public String error = null;
         public List<String> failedFiles = new ArrayList<>();
+        public Map<String, String> fileErrors = new HashMap<>();  // 文件名 -> 错误信息
     }
 
     /**

@@ -24,9 +24,10 @@ public class DocumentChunker {
 
     /**
      * 默认分块配置
+     * 🔧 优化：增加分块大小以支持大文件处理
      */
-    public static final int DEFAULT_CHUNK_SIZE = 1000;  // 1000字符
-    public static final int DEFAULT_CHUNK_OVERLAP = 200; // 200字符重叠
+    public static final int DEFAULT_CHUNK_SIZE = 2000;  // 2000字符（从1000增加）
+    public static final int DEFAULT_CHUNK_OVERLAP = 400; // 400字符重叠（从200增加）
 
     /**
      * 句子结束符

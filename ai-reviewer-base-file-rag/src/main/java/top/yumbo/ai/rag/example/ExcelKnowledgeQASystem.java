@@ -78,11 +78,11 @@ public class ExcelKnowledgeQASystem {
     /**
      * 初始化系统（构建知识库）
      *
-     * @param rebuildIfExists 如果知识库已存在是否重建
+     * @param rebuildIfExists true=强制重建知识库，false=加载已有知识库（如果不存在则构建）
      * @return 构建结果
      */
     public BuildResult initialize(boolean rebuildIfExists) {
-        log.info("\n🔨 步骤1: 构建Excel知识库\n");
+        log.info("\n🔨 步骤1: 初始化知识库\n");
 
         // 创建构建器（自动分块模式）
         builder = OptimizedExcelKnowledgeBuilder.createWithAutoChunking(
@@ -90,41 +90,69 @@ public class ExcelKnowledgeQASystem {
             excelFolderPath
         );
 
-        // 检查是否需要重建
+        // 检查已有知识库
         var stats = builder.getStatistics();
-        if (stats.getDocumentCount() > 0) {
+        boolean knowledgeBaseExists = stats.getDocumentCount() > 0;
+
+        if (knowledgeBaseExists) {
             if (rebuildIfExists) {
-                log.info("📚 现有知识库已存在 ({} 个文档) - 准备重建", stats.getDocumentCount());
+                // true: 强制重建
+                log.info("📚 检测到已有知识库 ({} 个文档)", stats.getDocumentCount());
+                log.info("🔄 rebuildIfExists=true，准备重建知识库...");
                 builder.clearKnowledgeBase();
-                log.info("✓ 知识库已清空");
+                log.info("✓ 已清空旧知识库");
+
+                // 重新构建
+                OptimizedExcelKnowledgeBuilder.BuildResult buildResult = builder.buildKnowledgeBase();
+                builder.close();
+
+                if (buildResult.error != null) {
+                    log.error("❌ 知识库重建失败: {}", buildResult.error);
+                    return new BuildResult(false, buildResult.error, buildResult);
+                }
+
+                log.info("✅ 知识库重建成功！");
+                log.info("   - 处理文件: {} 个", buildResult.successCount);
+                log.info("   - 生成文档: {} 个", buildResult.totalDocuments);
+                log.info("   - 耗时: {}秒", String.format("%.2f", buildResult.buildTimeMs / 1000.0));
+
+                return new BuildResult(true, null, buildResult);
             } else {
-                log.info("📚 现有知识库已存在 ({} 个文档) - 跳过构建（增量更新模式）", stats.getDocumentCount());
-                // 不关闭构建器，以便后续可以使用
+                // false: 加载已有知识库
+                log.info("📚 检测到已有知识库 ({} 个文档)", stats.getDocumentCount());
+                log.info("✅ rebuildIfExists=false，直接加载已有知识库");
+
+                // 🔧 修复：关闭构建器，释放 Lucene 索引锁
                 OptimizedExcelKnowledgeBuilder.BuildResult existingResult =
                     new OptimizedExcelKnowledgeBuilder.BuildResult();
                 existingResult.totalDocuments = (int) stats.getDocumentCount();
-                existingResult.successCount = 0; // 没有新处理的文件
+                existingResult.successCount = 0; // 没有新构建的文件
+                existingResult.buildTimeMs = 0;
+
+                builder.close();  // 🔧 关键修复：释放索引锁
+                builder = null;
+
                 return new BuildResult(true, null, existingResult);
             }
+        } else {
+            // 知识库不存在，需要首次构建
+            log.info("📝 未检测到已有知识库，开始首次构建...");
+
+            OptimizedExcelKnowledgeBuilder.BuildResult buildResult = builder.buildKnowledgeBase();
+            builder.close();
+
+            if (buildResult.error != null) {
+                log.error("❌ 知识库构建失败: {}", buildResult.error);
+                return new BuildResult(false, buildResult.error, buildResult);
+            }
+
+            log.info("✅ 知识库构建成功！");
+            log.info("   - 处理文件: {} 个", buildResult.successCount);
+            log.info("   - 生成文档: {} 个", buildResult.totalDocuments);
+            log.info("   - 耗时: {}秒", String.format("%.2f", buildResult.buildTimeMs / 1000.0));
+
+            return new BuildResult(true, null, buildResult);
         }
-
-        // 构建知识库
-        OptimizedExcelKnowledgeBuilder.BuildResult buildResult = builder.buildKnowledgeBase();
-
-        // 关闭构建器
-        builder.close();
-
-        if (buildResult.error != null) {
-            log.error("❌ 知识库构建失败: {}", buildResult.error);
-            return new BuildResult(false, buildResult.error, buildResult);
-        }
-
-        log.info("✅ 知识库构建成功！");
-        log.info("   - 处理文件: {} 个", buildResult.successCount);
-        log.info("   - 生成文档: {} 个", buildResult.totalDocuments);
-        log.info("   - 耗时: {}秒", String.format("%.2f", buildResult.buildTimeMs / 1000.0));
-
-        return new BuildResult(true, null, buildResult);
     }
 
     /**
@@ -160,7 +188,7 @@ public class ExcelKnowledgeQASystem {
 
             } catch (OrtException | IOException e) {
                 log.warn("⚠️  向量检索引擎初始化失败，将使用纯关键词检索", e);
-                log.warn("💡 提示：如需启用向量检索，请确保模型文件已下��到 ./models/text2vec-base-chinese/model.onnx");
+                log.warn("💡 提示：如需启用向量检索，请确保模型文件已下载到 ./models/paraphrase-multilingual/model.onnx");
                 embeddingEngine = null;
                 vectorIndexEngine = null;
             }
@@ -200,13 +228,19 @@ public class ExcelKnowledgeQASystem {
 
         log.info("\n" + "=".repeat(80));
         log.info("❓ 问题: {}", question);
-        log.info("-".repeat(80));
+        log.info("=".repeat(80));
+        log.info("");
 
         AIAnswer answer = qaSystem.answer(question);
 
-        log.info("\n💡 回答:");
+        log.info("");
+        log.info("=".repeat(80));
+        log.info("💡 回答:");
         log.info(answer.getAnswer());
-        log.info("\n📚 数据来源: {}", String.join(", ", answer.getSources()));
+        log.info("");
+        log.info("📚 数据来源 (共{}个文档):", answer.getSources().size());
+        answer.getSources().forEach(source -> log.info("   - {}", source));
+        log.info("");
         log.info("⏱️  响应时间: {}ms", answer.getResponseTimeMs());
         log.info("=".repeat(80));
 
@@ -272,7 +306,7 @@ public class ExcelKnowledgeQASystem {
     public static void main(String[] args) {
         // 配置路径
         String knowledgeBasePath = "./data/excel-qa-system";
-        String excelFolderPath = "E:\\excel";
+        String excelFolderPath = "E:\\excel1";
 
         // 💡 可以指定单个Excel文件（支持中文路径）
         // excelFolderPath = "E:\\月度数据.xls";
@@ -333,7 +367,9 @@ public class ExcelKnowledgeQASystem {
         log.info("\n📝 运行演示问题...\n");
 
         String[] demoQuestions = {
-            "基于检索的文档中找出城市性别比例最高的前三个城市是哪些？"
+//            "内蒙古 15岁以上婚配情况"
+//            "北京市 人均住房建筑面积"
+            "财务管理专业有那些学校以及分数线是多少"
         };
 
         system.askBatch(demoQuestions);

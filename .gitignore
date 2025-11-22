@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 .kotlin
 
+*.log
 ### IntelliJ IDEA ###
 .idea/
 .idea/modules.xml
@@ -38,3 +39,4 @@ build/
 
 ### Mac OS ###
 .DS_Store
+/data/excel-qa-system/documents/2025/11/22/0bef52e9-754b-42a3-9439-326cc13331dc.txt.gz

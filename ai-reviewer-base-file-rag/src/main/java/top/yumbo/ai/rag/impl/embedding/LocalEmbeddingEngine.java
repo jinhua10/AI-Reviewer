@@ -14,7 +14,7 @@ import java.util.*;
  * 使用 ONNX Runtime 运行本地 Sentence-BERT 模型
  *
  * 支持的模型：
- * - text2vec-base-chinese (中文，384维)
+ * - paraphrase-multilingual-MiniLM-L12-v2 (多语言，384维)
  * - all-MiniLM-L6-v2 (英文，384维)
  * - paraphrase-multilingual-MiniLM-L12-v2 (多语言，384维)
  *
@@ -34,7 +34,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
 
     // 常量
     private static final int DEFAULT_MAX_SEQUENCE_LENGTH = 512;
-    private static final String DEFAULT_MODEL_PATH = "models/text2vec-base-chinese/model.onnx";
+    private static final String DEFAULT_MODEL_PATH = "models/paraphrase-multilingual/model.onnx";
 
     /**
      * 使用默认模型路径构造
@@ -67,6 +67,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
                 "模型文件不存在: %s\n" +
                 "请下载模型文件到该路径。\n" +
                 "推荐模型：\n" +
+                "  多语言（推荐）：https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
                 "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
                 "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
                 modelPath
@@ -134,8 +135,23 @@ public class LocalEmbeddingEngine implements AutoCloseable {
             OrtSession.Result result = session.run(inputs);
 
             // 4. 提取输出向量
-            float[][] embeddings = (float[][]) result.get(0).getValue();
-            float[] vector = embeddings[0]; // 取第一个样本（批量大小=1）
+            // 🔧 修复：处理可能的三维输出 [batch_size, seq_len, hidden_dim]
+            Object outputValue = result.get(0).getValue();
+            float[] vector;
+
+            if (outputValue instanceof float[][][]) {
+                // 三维输出: [batch_size, seq_len, hidden_dim]
+                // 使用第一个 token（[CLS]）的嵌入作为句子表示
+                float[][][] output3d = (float[][][]) outputValue;
+                vector = output3d[0][0]; // batch=0, token=0 ([CLS])
+            } else if (outputValue instanceof float[][]) {
+                // 二维输出: [batch_size, hidden_dim]（已经是池化后的结果）
+                float[][] output2d = (float[][]) outputValue;
+                vector = output2d[0]; // batch=0
+            } else {
+                log.error("未知输出格式: {}", outputValue.getClass().getName());
+                return new float[embeddingDim]; // 返回零向量
+            }
 
             // 5. L2 归一化（余弦相似度需要）
             float[] normalized = l2Normalize(vector);
@@ -180,20 +196,36 @@ public class LocalEmbeddingEngine implements AutoCloseable {
     private long[] tokenize(String text) {
         // 简化策略：
         // 1. 截断到最大长度
-        // 2. 使用字符的 Unicode 编码作为 token ID
+        // 2. 使用字符的 Unicode 编码映射到词汇表范围
+
+        // BERT 词汇表大小通常是 21128 或 30522
+        // paraphrase-multilingual 和 text2vec-base-chinese 的词汇表大小都是 30522
+        final int VOCAB_SIZE = 30522;
+        final int CLS_TOKEN = 101;  // [CLS]
+        final int SEP_TOKEN = 102;  // [SEP]
+        final int UNK_TOKEN = 100;  // [UNK] 未知token
 
         char[] chars = text.toCharArray();
         int length = Math.min(chars.length, maxSequenceLength - 2); // 预留 [CLS] 和 [SEP]
 
         long[] tokens = new long[length + 2];
-        tokens[0] = 101; // [CLS] token
+        tokens[0] = CLS_TOKEN; // [CLS] token
 
         for (int i = 0; i < length; i++) {
-            // 将字符映射到词汇表范围 (101-30000)
-            tokens[i + 1] = (chars[i] % 29900) + 101;
+            // 🔧 修复：将字符映射到词汇表范围 [0, VOCAB_SIZE)
+            // 使用 Unicode 值模词汇表大小，确保在有效范围内
+            int charCode = chars[i];
+            int tokenId = (charCode % (VOCAB_SIZE - 1000)) + 1000; // 避开特殊token区域 [0-999]
+
+            // 确保在有效范围内
+            if (tokenId < 0 || tokenId >= VOCAB_SIZE) {
+                tokenId = UNK_TOKEN; // 使用未知token
+            }
+
+            tokens[i + 1] = tokenId;
         }
 
-        tokens[length + 1] = 102; // [SEP] token
+        tokens[length + 1] = SEP_TOKEN; // [SEP] token
 
         return tokens;
     }
@@ -259,9 +291,25 @@ public class LocalEmbeddingEngine implements AutoCloseable {
             inputs.put("token_type_ids", tokenTypeIdsTensor); // 🔧 修复：添加到输入
 
             OrtSession.Result result = session.run(inputs);
-            float[][] output = (float[][]) result.get(0).getValue();
 
-            int dim = output[0].length;
+            // 🔧 修复：处理可能的三维输出 [batch_size, seq_len, hidden_dim]
+            Object outputValue = result.get(0).getValue();
+            int dim;
+
+            if (outputValue instanceof float[][][]) {
+                // 三维输出: [batch_size, seq_len, hidden_dim]
+                float[][][] output3d = (float[][][]) outputValue;
+                dim = output3d[0][0].length; // 取 hidden_dim
+                log.debug("检测到三维输出，维度: {}", dim);
+            } else if (outputValue instanceof float[][]) {
+                // 二维输出: [batch_size, hidden_dim]
+                float[][] output2d = (float[][]) outputValue;
+                dim = output2d[0].length;
+                log.debug("检测到二维输出，维度: {}", dim);
+            } else {
+                log.warn("未知输出格式: {}, 使用默认维度 384", outputValue.getClass().getName());
+                dim = 384;
+            }
 
             inputTensor.close();
             maskTensor.close();
@@ -270,8 +318,8 @@ public class LocalEmbeddingEngine implements AutoCloseable {
 
             return dim;
 
-        } catch (OrtException e) {
-            log.warn("无法推断维度，使用默认值 384");
+        } catch (Exception e) {
+            log.warn("无法推断维度，使用默认值 384", e);
             return 384; // 默认维度
         }
     }
