@@ -1,5 +1,6 @@
 package top.yumbo.ai.rag.example.application.service;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import top.yumbo.ai.rag.LocalFileRAG;
@@ -23,6 +24,7 @@ import java.io.IOException;
 public class DocumentProcessingOptimizer {
 
     private final KnowledgeQAProperties properties;
+    @Getter
     private final MemoryMonitor memoryMonitor;
 
     // 批处理内存阈值
@@ -173,13 +175,6 @@ public class DocumentProcessingOptimizer {
         rag.optimizeIndex();
 
         log.info("✅ 提交和优化完成");
-    }
-
-    /**
-     * 获取内存监控器
-     */
-    public MemoryMonitor getMemoryMonitor() {
-        return memoryMonitor;
     }
 
     /**
