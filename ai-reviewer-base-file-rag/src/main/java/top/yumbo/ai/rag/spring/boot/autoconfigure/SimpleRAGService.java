@@ -1,5 +1,6 @@
 package top.yumbo.ai.rag.spring.boot.autoconfigure;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.model.Document;
@@ -21,6 +22,11 @@ import java.util.Map;
 @Slf4j
 public class SimpleRAGService {
 
+    /**
+     * -- GETTER --
+     *  获取底层 RAG 实例（高级用法）
+     */
+    @Getter
     private final LocalFileRAG rag;
     private final LocalFileRAGProperties properties;
 
@@ -125,13 +131,6 @@ public class SimpleRAGService {
      */
     public LocalFileRAG.Statistics getStatistics() {
         return rag.getStatistics();
-    }
-
-    /**
-     * 获取底层 RAG 实例（高级用法）
-     */
-    public LocalFileRAG getRag() {
-        return rag;
     }
 
     @PreDestroy
