@@ -1,6 +1,7 @@
 package top.yumbo.ai.rag.impl.embedding;
 
 import ai.onnxruntime.*;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -28,7 +29,17 @@ public class LocalEmbeddingEngine implements AutoCloseable {
 
     private final OrtEnvironment env;
     private final OrtSession session;
+    /**
+     * -- GETTER --
+     *  获取嵌入维度
+     */
+    @Getter
     private final int embeddingDim;
+    /**
+     * -- GETTER --
+     *  获取模型名称
+     */
+    @Getter
     private final String modelName;
     private final int maxSequenceLength;
 
@@ -322,20 +333,6 @@ public class LocalEmbeddingEngine implements AutoCloseable {
             log.warn("无法推断维度，使用默认值 384", e);
             return 384; // 默认维度
         }
-    }
-
-    /**
-     * 获取嵌入维度
-     */
-    public int getEmbeddingDim() {
-        return embeddingDim;
-    }
-
-    /**
-     * 获取模型名称
-     */
-    public String getModelName() {
-        return modelName;
     }
 
     @Override
