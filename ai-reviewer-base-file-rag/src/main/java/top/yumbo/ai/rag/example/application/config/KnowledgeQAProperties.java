@@ -1,0 +1,198 @@
+package top.yumbo.ai.rag.example.application.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * 知识库问答系统配置
+ *
+ * @author AI Reviewer Team
+ * @since 2025-11-22
+ */
+@Data
+@Component
+@ConfigurationProperties(prefix = "knowledge.qa")
+public class KnowledgeQAProperties {
+
+    /**
+     * 知识库配置
+     */
+    private KnowledgeBaseConfig knowledgeBase = new KnowledgeBaseConfig();
+
+    /**
+     * 向量检索配置
+     */
+    private VectorSearchConfig vectorSearch = new VectorSearchConfig();
+
+    /**
+     * LLM配置
+     */
+    private LlmConfig llm = new LlmConfig();
+
+    /**
+     * 文档处理配置
+     */
+    private DocumentConfig document = new DocumentConfig();
+
+    @Data
+    public static class KnowledgeBaseConfig {
+        /**
+         * 知识库存储路径
+         */
+        private String storagePath = "./data/knowledge-base";
+
+        /**
+         * 文档源路径（支持文件夹或单个文件）
+         */
+        private String sourcePath = "./data/documents";
+
+        /**
+         * 启动时是否重建知识库
+         */
+        private boolean rebuildOnStartup = false;
+
+        /**
+         * 是否启用缓存
+         */
+        private boolean enableCache = true;
+    }
+
+    @Data
+    public static class VectorSearchConfig {
+        /**
+         * 是否启用向量检索
+         */
+        private boolean enabled = true;
+
+        /**
+         * 模型配置
+         */
+        private ModelConfig model = new ModelConfig();
+
+        /**
+         * 向量索引存储路径
+         */
+        private String indexPath = "./data/vector-index";
+
+        /**
+         * 检索相似度阈值 (0.0-1.0)
+         */
+        private float similarityThreshold = 0.4f;
+
+        /**
+         * 检索返回的文档数量
+         */
+        private int topK = 20;
+    }
+
+    @Data
+    public static class ModelConfig {
+        /**
+         * 模型名称
+         */
+        private String name = "paraphrase-multilingual";
+
+        /**
+         * 模型路径（相对于 resources）
+         */
+        private String path = "/models/paraphrase-multilingual/model.onnx";
+
+        /**
+         * 支持的模型目录列表（自动查找顺序）
+         */
+        private List<String> searchPaths = List.of(
+            "bge-m3",
+            "multilingual-e5-large",
+            "bge-large-zh",
+            "paraphrase-multilingual",
+            "text2vec-base-chinese"
+        );
+
+        /**
+         * 模型文件名列表（自动查找顺序）
+         */
+        private List<String> fileNames = List.of(
+            "model.onnx",
+            "model_O2.onnx",
+            "model_quantized.onnx",
+            "model_quint8_avx2.onnx"
+        );
+    }
+
+    @Data
+    public static class LlmConfig {
+        /**
+         * LLM提供商 (mock, deepseek, openai)
+         */
+        private String provider = "mock";
+
+        /**
+         * API Key（从环境变量读取）
+         */
+        private String apiKey = "${AI_API_KEY:}";
+
+        /**
+         * API 端点
+         */
+        private String apiUrl = "https://api.deepseek.com/v1/chat/completions";
+
+        /**
+         * 模型名称
+         */
+        private String model = "deepseek-chat";
+
+        /**
+         * 最大上下文长度
+         */
+        private int maxContextLength = 20000;
+
+        /**
+         * 单文档最大长度
+         */
+        private int maxDocLength = 5000;
+    }
+
+    @Data
+    public static class DocumentConfig {
+        /**
+         * 支持的文件格式
+         */
+        private List<String> supportedFormats = List.of(
+            "xlsx", "xls",      // Excel
+            "docx", "doc",      // Word
+            "pptx", "ppt",      // PowerPoint
+            "pdf",              // PDF
+            "txt", "md",        // 文本
+            "html", "xml"       // 其他
+        );
+
+        /**
+         * 最大文件大小（MB）
+         */
+        private int maxFileSizeMb = 200;
+
+        /**
+         * 最大内容大小（MB）
+         */
+        private int maxContentSizeMb = 50;
+
+        /**
+         * 自动分块阈值（MB）
+         */
+        private int autoChunkThresholdMb = 2;
+
+        /**
+         * 文档分块大小（字符数）
+         */
+        private int chunkSize = 2000;
+
+        /**
+         * 文档分块重叠（字符数）
+         */
+        private int chunkOverlap = 400;
+    }
+}
+

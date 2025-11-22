@@ -215,6 +215,51 @@ public class LocalFileRAG implements Closeable {
     }
 
     /**
+     * 删除所有文档
+     *
+     * @return 删除的文档数量
+     */
+    public int deleteAllDocuments() {
+        log.info("Deleting all documents...");
+
+        // 1. 获取所有文档ID
+        List<String> allDocIds = storageEngine.getAllDocumentIds();
+        int count = allDocIds.size();
+
+        if (count == 0) {
+            log.info("No documents to delete");
+            return 0;
+        }
+
+        log.info("Found {} documents to delete", count);
+
+        // 2. 删除所有文档
+        for (String docId : allDocIds) {
+            try {
+                storageEngine.delete(docId);
+                indexEngine.deleteFromIndex(docId);
+
+                if (configuration.getCache().isEnabled()) {
+                    cacheEngine.invalidateDocument(docId);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to delete document: {}", docId, e);
+            }
+        }
+
+        // 3. 清空缓存
+        if (configuration.getCache().isEnabled()) {
+            cacheEngine.clear();
+        }
+
+        // 4. 提交更改
+        commit();
+
+        log.info("Deleted {} documents", count);
+        return count;
+    }
+
+    /**
      * 优化索引
      */
     public void optimizeIndex() {

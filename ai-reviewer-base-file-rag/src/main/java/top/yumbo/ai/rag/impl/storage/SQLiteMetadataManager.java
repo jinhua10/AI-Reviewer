@@ -228,6 +228,29 @@ public class SQLiteMetadataManager implements AutoCloseable {
     }
 
     /**
+     * 获取所有文档ID
+     */
+    public List<String> getAllDocumentIds() {
+        String sql = "SELECT id FROM documents";
+        List<String> ids = new ArrayList<>();
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                ids.add(rs.getString("id"));
+            }
+
+            log.debug("Retrieved {} document IDs", ids.size());
+        } catch (SQLException e) {
+            log.error("Failed to get all document IDs", e);
+            throw new RuntimeException("Failed to get all document IDs", e);
+        }
+
+        return ids;
+    }
+
+    /**
      * 清空所有文档
      */
     public void clear() {

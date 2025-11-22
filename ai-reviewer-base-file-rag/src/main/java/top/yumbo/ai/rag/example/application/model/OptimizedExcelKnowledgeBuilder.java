@@ -1,4 +1,4 @@
-package top.yumbo.ai.rag.example.knowledgeExample;
+package top.yumbo.ai.rag.example.application.model;
 
 import ai.onnxruntime.OrtException;
 import lombok.extern.slf4j.Slf4j;

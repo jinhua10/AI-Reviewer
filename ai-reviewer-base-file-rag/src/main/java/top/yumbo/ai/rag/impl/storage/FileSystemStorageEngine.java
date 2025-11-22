@@ -235,6 +235,11 @@ public class FileSystemStorageEngine implements StorageEngine {
     }
 
     @Override
+    public List<String> getAllDocumentIds() {
+        return metadataManager.getAllDocumentIds();
+    }
+
+    @Override
     public boolean exists(String id) {
         return metadataManager.exists(id);
     }

@@ -1,7 +1,7 @@
 package top.yumbo.ai.rag.test;
 
 import lombok.extern.slf4j.Slf4j;
-import top.yumbo.ai.rag.example.knowledgeExample.OptimizedExcelKnowledgeBuilder;
+import top.yumbo.ai.rag.example.application.model.OptimizedExcelKnowledgeBuilder;
 
 /**
  * 向量检索功能测试

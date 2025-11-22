@@ -1,0 +1,175 @@
+# 知识库问答系统配置文件
+# Knowledge QA System Configuration
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: knowledge-qa-system
+
+# 知识库问答系统配置
+knowledge:
+  qa:
+    # 知识库配置
+    knowledge-base:
+      # 知识库存储路径（索引、元数据等）
+      storage-path: ./data/knowledge-base
+
+      # 文档源路径（支持文件夹或单个文件）
+      # 示例：
+      #   - ./data/documents           # 文件夹
+      #   - E:/文档/知识库             # 中文路径
+      #   - ./data/documents/file.xlsx # 单个文件
+      source-path: ./data/documents
+
+      # 启动时是否重建知识库
+      # true: 每次启动时重新构建（适合开发）
+      # false: 使用已有知识库（适合生产）
+      rebuild-on-startup: false
+
+      # 是否启用缓存
+      enable-cache: true
+
+    # 向量检索配置
+    vector-search:
+      # 是否启用向量检索
+      # true: 使用语义向量检索（需要模型文件）
+      # false: 使用纯关键词检索
+      enabled: true
+
+      # 模型配置
+      model:
+        # 模型名称（用于日志显示）
+        name: paraphrase-multilingual
+
+        # 模型文件路径（相对于 resources）
+        # 系统会自动查找以下目录中的模型文件：
+        path: /models/paraphrase-multilingual/model.onnx
+
+        # 模型搜索路径（按优先级排序）
+        # 系统会按顺序在这些目录中查找模型文件
+        search-paths:
+          - bge-m3                      # BGE-M3 (推荐, 2024最新)
+          - multilingual-e5-large       # Multilingual E5 Large
+          - bge-large-zh                # BGE Large ZH (中文)
+          - paraphrase-multilingual     # Paraphrase Multilingual
+          - text2vec-base-chinese       # Text2Vec (旧版)
+
+        # 模型文件名（按优先级排序）
+        file-names:
+          - model.onnx                  # 标准模型
+          - model_O2.onnx               # 优化模型
+          - model_quantized.onnx        # 量化模型
+          - model_quint8_avx2.onnx      # AVX2 量化
+
+      # 向量索引存储路径
+      index-path: ./data/vector-index
+
+      # 检索相似度阈值 (0.0-1.0)
+      # 越高越严格，建议 0.3-0.5
+      similarity-threshold: 0.4
+
+      # 检索返回的文档数量
+      top-k: 20
+
+    # LLM 配置
+    llm:
+      # LLM 提供商
+      # 可选值: mock, deepseek, openai
+      provider: mock
+
+      # API Key（从环境变量读取）
+      # 设置环境变量: export AI_API_KEY=your-api-key
+      api-key: ${AI_API_KEY:}
+
+      # API 端点
+      api-url: https://api.deepseek.com/v1/chat/completions
+
+      # 模型名称
+      model: deepseek-chat
+
+      # 最大上下文长度（字符数）
+      max-context-length: 20000
+
+      # 单文档最大长度（字符数）
+      max-doc-length: 5000
+
+    # 文档处理配置
+    document:
+      # 支持的文件格式
+      supported-formats:
+        - xlsx
+        - xls
+        - docx
+        - doc
+        - pptx
+        - ppt
+        - pdf
+        - txt
+        - md
+        - html
+        - xml
+
+      # 最大文件大小（MB）
+      max-file-size-mb: 200
+
+      # 最大内容大小（MB）
+      # 超过此大小会强制分块
+      max-content-size-mb: 50
+
+      # 自动分块阈值（MB）
+      # 内容超过此大小会自动启用分块
+      auto-chunk-threshold-mb: 2
+
+      # 文档分块大小（字符数）
+      chunk-size: 2000
+
+      # 文档分块重叠（字符数）
+      chunk-overlap: 400
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    top.yumbo.ai.rag: INFO
+    org.springframework: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+# 开发环境配置
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+knowledge:
+  qa:
+    knowledge-base:
+      rebuild-on-startup: true  # 开发时每次重建
+    vector-search:
+      enabled: true
+
+logging:
+  level:
+    top.yumbo.ai.rag: DEBUG
+
+---
+# 生产环境配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+knowledge:
+  qa:
+    knowledge-base:
+      rebuild-on-startup: false  # 生产环境使用已有知识库
+    vector-search:
+      enabled: true
+
+logging:
+  level:
+    top.yumbo.ai.rag: INFO
+

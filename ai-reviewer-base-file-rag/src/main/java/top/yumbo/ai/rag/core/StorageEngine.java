@@ -80,6 +80,13 @@ public interface StorageEngine {
     long count();
 
     /**
+     * 获取所有文档ID
+     *
+     * @return 文档ID列表
+     */
+    List<String> getAllDocumentIds();
+
+    /**
      * 检查文档是否存在
      *
      * @param id 文档ID
