@@ -86,8 +86,14 @@ public class KnowledgeBaseService {
             if (knowledgeBaseExists && !rebuild) {
                 log.info("📚 检测到已有知识库 ({} 个文档)", stats.getDocumentCount());
                 log.info("✅ 跳过构建，使用已有知识库");
+
+                result.setSuccessCount(0);
+                result.setFailedCount(0);
+                result.setTotalDocuments((int) stats.getDocumentCount());
+                result.setBuildTimeMs(System.currentTimeMillis() - startTime);
+
                 rag.close();
-                return;
+                return result;
             }
 
             if (knowledgeBaseExists && rebuild) {
@@ -99,7 +105,7 @@ public class KnowledgeBaseService {
 
             // 3. 处理文档
             log.info("\n📝 开始处理文档...");
-            long startTime = System.currentTimeMillis();
+            long processStartTime = System.currentTimeMillis();
 
             int successCount = 0;
             int failedCount = 0;
@@ -173,14 +179,17 @@ public class KnowledgeBaseService {
                 rag.commit();
             }
 
-            long endTime = System.currentTimeMillis();
+            long processEndTime = System.currentTimeMillis();
 
             // 4. 填充构建结果
             result.setSuccessCount(successCount);
             result.setFailedCount(failedCount);
             result.setTotalDocuments((int) rag.getStatistics().getDocumentCount());
-            result.setBuildTimeMs(endTime - startTime);
-            result.setPeakMemoryMB(optimizer.getMemoryMonitor().getUsedMemory() / 1024 / 1024);
+            result.setBuildTimeMs(processEndTime - processStartTime);
+
+            // 获取峰值内存使用
+            long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            result.setPeakMemoryMB(usedMemory / 1024 / 1024);
 
             // 5. 显示结果
             log.info("\n" + "=".repeat(80));
@@ -262,22 +271,22 @@ public class KnowledgeBaseService {
     }
 
     /**
-     * 处理单个文档
+     * 处理单个文档（优化版，返回文档列表以支持批处理）
      */
-    private void processDocument(File file, LocalFileRAG rag,
-                                 LocalEmbeddingEngine embeddingEngine,
-                                 SimpleVectorIndexEngine vectorIndexEngine) {
+    private List<Document> processDocumentOptimized(File file, LocalFileRAG rag,
+                                                     LocalEmbeddingEngine embeddingEngine,
+                                                     SimpleVectorIndexEngine vectorIndexEngine) {
 
         log.info("📄 处理: {} ({} KB)", file.getName(), file.length() / 1024);
+        List<Document> createdDocuments = new ArrayList<>();
 
         try {
             // 1. 检查文件大小
-            long maxSizeBytes = properties.getDocument().getMaxFileSizeMb() * 1024L * 1024L;
-            if (file.length() > maxSizeBytes) {
+            if (!optimizer.checkFileSize(file.length())) {
                 log.warn("   ⚠️  文件过大，跳过: {} MB > {} MB",
                     file.length() / 1024 / 1024,
                     properties.getDocument().getMaxFileSizeMb());
-                return;
+                return createdDocuments;
             }
 
             // 2. 解析文档内容
@@ -285,7 +294,7 @@ public class KnowledgeBaseService {
 
             if (content == null || content.trim().isEmpty()) {
                 log.warn("   ⚠️  解析内容为空，跳过");
-                return;
+                return createdDocuments;
             }
 
             log.info("   ✓ 提取 {} 字符", content.length());

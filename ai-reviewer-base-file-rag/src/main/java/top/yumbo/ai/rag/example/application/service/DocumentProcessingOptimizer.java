@@ -64,10 +64,10 @@ public class DocumentProcessingOptimizer {
      * 检查并触发GC
      */
     public void checkAndTriggerGC() {
-        double memoryUsage = memoryMonitor.getMemoryUsagePercentage();
+        double memoryUsage = memoryMonitor.getMemoryUsagePercent();
 
         if (memoryUsage > GC_TRIGGER_THRESHOLD) {
-            log.warn("⚠️  内存使用率 {:.1f}% 超过阈值，触发GC...", memoryUsage);
+            log.warn("⚠️  内存使用率 {}% 超过阈值，触发GC...", String.format("%.1f", memoryUsage));
             System.gc();
 
             try {
@@ -76,9 +76,9 @@ public class DocumentProcessingOptimizer {
                 Thread.currentThread().interrupt();
             }
 
-            double afterGC = memoryMonitor.getMemoryUsagePercentage();
-            log.info("✓ GC完成，内存使用率: {:.1f}% -> {:.1f}%",
-                memoryUsage, afterGC);
+            double afterGC = memoryMonitor.getMemoryUsagePercent();
+            log.info("✓ GC完成，内存使用率: {}% -> {}%",
+                String.format("%.1f", memoryUsage), String.format("%.1f", afterGC));
         }
     }
 
@@ -186,12 +186,12 @@ public class DocumentProcessingOptimizer {
      * 打印内存使用情况
      */
     public void logMemoryUsage(String context) {
-        double usage = memoryMonitor.getMemoryUsagePercentage();
-        long usedMB = memoryMonitor.getUsedMemory() / 1024 / 1024;
-        long maxMB = memoryMonitor.getMaxMemory() / 1024 / 1024;
+        double usage = memoryMonitor.getMemoryUsagePercent();
+        long usedMB = memoryMonitor.getUsedMemoryMB();
+        long maxMB = memoryMonitor.getMaxMemoryMB();
 
-        log.info("💾 {} - 内存: {}MB / {}MB ({:.1f}%)",
-            context, usedMB, maxMB, usage);
+        log.info("💾 {} - 内存: {}MB / {}MB ({}%)",
+            context, usedMB, maxMB, String.format("%.1f", usage));
     }
 }
 
