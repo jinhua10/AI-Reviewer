@@ -1,7 +1,10 @@
 package top.yumbo.ai.rag.example.knowledgeExample;
 
+import ai.onnxruntime.OrtException;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
+import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
+import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.optimization.DocumentChunker;
 import top.yumbo.ai.rag.optimization.MemoryMonitor;
@@ -33,6 +36,11 @@ public class OptimizedExcelKnowledgeBuilder {
     private final String excelFolderPath;
     private final Set<String> processedFiles = new HashSet<>();
 
+    // P0修复：向量嵌入和索引（使用简化版）
+    private final LocalEmbeddingEngine embeddingEngine;
+    private final SimpleVectorIndexEngine vectorIndexEngine;
+    private final boolean enableVectorSearch;  // 是否启用向量检索
+
     // 内存管理
     private final MemoryMonitor memoryMonitor;
     private static final long BATCH_MEMORY_THRESHOLD = 100 * 1024 * 1024; // 100MB
@@ -61,14 +69,28 @@ public class OptimizedExcelKnowledgeBuilder {
      * @param enableChunking 是否启用文档分块（true=总是分块，false=根据文件大小自动判断）
      */
     public OptimizedExcelKnowledgeBuilder(String storagePath, String excelFolderPath, boolean enableChunking) {
+        this(storagePath, excelFolderPath, enableChunking, true); // 默认启用向量检索
+    }
+
+    /**
+     * 完整构造函数
+     *
+     * @param storagePath 知识库存储路径
+     * @param excelFolderPath Excel文件夹路径
+     * @param enableChunking 是否启用文档分块
+     * @param enableVectorSearch 是否启用向量检索（P0修复）
+     */
+    public OptimizedExcelKnowledgeBuilder(String storagePath, String excelFolderPath,
+                                           boolean enableChunking, boolean enableVectorSearch) {
         this.excelFolderPath = excelFolderPath;
         this.enableChunking = enableChunking;
-        this.autoChunking = !enableChunking; // 如果不强制启用，则使用自动模式
+        this.autoChunking = !enableChunking;
+        this.enableVectorSearch = enableVectorSearch;
         this.memoryMonitor = new MemoryMonitor();
         this.chunker = DocumentChunker.builder()
-            .chunkSize(2000)      // 2000字符每块
-            .chunkOverlap(200)    // 200字符重叠
-            .smartSplit(true)     // 智能分割
+            .chunkSize(2000)
+            .chunkOverlap(200)
+            .smartSplit(true)
             .build();
 
         // 创建LocalFileRAG实例
@@ -78,12 +100,62 @@ public class OptimizedExcelKnowledgeBuilder {
             .enableCompression(true)
             .build();
 
+        // P0修复：初始化向量嵌入和索引引擎（简化版）
+        LocalEmbeddingEngine tempEmbedding = null;
+        SimpleVectorIndexEngine tempVector = null;
+
+        if (enableVectorSearch) {
+            try {
+                log.info("🚀 初始化向量检索引擎（简化版）...");
+
+                // 获取模型路径（支持从 resources 或文件系统加载）
+                String modelPath = getModelPathFromResourcesOrFileSystem();
+                log.info("📦 模型路径: {}", modelPath);
+
+                // 初始化嵌入引擎
+                tempEmbedding = new LocalEmbeddingEngine(modelPath);
+
+                // 初始化简化版向量索引引擎（线性扫描）
+                tempVector = new SimpleVectorIndexEngine(
+                    storagePath,
+                    tempEmbedding.getEmbeddingDim()
+                );
+
+                log.info("✅ 向量检索引擎初始化成功（适合<10万条文档）");
+
+            } catch (OrtException | IOException e) {
+                log.error("❌ 向量检索引擎初始化失败，将使用纯关键词检索模式", e);
+                log.warn("💡 提示：如需启用向量检索，请确保模型文件已下载");
+                log.warn("   方式1: 放到 resources/models/text2vec-base-chinese/model.onnx");
+                log.warn("   方式2: 放到 ./models/text2vec-base-chinese/model.onnx");
+
+                // 清理已创建的资源
+                if (tempEmbedding != null) {
+                    try {
+                        tempEmbedding.close();
+                    } catch (Exception ex) {
+                        // 忽略关闭异常
+                    }
+                }
+                tempEmbedding = null;
+                tempVector = null;
+            }
+        }
+
+        this.embeddingEngine = tempEmbedding;
+        this.vectorIndexEngine = tempVector;
+
         log.info("=".repeat(80));
         log.info("Optimized Excel Knowledge Builder Initialized");
         log.info("=".repeat(80));
         log.info("Storage Path: {}", storagePath);
         log.info("Excel Folder: {}", excelFolderPath);
         log.info("Chunking Mode: {}", enableChunking ? "Always Enabled" : "Auto (threshold: " + AUTO_CHUNK_THRESHOLD / 1024 / 1024 + "MB)");
+        log.info("Vector Search: {}", this.embeddingEngine != null ? "✅ Enabled" : "❌ Disabled (Keyword Only)");
+        if (this.embeddingEngine != null) {
+            log.info("Embedding Model: {}", this.embeddingEngine.getModelName());
+            log.info("Vector Dimension: {}", this.embeddingEngine.getEmbeddingDim());
+        }
         log.info("Max File Size: {}MB", MAX_FILE_SIZE / 1024 / 1024);
         log.info("Max Content Size: {}MB", MAX_CONTENT_SIZE / 1024 / 1024);
         log.info("Batch Memory Threshold: {}MB", BATCH_MEMORY_THRESHOLD / 1024 / 1024);
@@ -105,6 +177,87 @@ public class OptimizedExcelKnowledgeBuilder {
      */
     public static OptimizedExcelKnowledgeBuilder createWithAutoChunking(String storagePath, String excelFolderPath) {
         return new OptimizedExcelKnowledgeBuilder(storagePath, excelFolderPath, false);
+    }
+
+    /**
+     * 从 resources 或文件系统获取模型文件路径
+     * 优先级：
+     * 1. resources/models/text2vec-base-chinese/model.onnx（打包后可用）
+     * 2. ./models/text2vec-base-chinese/model.onnx（开发环境）
+     *
+     * @return 模型文件路径
+     * @throws IOException 如果模型文件不存在
+     */
+    private String getModelPathFromResourcesOrFileSystem() throws IOException {
+        // 方式1：尝试从 classpath/resources 加载（支持打包后运行）
+        String resourcePath = "/models/text2vec-base-chinese/model.onnx";
+        java.net.URL resourceUrl = getClass().getResource(resourcePath);
+
+        if (resourceUrl != null) {
+            try {
+                // 如果是 jar 包内资源，需要提取到临时文件
+                if (resourceUrl.getProtocol().equals("jar")) {
+                    log.info("📦 检测到 JAR 包内模型，提取到临时目录...");
+
+                    java.io.InputStream is = getClass().getResourceAsStream(resourcePath);
+                    if (is == null) {
+                        throw new IOException("无法读取资源: " + resourcePath);
+                    }
+
+                    // 创建临时文件
+                    Path tempFile = Files.createTempFile("text2vec-model-", ".onnx");
+                    tempFile.toFile().deleteOnExit(); // JVM 退出时删除
+
+                    // 复制到临时文件
+                    Files.copy(is, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    is.close();
+
+                    log.info("✅ 模型已提取到: {}", tempFile);
+                    return tempFile.toString();
+
+                } else {
+                    // 如果是文件系统资源（开发环境）
+                    Path modelPath = Paths.get(resourceUrl.toURI());
+                    if (Files.exists(modelPath)) {
+                        log.info("✅ 从 resources 加载模型: {}", modelPath);
+                        return modelPath.toString();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("从 resources 加载模型失败: {}", e.getMessage());
+            }
+        }
+
+        // 方式2：尝试从文件系统加载（开发环境备用）
+        String fileSystemPath = "./models/text2vec-base-chinese/model.onnx";
+        Path fsPath = Paths.get(fileSystemPath);
+        if (Files.exists(fsPath)) {
+            log.info("✅ 从文件系统加载模型: {}", fsPath.toAbsolutePath());
+            return fsPath.toString();
+        }
+
+        // 方式3：检查绝对路径（用户自定义）
+        String absolutePath = "models/text2vec-base-chinese/model.onnx";
+        Path absPath = Paths.get(absolutePath);
+        if (Files.exists(absPath)) {
+            log.info("✅ 从绝对路径加载模型: {}", absPath.toAbsolutePath());
+            return absPath.toString();
+        }
+
+        // 所有方式都失败
+        throw new IOException(
+            "模型文件不存在！\n" +
+            "已尝试以下路径：\n" +
+            "  1. resources" + resourcePath + "\n" +
+            "  2. " + fsPath.toAbsolutePath() + "\n" +
+            "  3. " + absPath.toAbsolutePath() + "\n\n" +
+            "请下载模型文件并放到以下任一位置：\n" +
+            "  - src/main/resources/models/text2vec-base-chinese/model.onnx（推荐，支持打包）\n" +
+            "  - ./models/text2vec-base-chinese/model.onnx（开发环境）\n\n" +
+            "模型下载地址：\n" +
+            "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
+            "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+        );
     }
 
     /**
@@ -386,10 +539,36 @@ public class OptimizedExcelKnowledgeBuilder {
                 log.debug("Document indexed without chunking: {}", file.getName());
             }
 
-            // 6. 索引文档
+            // 6. 索引文档（Lucene + 向量）
             for (Document doc : documentsToIndex) {
+                // 6.1 Lucene 索引（关键词检索）
                 String docId = rag.index(doc);
-                log.trace("Indexed: {} -> {}", file.getName(), docId);
+                log.trace("Indexed (Lucene): {} -> {}", file.getName(), docId);
+
+                // 6.2 向量索引（语义检索）- P0修复
+                if (embeddingEngine != null && vectorIndexEngine != null) {
+                    try {
+                        // 生成文档的文本表示（标题 + 内容）
+                        String textForEmbedding = doc.getTitle() + "\n" + doc.getContent();
+
+                        // 截断过长文本（避免ONNX内存溢出）
+                        if (textForEmbedding.length() > 5000) {
+                            textForEmbedding = textForEmbedding.substring(0, 5000);
+                        }
+
+                        // 生成向量嵌入
+                        float[] vector = embeddingEngine.embed(textForEmbedding);
+
+                        // 添加到向量索引
+                        vectorIndexEngine.addDocument(docId, vector);
+
+                        log.trace("Vector indexed: {} -> {} dims", docId, vector.length);
+
+                    } catch (Exception e) {
+                        log.warn("向量索引失败: {} - {}", docId, e.getMessage());
+                        // 不影响主流程，继续处理
+                    }
+                }
             }
 
             processedFiles.add(file.getAbsolutePath());
@@ -511,6 +690,23 @@ public class OptimizedExcelKnowledgeBuilder {
      * 关闭资源
      */
     public void close() {
+        // P0修复：保存向量索引
+        if (vectorIndexEngine != null) {
+            try {
+                log.info("💾 保存向量索引...");
+                vectorIndexEngine.saveIndex();
+                log.info("✅ 向量索引已保存");
+            } catch (IOException e) {
+                log.error("保存向量索引失败", e);
+            }
+        }
+
+        // 关闭嵌入引擎
+        if (embeddingEngine != null) {
+            embeddingEngine.close();
+        }
+
+        // 关闭 RAG
         rag.close();
         log.info("Knowledge builder closed");
     }

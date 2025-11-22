@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.example.llm.LLMClient;
 import top.yumbo.ai.rag.example.llm.MockLLMClient;
+import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
+import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
 import top.yumbo.ai.rag.model.SearchResult;
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
 /**
  * AI系统集成示例：智能问答系统
  * 展示如何使用LocalFileRAG替代传统RAG实现智能问答
+ *
+ * 🆕 P0修复：支持向量检索增强
  */
 @Slf4j
 public class AIQASystemExample {
@@ -23,9 +27,33 @@ public class AIQASystemExample {
     private final LLMClient llmClient;
     private final SmartContextBuilder contextBuilder;
 
+    // 🆕 向量检索组件（可选）
+    private final LocalEmbeddingEngine embeddingEngine;
+    private final SimpleVectorIndexEngine vectorIndexEngine;
+
+    /**
+     * 构造函数（纯关键词检索模式）
+     */
     public AIQASystemExample(LocalFileRAG rag, LLMClient llmClient) {
+        this(rag, llmClient, null, null);
+    }
+
+    /**
+     * 构造函数（向量检索增强模式）
+     *
+     * @param rag RAG实例
+     * @param llmClient LLM客户端
+     * @param embeddingEngine 嵌入引擎
+     * @param vectorIndexEngine 向量索引引擎
+     */
+    public AIQASystemExample(LocalFileRAG rag, LLMClient llmClient,
+                            LocalEmbeddingEngine embeddingEngine,
+                            SimpleVectorIndexEngine vectorIndexEngine) {
         this.rag = rag;
         this.llmClient = llmClient;
+        this.embeddingEngine = embeddingEngine;
+        this.vectorIndexEngine = vectorIndexEngine;
+
         // 初始化智能上下文构建器
         this.contextBuilder = SmartContextBuilder.builder()
             .maxContextLength(8000)  // 8000字符总上下文
@@ -33,33 +61,46 @@ public class AIQASystemExample {
             .build();
 
         log.info("AIQASystem initialized with smart context builder");
+        if (embeddingEngine != null && vectorIndexEngine != null) {
+            log.info("✅ 向量检索增强已启用");
+        }
     }
 
     /**
-     * 主要问答方法
+     * 主要问答方法（支持向量检索增强）
      */
     public AIAnswer answer(String question) {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 步骤1: 提取关键词
-            String keywords = extractKeywords(question);
-            log.info("Extracted keywords: {}", keywords);
+            List<Document> documents;
 
-            // 步骤2: 检索相关文档
-            SearchResult searchResult = rag.search(Query.builder()
-                .queryText(keywords)
-                .limit(5)  // Top-5最相关文档
-                .build());
+            // 🆕 步骤2A: 向量检索（如果启用）
+            if (embeddingEngine != null && vectorIndexEngine != null) {
+                documents = hybridSearch(question);
+                log.info("✅ 使用混合检索（Lucene + Vector）");
+            } else {
+                // 步骤1: 提取关键词
+                String keywords = extractKeywords(question);
+                log.info("Extracted keywords: {}", keywords);
 
-            log.info("Found {} relevant documents in {}ms",
-                searchResult.getTotalHits(),
-                searchResult.getQueryTimeMs());
+                // 步骤2B: 纯关键词检索
+                SearchResult searchResult = rag.search(Query.builder()
+                    .queryText(keywords)
+                    .limit(5)  // Top-5最相关文档
+                    .build());
+
+                log.info("Found {} relevant documents in {}ms",
+                    searchResult.getTotalHits(),
+                    searchResult.getQueryTimeMs());
+
+                documents = searchResult.getDocuments();
+            }
 
             // 步骤3: 构建智能上下文（优化：提取最相关片段）
             String context = contextBuilder.buildSmartContext(
                 question,
-                searchResult.getDocuments()
+                documents
             );
 
             log.info("Context stats: {}",
@@ -72,8 +113,9 @@ public class AIQASystemExample {
             String answer = llmClient.generate(prompt);
 
             // 步骤6: 提取文档来源
-            List<String> sources = searchResult.getDocuments().stream()
+            List<String> sources = documents.stream()
                 .map(Document::getTitle)
+                .distinct()
                 .toList();
 
             long totalTime = System.currentTimeMillis() - startTime;
@@ -88,6 +130,82 @@ public class AIQASystemExample {
                 List.of(),
                 System.currentTimeMillis() - startTime
             );
+        }
+    }
+
+    /**
+     * 🆕 混合检索：结合Lucene关键词检索和向量语义检索
+     */
+    private List<Document> hybridSearch(String question) {
+        try {
+            long startTime = System.currentTimeMillis();
+
+            // 1. Lucene关键词检索（快速粗筛 Top-20）
+            String keywords = extractKeywords(question);
+            SearchResult luceneResult = rag.search(Query.builder()
+                .queryText(keywords)
+                .limit(20)
+                .build());
+
+            log.debug("Lucene找到 {} 个文档", luceneResult.getDocuments().size());
+
+            // 2. 向量检索（语义精排）
+            float[] queryVector = embeddingEngine.embed(question);
+            List<SimpleVectorIndexEngine.VectorSearchResult> vectorResults =
+                vectorIndexEngine.search(queryVector, 20, 0.6f);  // 相似度 >= 0.6
+
+            log.debug("向量检索找到 {} 个文档", vectorResults.size());
+
+            // 3. 混合评分：融合两种检索结果
+            Map<String, Double> hybridScores = new HashMap<>();
+
+            // Lucene结果（权重 0.3）
+            List<Document> luceneDocs = luceneResult.getDocuments();
+            for (int i = 0; i < luceneDocs.size(); i++) {
+                String docId = luceneDocs.get(i).getId();
+                // 归一化排名分数（第1名=1.0，第20名=0.05）
+                double normalizedScore = 1.0 - (i * 0.05);
+                hybridScores.put(docId, 0.3 * normalizedScore);
+            }
+
+            // 向量结果（权重 0.7）
+            for (SimpleVectorIndexEngine.VectorSearchResult result : vectorResults) {
+                String docId = result.getDocId();
+                double currentScore = hybridScores.getOrDefault(docId, 0.0);
+                // 余弦相似度已经在 [0, 1] 范围
+                hybridScores.put(docId, currentScore + 0.7 * result.getSimilarity());
+            }
+
+            // 4. 按混合分数排序，取Top-5
+            List<String> topDocIds = hybridScores.entrySet().stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(5)
+                .map(Map.Entry::getKey)
+                .toList();
+
+            // 5. 从RAG获取完整文档
+            List<Document> finalDocs = new ArrayList<>();
+            for (String docId : topDocIds) {
+                Document doc = rag.getDocument(docId);
+                if (doc != null) {
+                    finalDocs.add(doc);
+                }
+            }
+
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("混合检索完成: 找到 {} 个文档，耗时 {}ms", finalDocs.size(), elapsed);
+
+            return finalDocs;
+
+        } catch (Exception e) {
+            log.error("混合检索失败，回退到纯关键词检索", e);
+            // 回退到纯关键词检索
+            String keywords = extractKeywords(question);
+            SearchResult fallbackResult = rag.search(Query.builder()
+                .queryText(keywords)
+                .limit(5)
+                .build());
+            return fallbackResult.getDocuments();
         }
     }
 

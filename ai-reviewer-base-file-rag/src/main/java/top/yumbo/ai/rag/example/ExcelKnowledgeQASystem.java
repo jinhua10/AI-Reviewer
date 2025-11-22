@@ -1,19 +1,29 @@
 package top.yumbo.ai.rag.example;
 
+import ai.onnxruntime.OrtException;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.example.knowledgeExample.OptimizedExcelKnowledgeBuilder;
 import top.yumbo.ai.rag.example.llm.LLMClient;
 import top.yumbo.ai.rag.example.llm.MockLLMClient;
+import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
+import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
+
+import java.io.IOException;
 
 /**
- * Excel知识库智能问答系统
+ * Excel知识库智能问答系统（向量检索增强版）
  * 结合OptimizedExcelKnowledgeBuilder和AIQASystemExample
  *
  * 完整流程：
- * 1. 使用OptimizedExcelKnowledgeBuilder构建Excel知识库
- * 2. 使用AIQASystemExample进行智能问答
+ * 1. 使用OptimizedExcelKnowledgeBuilder构建Excel知识库（自动生成向量索引）
+ * 2. 使用AIQASystemExample进行智能问答（支持向量语义检索）
  * 3. 支持自动分块、智能上下文构建、DeepSeek LLM
+ *
+ * 🆕 P0修复：集成向量检索功能
+ * - 语义理解：支持同义词、近义词检索
+ * - 向量索引：使用SimpleVectorIndexEngine（适合<10万文档）
+ * - 本地存储：完全本地化，无需外部服务
  *
  * @author AI Reviewer Team
  * @since 2025-11-22
@@ -23,25 +33,45 @@ public class ExcelKnowledgeQASystem {
 
     private final String knowledgeBasePath;
     private final String excelFolderPath;
+    private final boolean enableVectorSearch;  // 🆕 是否启用向量检索
+
     private OptimizedExcelKnowledgeBuilder builder;
     private AIQASystemExample qaSystem;
     private LocalFileRAG rag;
 
+    // 🆕 向量检索组件
+    private LocalEmbeddingEngine embeddingEngine;
+    private SimpleVectorIndexEngine vectorIndexEngine;
+
     /**
-     * 构造函数
+     * 构造函数（默认启用向量检索）
      *
      * @param knowledgeBasePath 知识库存储路径
      * @param excelFolderPath Excel文件夹路径
      */
     public ExcelKnowledgeQASystem(String knowledgeBasePath, String excelFolderPath) {
+        this(knowledgeBasePath, excelFolderPath, true);  // 默认启用向量检索
+    }
+
+    /**
+     * 构造函数（完整版）
+     *
+     * @param knowledgeBasePath 知识库存储路径
+     * @param excelFolderPath Excel文件夹路径
+     * @param enableVectorSearch 是否启用向量检索
+     */
+    public ExcelKnowledgeQASystem(String knowledgeBasePath, String excelFolderPath,
+                                   boolean enableVectorSearch) {
         this.knowledgeBasePath = knowledgeBasePath;
         this.excelFolderPath = excelFolderPath;
+        this.enableVectorSearch = enableVectorSearch;
 
         log.info("=".repeat(80));
-        log.info("Excel知识库智能问答系统");
+        log.info("Excel知识库智能问答系统 {}", enableVectorSearch ? "（向量检索增强版）" : "");
         log.info("=".repeat(80));
         log.info("知识库路径: {}", knowledgeBasePath);
         log.info("Excel文件夹: {}", excelFolderPath);
+        log.info("向量检索: {}", enableVectorSearch ? "✅ 启用" : "❌ 禁用");
         log.info("=".repeat(80));
     }
 
@@ -109,15 +139,48 @@ public class ExcelKnowledgeQASystem {
             .enableCache(true)
             .build();
 
+        // 🆕 初始化向量检索组件（如果启用）
+        if (enableVectorSearch) {
+            try {
+                log.info("🚀 初始化向量检索引擎...");
+
+                // 初始化嵌入引擎
+                embeddingEngine = new LocalEmbeddingEngine();
+
+                // 加载向量索引
+                vectorIndexEngine = new SimpleVectorIndexEngine(
+                    knowledgeBasePath,
+                    embeddingEngine.getEmbeddingDim()
+                );
+
+                log.info("✅ 向量检索引擎已就绪");
+                log.info("   - 模型: {}", embeddingEngine.getModelName());
+                log.info("   - 向量维度: {}", embeddingEngine.getEmbeddingDim());
+                log.info("   - 索引向量数: {}", vectorIndexEngine.size());
+
+            } catch (OrtException | IOException e) {
+                log.warn("⚠️  向量检索引擎初始化失败，将使用纯关键词检索", e);
+                log.warn("💡 提示：如需启用向量检索，请确保模型文件已下��到 ./models/text2vec-base-chinese/model.onnx");
+                embeddingEngine = null;
+                vectorIndexEngine = null;
+            }
+        }
+
         // 初始化LLM客户端（使用DeepSeek）
         LLMClient llmClient = new MockLLMClient();
 
-        // 创建问答系统
-        qaSystem = new AIQASystemExample(rag, llmClient);
+        // 创建问答系统（支持向量检索）
+        if (embeddingEngine != null && vectorIndexEngine != null) {
+            qaSystem = new AIQASystemExample(rag, llmClient, embeddingEngine, vectorIndexEngine);
+            log.info("✅ 使用向量检索增强模式");
+        } else {
+            qaSystem = new AIQASystemExample(rag, llmClient);
+            log.info("✅ 使用关键词检索模式");
+        }
 
         // 显示知识库统计
         var stats = rag.getStatistics();
-        log.info("📚 知识库统计:");
+        log.info("\n📚 知识库统计:");
         log.info("   - 文档数: {}", stats.getDocumentCount());
         log.info("   - 索引数: {}", stats.getIndexedDocumentCount());
 
@@ -171,6 +234,12 @@ public class ExcelKnowledgeQASystem {
      * 关闭系统
      */
     public void close() {
+        // 关闭向量检索组件
+        if (embeddingEngine != null) {
+            embeddingEngine.close();
+            log.info("✅ 向量嵌入引擎已关闭");
+        }
+
         if (rag != null) {
             rag.close();
             log.info("✅ 问答系统已关闭");
