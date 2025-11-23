@@ -157,6 +157,19 @@
             <version>3.14.0</version>
         </dependency>
 
+        <!-- OkHttp - HTTP 客户端 (用于 OpenAI API 调用) -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+
+        <!-- Jackson - JSON 处理 (用于 OpenAI API) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -164,40 +177,21 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <!-- Logback - SLF4J implementation -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.4.14</version>
-        </dependency>
-        <!-- Ensure logback-core matches classic to avoid NoSuchMethodError -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>1.4.14</version>
-        </dependency>
-        <!-- Log4j2 to SLF4J bridge - 将 Log4j2 日志重定向到 SLF4J -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-to-slf4j</artifactId>
-            <version>2.20.0</version>
-        </dependency>
-        <!-- JUL to SLF4J bridge - 将 Java Util Logging 重定向到 SLF4J -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jul-to-slf4j</artifactId>
-            <version>2.0.9</version>
-        </dependency>
-        <!-- Spring Boot -->
+        <!-- Spring Boot Starter - 包含日志依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
+
+        <!--
+            注意：不需要手动添加 slf4j-api、logback-classic 等日志依赖
+            spring-boot-starter 已经包含了完整的日志配置：
+            - slf4j-api
+            - logback-classic
+            - logback-core
+            - log4j-to-slf4j
+            - jul-to-slf4j
+        -->
 
         <!-- Spring Boot Web - REST API 支持 -->
         <dependency>
@@ -292,6 +286,28 @@
                         </systemProperty>
                     </systemProperties>
                 </configuration>
+            </plugin>
+
+            <!-- Spring Boot Maven 插件 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>top.yumbo.ai.rag.example.application.KnowledgeQASystemApplication</mainClass>
+                    <jvmArguments>
+                        -Dfile.encoding=UTF-8
+                        -Dsun.stdout.encoding=UTF-8
+                        -Dsun.stderr.encoding=UTF-8
+                        -Dconsole.encoding=UTF-8
+                    </jvmArguments>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
