@@ -453,6 +453,32 @@
                             </target>
                         </configuration>
                     </execution>
+
+                    <!-- 复制打包好的 JAR 到 release 目录 -->
+                    <execution>
+                        <id>copy-jar-to-release</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="📦 复制 JAR 包到 release 目录..."/>
+
+                                <!-- 确保 release 目录存在 -->
+                                <mkdir dir="${project.basedir}/release"/>
+
+                                <!-- 复制 JAR 包 -->
+                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar"
+                                      todir="${project.basedir}/release"
+                                      overwrite="true"
+                                      failonerror="true"/>
+
+                                <echo message="✅ JAR 包已复制到 release 目录"/>
+                                <echo message="📁 文件: release/${project.artifactId}-${project.version}.jar"/>
+                            </target>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
