@@ -128,9 +128,11 @@ public class KnowledgeQAProperties {
     @Data
     public static class LlmConfig {
         /**
-         * LLM提供商 (mock, deepseek, openai)
+         * LLM提供商 (deepseek, openai)
+         * deepseek: DeepSeek（默认，从环境变量 AI_API_KEY 读取）
+         * openai: OpenAI（从环境变量 OPENAI_API_KEY 读取）
          */
-        private String provider = "mock";
+        private String provider = "deepseek";
 
         /**
          * API Key（从环境变量读取）

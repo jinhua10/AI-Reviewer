@@ -78,21 +78,21 @@ knowledge:
     llm:
       # LLM 提供商
       # 可选值:
-      #   - mock: 模拟客户端（默认，用于测试）
+      #   - deepseek: DeepSeek（默认，从环境变量 AI_API_KEY 读取，未设置时降级为 Mock 模式）
       #   - openai: OpenAI (GPT-4o, GPT-4, GPT-3.5)
-      #   - deepseek: DeepSeek
-      provider: mock
+      provider: deepseek
 
       # API Key（从环境变量读取）
-      # OpenAI: export OPENAI_API_KEY=sk-your-key
+      # DeepSeek: export AI_API_KEY=your-deepseek-key
+      # OpenAI: export OPENAI_API_KEY=sk-your-openai-key
       # 或通用: export AI_API_KEY=your-key
       api-key: ${AI_API_KEY:}
 
       # API 端点
-      # OpenAI 默认: https://api.openai.com/v1/chat/completions
-      # DeepSeek: https://api.deepseek.com/v1/chat/completions
+      # DeepSeek 默认: https://api.deepseek.com/v1/chat/completions
+      # OpenAI: https://api.openai.com/v1/chat/completions
       # 自定义端点（如使用代理）: https://your-proxy.com/v1/chat/completions
-      api-url: https://api.openai.com/v1/chat/completions
+      api-url: https://api.deepseek.com/v1/chat/completions
 
       # 模型名称
       # OpenAI 可选模型:

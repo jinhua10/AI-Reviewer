@@ -99,8 +99,8 @@ knowledge:
       rebuild-on-startup: false
       
     llm:
-      # 默认使用Mock LLM
-      provider: mock
+      # 默认使用 DeepSeek（从环境变量 AI_API_KEY 读取）
+      provider: deepseek
 ```
 
 ### 启动时加载外置配置
