@@ -278,21 +278,29 @@
                 <configuration>
                     <!-- 增加堆内存大小，解决测试时的 OutOfMemoryError -->
                     <argLine>
-                        -Xms1024m
-                        -Xmx4096m
-                        -XX:MaxMetaspaceSize=512m
+                        -Xms2048m
+                        -Xmx8192m
+                        -XX:MaxMetaspaceSize=1024m
                         -XX:+UseG1GC
+                        -XX:G1HeapRegionSize=16m
                         -XX:MaxGCPauseMillis=200
+                        -XX:+DisableExplicitGC
+                        -XX:+HeapDumpOnOutOfMemoryError
+                        -XX:HeapDumpPath=target/heap-dump.hprof
                         -Dfile.encoding=UTF-8
                         -Dconsole.encoding=UTF-8
                         -Dsun.stdout.encoding=UTF-8
                         -Dsun.stderr.encoding=UTF-8
                     </argLine>
-                    <!-- 防止内存泄漏 -->
+                    <!-- 防止内存泄漏 - 每个测试类使用新的 JVM -->
                     <reuseForks>false</reuseForks>
                     <forkCount>1</forkCount>
                     <!-- 超时设置（秒） -->
                     <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+                    <!-- 失败后继续运行 -->
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <!-- 打印详细的堆栈信息 -->
+                    <trimStackTrace>false</trimStackTrace>
                 </configuration>
             </plugin>
             <!-- Exec Maven 插件 - UTF-8 编码 -->

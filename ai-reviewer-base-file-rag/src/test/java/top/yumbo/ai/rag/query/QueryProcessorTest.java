@@ -62,8 +62,20 @@ class QueryProcessorTest {
 
     @AfterEach
     void tearDown() {
+        // 清理查询处理器
+        if (queryProcessor != null) {
+            queryProcessor = null;
+        }
+
+        // 关闭 RAG
         if (rag != null) {
-            rag.close();
+            try {
+                rag.close();
+            } catch (Exception e) {
+                System.err.println("Error closing RAG: " + e.getMessage());
+            } finally {
+                rag = null;
+            }
         }
 
         // 清理临时目录
@@ -80,8 +92,13 @@ class QueryProcessorTest {
                         });
             } catch (Exception e) {
                 // ignore
+            } finally {
+                tempDir = null;
             }
         }
+
+        // 建议 GC 运行（仅建议，不强制）
+        System.gc();
     }
 
     private void indexTestDocuments() {
