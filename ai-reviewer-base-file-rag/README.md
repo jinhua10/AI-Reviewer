@@ -6,7 +6,9 @@
 
 完全本地化 | 高性能 | 隐私保护 | 成本节约
 
-[快速开始](#快速开始) • [示例代码](#示例代码) • [应用指南](#应用指南) • [文档](#文档)
+[English](README_EN.md) | 简体中文
+
+[快速开始](#-快速开始) • [配置说明](#️-配置说明) • [OCR配置](#️-ocr配置详解) • [示例代码](#-示例代码)
 
 </div>
 
@@ -16,11 +18,12 @@
 
 - ✅ **零外部依赖** - 无需向量数据库、无需Embedding API
 - ✅ **完全本地化** - 数据不离开本地环境，100%隐私保护
-- ✅ **高性能** - 基于Lucene BM25算法，亚秒级检索
+- ✅ **多模态支持** - 文本、图片OCR、PDF等35+格式
+- ✅ **高性能检索** - 基于Lucene BM25算法，亚秒级响应
+- ✅ **灵活OCR** - 支持Tesseract、GPT-4o、GPT-5、PaddleOCR
+- ✅ **多LLM支持** - OpenAI、DeepSeek、Claude等
 - ✅ **成本节约** - 节省60-70%的API调用费用
-- ✅ **易于集成** - 简洁的Java API，Builder模式构建
-- ✅ **35+格式** - 支持txt、pdf、docx、xlsx、代码文件等
-- ✅ **生产就绪** - 完整的测试覆盖，企业级代码质量
+- ✅ **易于集成** - Spring Boot自动配置，开箱即用
 
 ---
 
@@ -55,7 +58,7 @@
 
 ## 🚀 快速开始
 
-### 方式1：极简模式（Spring Boot Starter）⭐ 推荐
+### 方式1：Spring Boot Starter（推荐）⭐
 
 **只需 3 步，5 分钟搭建！**
 
@@ -69,37 +72,355 @@
 </dependency>
 ```
 
-#### 2. 配置（可选）
+#### 2. 配置
 
 ```yaml
-# application.yml - 甚至可以不配置！
+# application.yml
 local-file-rag:
   storage-path: ./data/rag
   auto-qa-service: true
+  
+  # LLM配置
+  llm:
+    provider: openai      # openai, deepseek, claude
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o
+    
+  # OCR配置
+  ocr:
+    provider: tesseract   # tesseract, gpt4o, gpt5, paddleocr
 ```
 
-#### 3. 使用（一行代码）
+#### 3. 使用
 
 ```java
 @RestController
-public class MyController {
-    
+public class QAController {
     @Autowired
-    private SimpleRAGService rag;  // 自动注入
-    
+    private SimpleRAGService rag;
+
     @PostMapping("/index")
-    public String index(@RequestBody String content) {
-        return rag.index("标题", content);  // 一行代码索引
+    public String index(@RequestParam String title, @RequestParam String content) {
+        return rag.index(title, content);
     }
-    
+
     @GetMapping("/search")
-    public List<Document> search(@RequestParam String q) {
-        return rag.search(q);  // 一行代码搜索
+    public List<Document> search(@RequestParam String query) {
+        return rag.search(query);
+    }
+
+    @GetMapping("/answer")
+    public String answer(@RequestParam String question) {
+        return rag.answer(question);
     }
 }
 ```
 
 **完整示例：[QUICK-START.md](QUICK-START.md)**
+
+---
+
+## ⚙️ 配置说明
+
+### 完整配置示例
+
+```yaml
+local-file-rag:
+  # 存储路径
+  storage-path: ./data/rag
+  
+  # 自动启用QA服务
+  auto-qa-service: true
+  
+  # 索引配置
+  index:
+    analyzer: ik_smart        # 分词器: standard, ik_smart, ik_max_word
+    similarity: BM25          # 相似度算法: BM25, TFIDF
+    
+  # 缓存配置
+  cache:
+    enabled: true
+    max-size: 1000
+    expire-minutes: 60
+
+  # LLM配置
+  llm:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o
+    endpoint: https://api.openai.com/v1/chat/completions
+    temperature: 0.7
+    max-tokens: 2000
+    timeout-seconds: 30
+    max-retries: 3
+
+  # OCR配置
+  ocr:
+    provider: tesseract
+    tesseract:
+      data-path: /usr/share/tesseract-ocr/5/tessdata
+      language: chi_sim+eng
+    gpt-vision:
+      api-key: ${OPENAI_API_KEY}
+      model: gpt-4o
+      detail: high
+    paddleocr:
+      use-gpu: false
+      lang: ch
+```
+
+---
+
+## 🔧 LLM配置详解
+
+### OpenAI (GPT-4o/GPT-5)
+
+```yaml
+local-file-rag:
+  llm:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o  # 或 gpt-5
+    endpoint: https://api.openai.com/v1/chat/completions
+    temperature: 0.7
+    max-tokens: 2000
+```
+
+**环境变量设置:**
+```bash
+export OPENAI_API_KEY="sk-your-key-here"
+```
+
+### DeepSeek
+
+```yaml
+local-file-rag:
+  llm:
+    provider: deepseek
+    api-key: ${DEEPSEEK_API_KEY}
+    model: deepseek-chat
+    endpoint: https://api.deepseek.com/v1/chat/completions
+    temperature: 0.7
+    max-tokens: 2000
+```
+
+**环境变量设置:**
+```bash
+export DEEPSEEK_API_KEY="your-deepseek-key"
+```
+
+### Claude
+
+```yaml
+local-file-rag:
+  llm:
+    provider: claude
+    api-key: ${CLAUDE_API_KEY}
+    model: claude-3-opus-20240229
+    endpoint: https://api.anthropic.com/v1/messages
+    temperature: 0.7
+    max-tokens: 2000
+```
+
+**环境变量设置:**
+```bash
+export CLAUDE_API_KEY="your-claude-key"
+```
+
+---
+
+## 🖼️ OCR配置详解
+
+### 方式1: Tesseract (推荐本地使用)
+
+**优势**: 免费、快速、离线、多语言
+
+**安装:**
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim
+
+# macOS
+brew install tesseract tesseract-lang
+
+# Windows
+# 下载: https://github.com/UB-Mannheim/tesseract/wiki
+```
+
+**配置:**
+
+```yaml
+local-file-rag:
+  ocr:
+    provider: tesseract
+    tesseract:
+      data-path: /usr/share/tesseract-ocr/5/tessdata
+      language: chi_sim+eng  # 中英文
+```
+
+**启动:**
+
+```bash
+mvn spring-boot:run
+```
+
+---
+
+### 方式2: GPT-4o Vision (推荐云端使用)
+
+**优势**: 高准确度、理解复杂图片、多语言支持
+
+**配置:**
+
+```yaml
+local-file-rag:
+  llm:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o
+    
+  ocr:
+    provider: gpt4o
+    gpt-vision:
+      api-key: ${OPENAI_API_KEY}
+      model: gpt-4o
+      detail: high
+```
+
+**启动:**
+
+```bash
+export OPENAI_API_KEY="your-key"
+mvn spring-boot:run
+```
+
+---
+
+### 方式3: GPT-5 (最新模型)
+
+**优势**: 最高准确度、最新技术
+
+**配置:**
+
+```yaml
+local-file-rag:
+  llm:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-5
+    
+  ocr:
+    provider: gpt5
+    gpt-vision:
+      api-key: ${OPENAI_API_KEY}
+      model: gpt-5
+      detail: high
+```
+
+---
+
+### 方式4: PaddleOCR (离线中文)
+
+**优势**: 完全离线、中文优化、免费
+
+**添加依赖:**
+
+```xml
+<dependency>
+    <groupId>com.baidu</groupId>
+    <artifactId>paddle-ocr</artifactId>
+    <version>2.7.0</version>
+</dependency>
+```
+
+**配置:**
+
+```yaml
+local-file-rag:
+  ocr:
+    provider: paddleocr
+    paddleocr:
+      use-gpu: false
+      lang: ch
+```
+
+---
+
+## 🔄 OCR动态切换
+
+### 代码切换
+
+```java
+@Autowired
+private SimpleRAGService rag;
+
+// 切换到Tesseract
+rag.switchOCRProvider("tesseract");
+
+// 切换到GPT-4o
+rag.switchOCRProvider("gpt4o");
+
+// 切换到GPT-5
+rag.switchOCRProvider("gpt5");
+
+// 切换到PaddleOCR
+rag.switchOCRProvider("paddleocr");
+```
+
+### 配置文件切换
+
+**application-tesseract.yml:**
+```yaml
+local-file-rag:
+  ocr:
+    provider: tesseract
+```
+
+**application-gpt4o.yml:**
+```yaml
+local-file-rag:
+  ocr:
+    provider: gpt4o
+```
+
+**启动时指定:**
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=tesseract
+```
+
+---
+
+## 📊 OCR性能对比
+
+| 提供商 | 速度 | 准确度 | 成本 | 离线 | 多语言 | 推荐场景 |
+|--------|------|--------|------|------|--------|----------|
+| Tesseract | ⭐⭐⭐⭐ | ⭐⭐⭐ | 免费 | ✅ | ⭐⭐⭐⭐ | 开发/测试/离线 |
+| GPT-4o | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $$ | ❌ | ⭐⭐⭐⭐⭐ | 生产/高质量 |
+| GPT-5 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $$$ | ❌ | ⭐⭐⭐⭐⭐ | 最佳效果 |
+| PaddleOCR | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 免费 | ✅ | ⭐⭐⭐⭐ | 中文/隐私 |
+
+### 成本对比 (1000次OCR)
+
+- **Tesseract**: $0 (免费)
+- **GPT-4o**: ~$10
+- **GPT-5**: ~$15
+- **PaddleOCR**: $0 (免费)
+
+---
+
+## 💡 使用建议
+
+### 场景推荐
+
+| 场景 | 推荐OCR | 原因 |
+|------|---------|------|
+| 开发/测试 | Tesseract | 免费快速 |
+| 生产环境 | GPT-4o | 高准确度 |
+| 隐私敏感 | Tesseract/PaddleOCR | 完全本地 |
+| 中文文档 | PaddleOCR | 中文优化 |
+| 最佳效果 | GPT-5 | 最新技术 |
+| 成本敏感 | Tesseract | 零成本 |
 
 ---
 

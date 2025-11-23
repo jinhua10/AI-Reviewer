@@ -406,6 +406,186 @@ ProcessResult result = engine.execute(context);
 - Automatic adapter discovery via SPI
 - Zero-configuration setup for Spring Boot applications
 
+---
+
+### ai-reviewer-base-file-rag
+
+**🚀 Zero External Dependencies Local File RAG Framework**
+
+A fully localized RAG solution that requires no vector database or Embedding API, implementing high-performance document retrieval based on Lucene BM25 algorithm.
+
+#### Core Features
+
+- ✅ **Zero External Dependencies** - No vector database, no Embedding API
+- ✅ **Fully Local** - Data never leaves local environment, 100% privacy protection
+- ✅ **Multimodal Support** - Text, Image OCR, PDF, 35+ formats
+- ✅ **High Performance** - Lucene BM25 based, sub-second response
+- ✅ **Flexible OCR** - Tesseract, GPT-4o, GPT-5, PaddleOCR support
+- ✅ **Multi-LLM** - OpenAI, DeepSeek, Claude support
+
+#### Quick Start
+
+**1. Add Dependency:**
+
+```xml
+<dependency>
+    <groupId>top.yumbo.ai</groupId>
+    <artifactId>ai-reviewer-base-file-rag</artifactId>
+    <version>1.0</version>
+</dependency>
+```
+
+**2. Configuration (application.yml):**
+
+```yaml
+local-file-rag:
+  storage-path: ./data/rag
+  auto-qa-service: true
+  
+  # LLM Configuration (choose one provider)
+  llm:
+    provider: openai      # openai, deepseek, claude
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o
+    
+  # OCR Configuration (choose one provider)
+  ocr:
+    provider: tesseract   # tesseract, gpt4o, gpt5, paddleocr
+```
+
+**3. Usage:**
+
+```java
+@RestController
+public class QAController {
+    @Autowired
+    private SimpleRAGService rag;
+
+    @PostMapping("/index")
+    public String index(@RequestParam String title, @RequestParam String content) {
+        return rag.index(title, content);
+    }
+
+    @GetMapping("/answer")
+    public String answer(@RequestParam String question) {
+        return rag.answer(question);
+    }
+}
+```
+
+#### LLM Configuration
+
+**OpenAI (GPT-4o/GPT-5):**
+```yaml
+local-file-rag:
+  llm:
+    provider: openai
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-4o  # or gpt-5
+```
+
+**DeepSeek:**
+```yaml
+local-file-rag:
+  llm:
+    provider: deepseek
+    api-key: ${DEEPSEEK_API_KEY}
+    model: deepseek-chat
+```
+
+**Claude:**
+```yaml
+local-file-rag:
+  llm:
+    provider: claude
+    api-key: ${CLAUDE_API_KEY}
+    model: claude-3-opus-20240229
+```
+
+#### OCR Configuration
+
+**Tesseract (Free Local):**
+```bash
+# Install Tesseract
+sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim  # Ubuntu
+brew install tesseract tesseract-lang                      # macOS
+```
+
+```yaml
+local-file-rag:
+  ocr:
+    provider: tesseract
+    tesseract:
+      language: chi_sim+eng  # Chinese & English support
+```
+
+**GPT-4o Vision (High Accuracy Cloud):**
+```yaml
+local-file-rag:
+  ocr:
+    provider: gpt4o
+    gpt-vision:
+      api-key: ${OPENAI_API_KEY}
+      detail: high
+```
+
+**GPT-5 (Latest Model):**
+```yaml
+local-file-rag:
+  ocr:
+    provider: gpt5
+```
+
+**PaddleOCR (Offline Chinese):**
+```yaml
+local-file-rag:
+  ocr:
+    provider: paddleocr
+    paddleocr:
+      lang: ch
+```
+
+#### Dynamic OCR Switching
+
+```java
+@Autowired
+private SimpleRAGService rag;
+
+// Switch OCR provider programmatically
+rag.switchOCRProvider("tesseract");  // Switch to Tesseract
+rag.switchOCRProvider("gpt4o");      // Switch to GPT-4o
+rag.switchOCRProvider("gpt5");       // Switch to GPT-5
+rag.switchOCRProvider("paddleocr");  // Switch to PaddleOCR
+```
+
+Or use profile-based switching:
+
+```bash
+# Start with different profiles
+mvn spring-boot:run -Dspring-boot.run.profiles=tesseract
+mvn spring-boot:run -Dspring-boot.run.profiles=gpt4o
+```
+
+#### OCR Performance Comparison
+
+| Provider | Speed | Accuracy | Cost | Offline | Recommended For |
+|----------|-------|----------|------|---------|-----------------|
+| Tesseract | ⭐⭐⭐⭐ | ⭐⭐⭐ | Free | ✅ | Dev/Test/Offline |
+| GPT-4o | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $$ | ❌ | Production/High Quality |
+| GPT-5 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | $$$ | ❌ | Best Results |
+| PaddleOCR | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Free | ✅ | Chinese/Privacy-Sensitive |
+
+#### Complete Documentation
+
+See **[LocalFileRAG Documentation](ai-reviewer-base-file-rag/README.md)** for:
+- Detailed configuration options
+- OCR performance comparison
+- LLM integration guide
+- Use case examples
+- API reference
+
+---
+
 ## 🔧 Extending the Engine
 
 ### Creating a Custom Parser
