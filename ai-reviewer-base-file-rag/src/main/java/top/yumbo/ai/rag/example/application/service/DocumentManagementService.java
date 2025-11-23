@@ -139,7 +139,10 @@ public class DocumentManagementService {
             log.info("文件已存在，重命名为: {}", newFilename);
         }
 
-        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        // 使用 try-with-resources 确保流被正确关闭
+        try (var inputStream = file.getInputStream()) {
+            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
 
         log.info("✅ 文档已保存: {}", targetPath.getFileName());
 
