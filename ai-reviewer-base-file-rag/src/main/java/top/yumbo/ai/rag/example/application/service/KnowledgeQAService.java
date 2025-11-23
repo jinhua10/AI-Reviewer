@@ -5,10 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.example.application.config.KnowledgeQAProperties;
+import top.yumbo.ai.rag.example.application.model.AIAnswer;
+import top.yumbo.ai.rag.example.application.model.BuildResult;
 import top.yumbo.ai.rag.example.llm.LLMClient;
 import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
 import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
 import top.yumbo.ai.rag.model.Document;
+import top.yumbo.ai.rag.optimization.SmartContextBuilder;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -104,7 +107,7 @@ public class KnowledgeQAService {
         }
 
         // 构建知识库 - 启动时使用增量索引，除非配置要求重建
-        top.yumbo.ai.rag.example.application.model.BuildResult buildResult;
+        BuildResult buildResult;
 
         if (rebuildOnStartup) {
             log.info("   🚀 开始完全重建知识库...");
@@ -195,7 +198,7 @@ public class KnowledgeQAService {
         log.info("\n📝 步骤4: 创建问答系统");
 
         // 初始化智能上下文构建器
-        contextBuilder = top.yumbo.ai.rag.optimization.SmartContextBuilder.builder()
+        contextBuilder = SmartContextBuilder.builder()
             .maxContextLength(properties.getLlm().getMaxContextLength())
             .maxDocLength(properties.getLlm().getMaxDocLength())
             .build();
@@ -254,7 +257,7 @@ public class KnowledgeQAService {
 
             // 步骤5: 提取文档来源
             List<String> sources = documents.stream()
-                .map(top.yumbo.ai.rag.model.Document::getTitle)
+                .map(Document::getTitle)
                 .distinct()
                 .toList();
 
@@ -268,12 +271,12 @@ public class KnowledgeQAService {
             log.info("\n⏱️  响应时间: {}ms", totalTime);
             log.info("=".repeat(80));
 
-            return new top.yumbo.ai.rag.example.application.model.AIAnswer(answer, sources, totalTime);
+            return new AIAnswer(answer, sources, totalTime);
 
         } catch (Exception e) {
             log.error("❌ 问答处理失败", e);
             long totalTime = System.currentTimeMillis() - startTime;
-            return new top.yumbo.ai.rag.example.application.model.AIAnswer(
+            return new AIAnswer(
                 "抱歉，处理您的问题时出现错误：" + e.getMessage(),
                 List.of(),
                 totalTime

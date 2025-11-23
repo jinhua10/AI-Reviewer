@@ -13,12 +13,12 @@ import java.util.*;
 /**
  * 本地向量嵌入引擎
  * 使用 ONNX Runtime 运行本地 Sentence-BERT 模型
- *
+ * <p>
  * 支持的模型：
  * - paraphrase-multilingual-MiniLM-L12-v2 (多语言，384维)
  * - all-MiniLM-L6-v2 (英文，384维)
  * - paraphrase-multilingual-MiniLM-L12-v2 (多语言，384维)
- *
+ * <p>
  * P0修复：解决缺少向量嵌入能力的问题
  *
  * @author AI Reviewer Team
@@ -31,13 +31,13 @@ public class LocalEmbeddingEngine implements AutoCloseable {
     private final OrtSession session;
     /**
      * -- GETTER --
-     *  获取嵌入维度
+     * 获取嵌入维度
      */
     @Getter
     private final int embeddingDim;
     /**
      * -- GETTER --
-     *  获取模型名称
+     * 获取模型名称
      */
     @Getter
     private final String modelName;
@@ -66,7 +66,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
     /**
      * 完整构造函数
      *
-     * @param modelPath ONNX模型文件路径
+     * @param modelPath         ONNX模型文件路径
      * @param maxSequenceLength 最大序列长度
      */
     public LocalEmbeddingEngine(String modelPath, int maxSequenceLength)
@@ -104,30 +104,30 @@ public class LocalEmbeddingEngine implements AutoCloseable {
         // 3. 如果都失败，抛出异常
         if (actualModelPath == null) {
             throw new IOException(String.format(
-                "模型文件不存在: %s\n" +
-                "请下载模型文件到该路径。\n" +
-                "\n" +
-                "📥 推荐模型：\n" +
-                "  多语言（推荐）：https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
-                "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
-                "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2\n" +
-                "\n" +
-                "📁 模型放置位置：\n" +
-                "  1. 外部目录（推荐）：./models/xxx/model.onnx\n" +
-                "  2. 开发环境：src/main/resources/models/xxx/model.onnx\n" +
-                "\n" +
-                "💡 配置示例（application.yml）：\n" +
-                "  vector:\n" +
-                "    model:\n" +
-                "      path: ./models/paraphrase-multilingual/model.onnx",
-                modelPath
+                    "模型文件不存在: %s\n" +
+                            "请下载模型文件到该路径。\n" +
+                            "\n" +
+                            "📥 推荐模型：\n" +
+                            "  多语言（推荐）：https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
+                            "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
+                            "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2\n" +
+                            "\n" +
+                            "📁 模型放置位置：\n" +
+                            "  1. 外部目录（推荐）：./models/xxx/model.onnx\n" +
+                            "  2. 开发环境：src/main/resources/models/xxx/model.onnx\n" +
+                            "\n" +
+                            "💡 配置示例（application.yml）：\n" +
+                            "  vector:\n" +
+                            "    model:\n" +
+                            "      path: ./models/paraphrase-multilingual/model.onnx",
+                    modelPath
             ));
         }
 
         // 提取模型名称
         Path finalPath = Paths.get(actualModelPath);
         this.modelName = finalPath.getParent() != null ?
-            finalPath.getParent().getFileName().toString() : "unknown";
+                finalPath.getParent().getFileName().toString() : "unknown";
 
         // 初始化 ONNX Runtime 环境
         this.env = OrtEnvironment.getEnvironment();
@@ -241,7 +241,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
 
     /**
      * 简化的分词器（基于字符级别）
-     *
+     * <p>
      * 注意：这是简化实现，生产环境建议使用：
      * - HuggingFace Tokenizers
      * - 或预先使用 Python 生成 token IDs
@@ -402,7 +402,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
             System.out.println("文本: " + text);
             System.out.println("向量维度: " + vector.length);
             System.out.println("向量前10维: " + Arrays.toString(
-                Arrays.copyOf(vector, Math.min(10, vector.length))
+                    Arrays.copyOf(vector, Math.min(10, vector.length))
             ));
 
             engine.close();

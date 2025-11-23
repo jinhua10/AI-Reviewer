@@ -8,7 +8,7 @@ import top.yumbo.ai.rag.impl.parser.image.*;
 
 /**
  * 图片处理配置
- *
+ * <p>
  * 根据配置创建相应的图片提取器策略
  *
  * @author AI Reviewer Team

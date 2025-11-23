@@ -89,6 +89,7 @@ public class OpenAILLMClient implements LLMClient {
 
     public String generate(String prompt, String systemPrompt) {
         try {
+            log.info(prompt);
             // 构建请求消息
             List<Map<String, String>> messages = buildMessages(systemPrompt, prompt);
 
