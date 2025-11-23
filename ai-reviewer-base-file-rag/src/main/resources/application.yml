@@ -8,6 +8,16 @@ spring:
   application:
     name: knowledge-qa-system
 
+  # 文件上传配置
+  servlet:
+    multipart:
+      # 单个文件最大大小（默认 1MB，调整为 100MB）
+      max-file-size: 100MB
+      # 单次请求最大大小（默认 10MB，调整为 100MB）
+      max-request-size: 100MB
+      # 是否启用文件上传
+      enabled: true
+
 # 知识库问答系统配置
 knowledge:
   qa:
