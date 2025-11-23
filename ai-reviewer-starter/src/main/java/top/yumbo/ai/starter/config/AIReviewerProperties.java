@@ -40,4 +40,12 @@ public class AIReviewerProperties {
         private Integer threadPoolSize;
         private Integer maxQueueSize;
     }
+
+    @Data
+    public static class Batch {
+        private Integer threadPoolSize = 4;
+        private String tempExtractDir = "./temp/extracted-projects";
+    }
+
+    private Batch batch = new Batch();
 }

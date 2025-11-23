@@ -89,6 +89,10 @@ ai-reviewer:
   executor:
     thread-pool-size: 10
     max-queue-size: 100
+  # Batch review configuration for multiple projects
+  batch:
+    thread-pool-size: 4
+    temp-extract-dir: ./temp/extracted-projects
 # Spring Boot Configuration
 spring:
   application:

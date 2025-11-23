@@ -11,6 +11,7 @@ import top.yumbo.ai.api.model.ProcessResult;
 import top.yumbo.ai.api.model.ProcessorConfig;
 import top.yumbo.ai.application.hackathon.ai.BedrockAdapter;
 import top.yumbo.ai.application.hackathon.core.HackathonAIEngine;
+import top.yumbo.ai.application.hackathon.core.HackathonAIEngineV2;
 import top.yumbo.ai.application.hackathon.parser.HackathonFileParser;
 import top.yumbo.ai.application.hackathon.processor.HackathonCodeReviewProcessor;
 import top.yumbo.ai.core.context.ExecutionContext;
@@ -82,7 +83,15 @@ public class HackathonAutoConfiguration {
     }
 
     @Bean
-    public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine) {
+    public HackathonAIEngineV2 hackathonAIEngineV2(HackathonAIEngine hackathonAIEngine) {
+        log.info("Initializing HackathonAIEngineV2 for batch processing");
+        return new HackathonAIEngineV2(
+                hackathonAIEngine, aiReviewerProperties);
+    }
+
+    @Bean
+    public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine,
+                                     HackathonAIEngineV2 hackathonAIEngineV2) {
         return args -> {
             log.info("AI Reviewer Started - Hackathon AIEngine bean found: {}", hackathonAIEngine != null);
             log.info("Configuration: {}", aiReviewerProperties);
@@ -120,31 +129,47 @@ public class HackathonAutoConfiguration {
             }
             log.debug("Effective args to inspect: {}", effectiveArgs);
 
-            // Example usage - can be triggered via REST API or CLI
-            if (hackathonAIEngine != null) {
-                String targetPath = null;
-                // look for --review [value] or --review=value
-                for (int i = 0; i < effectiveArgs.size(); i++) {
-                    String a = effectiveArgs.get(i);
-                    if (a.startsWith("--review=")) {
-                        targetPath = a.substring("--review=".length());
-                        break;
+            // Check for --reviewAll mode (batch processing)
+            String reviewAllPath = null;
+            String reviewPath = null;
+
+            for (int i = 0; i < effectiveArgs.size(); i++) {
+                String a = effectiveArgs.get(i);
+
+                // Check for --reviewAll
+                if (a.startsWith("--reviewAll=")) {
+                    reviewAllPath = a.substring("--reviewAll=".length());
+                    break;
+                }
+                if ("--reviewAll".equals(a)) {
+                    if (i + 1 < effectiveArgs.size()) {
+                        reviewAllPath = effectiveArgs.get(i + 1);
                     }
-                    if ("--review".equals(a)) {
-                        if (i + 1 < effectiveArgs.size()) {
-                            targetPath = effectiveArgs.get(i + 1);
-                        } else {
-                            targetPath = ".";
-                        }
-                        break;
-                    }
+                    break;
                 }
 
-                if (targetPath != null) {
-                    runReview(hackathonAIEngine, aiReviewerProperties, targetPath);
-                } else {
-                    log.info("No --review argument provided; application started without running a review.");
+                // Check for --review (single project mode)
+                if (a.startsWith("--review=")) {
+                    reviewPath = a.substring("--review=".length());
                 }
+                if ("--review".equals(a) && reviewAllPath == null) {
+                    if (i + 1 < effectiveArgs.size()) {
+                        reviewPath = effectiveArgs.get(i + 1);
+                    } else {
+                        reviewPath = ".";
+                    }
+                }
+            }
+
+            // Execute based on mode
+            if (reviewAllPath != null) {
+                // Batch review mode
+                runBatchReview(hackathonAIEngineV2, reviewAllPath);
+            } else if (reviewPath != null) {
+                // Single review mode
+                runReview(hackathonAIEngine, aiReviewerProperties, reviewPath);
+            } else {
+                log.info("No --review or --reviewAll argument provided; application started without running a review.");
             }
         };
     }
@@ -175,6 +200,23 @@ public class HackathonAutoConfiguration {
             log.info("Report saved to: {}", processorConfig.getOutputPath());
         } else {
             log.error("Code review failed: {}", result.getErrorMessage());
+        }
+    }
+
+    private void runBatchReview(HackathonAIEngineV2 engineV2, String zipDirectory) {
+        log.info("Starting batch code review for all projects in: {}", zipDirectory);
+
+        HackathonAIEngineV2.BatchResult result = engineV2.reviewAllProjects(zipDirectory);
+
+        if (result.isSuccess()) {
+            log.info("Batch review completed successfully!");
+            log.info("Total: {}, Successful: {}, Failed: {}, Skipped: {}",
+                    result.getTotalProjects(),
+                    result.getSuccessCount(),
+                    result.getFailedCount(),
+                    result.getSkippedCount());
+        } else {
+            log.error("Batch review failed: {}", result.getErrorMessage());
         }
     }
 
