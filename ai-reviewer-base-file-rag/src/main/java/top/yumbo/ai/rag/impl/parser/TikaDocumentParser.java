@@ -35,6 +35,7 @@ public class TikaDocumentParser implements DocumentParser {
     private final boolean extractImageMetadata;     // 是否提取图片元数据
     private final boolean includeImagePlaceholders; // 是否包含图片占位符
     private final int maxContentLength;             // 最大内容长度（防止内存溢出）
+    private final top.yumbo.ai.rag.impl.parser.image.SmartImageExtractor imageExtractor; // 智能图片提取器
 
     // 默认配置
     private static final int DEFAULT_MAX_CONTENT_LENGTH = 10 * 1024 * 1024; // 10MB
@@ -92,9 +93,13 @@ public class TikaDocumentParser implements DocumentParser {
         this.extractImageMetadata = extractImageMetadata;
         this.includeImagePlaceholders = includeImagePlaceholders;
 
+        // 初始化智能图片提取器（从环境变量自动配置）
+        this.imageExtractor = top.yumbo.ai.rag.impl.parser.image.SmartImageExtractor.fromEnv();
+
         log.info("TikaDocumentParser initialized with config: maxContentLength={}MB, " +
-                "extractImageMetadata={}, includeImagePlaceholders={}",
-                maxContentLength / 1024 / 1024, extractImageMetadata, includeImagePlaceholders);
+                "extractImageMetadata={}, includeImagePlaceholders={}, imageStrategy={}",
+                maxContentLength / 1024 / 1024, extractImageMetadata, includeImagePlaceholders,
+                imageExtractor.getActiveStrategy().getStrategyName());
     }
 
     @Override
@@ -139,12 +144,13 @@ public class TikaDocumentParser implements DocumentParser {
         ParseContext context = new ParseContext();
         context.set(Parser.class, parser);
 
-        // 注意：暂时禁用 EnhancedContentHandler，因为它可能导致内容丢失
-        // 特别是对于包含图片的Excel文件
-        // TODO: 未来改进图片处理逻辑
-        // if (extractImageMetadata || includeImagePlaceholders) {
-        //     handler = new EnhancedContentHandler(handler, metadata, includeImagePlaceholders);
-        // }
+        // 图片处理说明：
+        // 不使用 EnhancedContentHandler，因为它可能导致内容丢失（特别是 Excel）
+        // 图片处理由 SmartImageExtractor 统一管理，支持多种策略：
+        // - 占位符（默认，零依赖）
+        // - Tesseract OCR（文字识别，本地）
+        // - Vision LLM（语义理解，云端）
+        // 可通过环境变量配置：ENABLE_OCR=true, VISION_LLM_API_KEY=xxx
 
         // 执行解析
         parser.parse(stream, handler, metadata, context);

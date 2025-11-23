@@ -37,6 +37,11 @@ public class KnowledgeQAProperties {
      */
     private DocumentConfig document = new DocumentConfig();
 
+    /**
+     * 图片处理配置
+     */
+    private ImageProcessingConfig imageProcessing = new ImageProcessingConfig();
+
     @Data
     public static class KnowledgeBaseConfig {
         /**
@@ -193,6 +198,74 @@ public class KnowledgeQAProperties {
          * 文档分块重叠（字符数）
          */
         private int chunkOverlap = 400;
+    }
+
+    /**
+     * 图片处理配置
+     */
+    @Data
+    public static class ImageProcessingConfig {
+        /**
+         * 图片处理策略: placeholder, ocr, vision-llm, hybrid
+         */
+        private String strategy = "placeholder";
+
+        /**
+         * 是否启用 OCR
+         */
+        private boolean enableOcr = false;
+
+        /**
+         * OCR 配置
+         */
+        private OcrConfig ocr = new OcrConfig();
+
+        /**
+         * Vision LLM 配置
+         */
+        private VisionLlmConfig visionLlm = new VisionLlmConfig();
+    }
+
+    /**
+     * OCR 配置
+     */
+    @Data
+    public static class OcrConfig {
+        /**
+         * Tesseract 数据路径
+         */
+        private String tessdataPath = "${TESSDATA_PREFIX:}";
+
+        /**
+         * 识别语言 (chi_sim=简体中文, eng=英文)
+         */
+        private String language = "chi_sim+eng";
+    }
+
+    /**
+     * Vision LLM 配置
+     */
+    @Data
+    public static class VisionLlmConfig {
+        /**
+         * 是否启用
+         */
+        private boolean enabled = false;
+
+        /**
+         * API Key
+         */
+        private String apiKey = "${VISION_LLM_API_KEY:}";
+
+        /**
+         * 模型名称
+         */
+        private String model = "gpt-4-vision-preview";
+
+        /**
+         * API 端点
+         */
+        private String endpoint = "${VISION_LLM_ENDPOINT:}";
     }
 }
 
