@@ -185,7 +185,7 @@ knowledge:
       strategy: placeholder
 
       # 是否启用 OCR
-      enable-ocr: false
+      enable-ocr: true
 
       # OCR 配置
       ocr:
