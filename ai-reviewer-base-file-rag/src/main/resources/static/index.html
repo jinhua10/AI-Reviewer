@@ -347,6 +347,8 @@
         const API_BASE_URL = 'http://localhost:8080/api/qa';
 
         // API 调用函数
+        const API_DOCS_URL = 'http://localhost:8080/api/documents';
+
         const api = {
             ask: async (question) => {
                 const response = await axios.post(`${API_BASE_URL}/ask`, { question });
@@ -364,6 +366,27 @@
             },
             health: async () => {
                 const response = await axios.get(`${API_BASE_URL}/health`);
+                return response.data;
+            },
+            rebuild: async () => {
+                const response = await axios.post(`${API_BASE_URL}/rebuild`);
+                return response.data;
+            },
+            // 文档管理 API
+            uploadDocument: async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await axios.post(`${API_DOCS_URL}/upload`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                return response.data;
+            },
+            listDocuments: async () => {
+                const response = await axios.get(`${API_DOCS_URL}/list`);
+                return response.data;
+            },
+            deleteDocument: async (fileName) => {
+                const response = await axios.delete(`${API_DOCS_URL}/${encodeURIComponent(fileName)}`);
                 return response.data;
             }
         };
@@ -582,11 +605,193 @@
             );
         }
 
+        // 文档管理组件
+        function DocumentsTab() {
+            const [documents, setDocuments] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [uploading, setUploading] = useState(false);
+            const [uploadProgress, setUploadProgress] = useState(null);
+
+            useEffect(() => {
+                loadDocuments();
+            }, []);
+
+            const loadDocuments = async () => {
+                setLoading(true);
+                setError(null);
+
+                try {
+                    const result = await api.listDocuments();
+                    if (result.success) {
+                        setDocuments(result.documents || []);
+                    } else {
+                        setError(result.message);
+                    }
+                } catch (err) {
+                    setError(err.message || '加载文档列表失败');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleFileSelect = async (event) => {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+
+                setUploading(true);
+                setUploadProgress({ total: files.length, current: 0, success: 0, failed: 0 });
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    try {
+                        await api.uploadDocument(file);
+                        setUploadProgress(prev => ({ ...prev, current: i + 1, success: prev.success + 1 }));
+                    } catch (err) {
+                        setUploadProgress(prev => ({ ...prev, current: i + 1, failed: prev.failed + 1 }));
+                    }
+                }
+
+                setUploading(false);
+                setTimeout(() => setUploadProgress(null), 3000);
+                loadDocuments();
+
+                // 清空文件输入
+                event.target.value = '';
+            };
+
+            const handleDelete = async (fileName) => {
+                if (!confirm(`确定要删除文档 "${fileName}" 吗？\n\n删除后需要重建索引才能生效。`)) {
+                    return;
+                }
+
+                try {
+                    const result = await api.deleteDocument(fileName);
+                    if (result.success) {
+                        alert('文档删除成功！\n建议重建索引以更新搜索结果。');
+                        loadDocuments();
+                    } else {
+                        alert('删除失败: ' + result.message);
+                    }
+                } catch (err) {
+                    alert('删除失败: ' + err.message);
+                }
+            };
+
+            const formatFileSize = (bytes) => {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+                return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+            };
+
+            if (loading) {
+                return (
+                    <div className="loading">
+                        <div className="spinner"></div>
+                        <p>加载文档列表...</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    {/* 上传区域 */}
+                    <div style={{marginBottom: '30px', padding: '20px', background: '#f8f9ff', borderRadius: '8px'}}>
+                        <h3 style={{marginBottom: '15px'}}>📤 上传文档</h3>
+                        <input
+                            type="file"
+                            id="fileInput"
+                            multiple
+                            accept=".xlsx,.xls,.docx,.doc,.pptx,.ppt,.pdf,.txt,.md,.html,.xml"
+                            onChange={handleFileSelect}
+                            disabled={uploading}
+                            style={{display: 'none'}}
+                        />
+                        <label htmlFor="fileInput" className="btn btn-primary" style={{display: 'inline-block', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.5 : 1}}>
+                            {uploading ? '⏳ 上传中...' : '📁 选择文件'}
+                        </label>
+                        <p style={{marginTop: '10px', fontSize: '14px', color: '#666'}}>
+                            支持格式: Excel, Word, PowerPoint, PDF, TXT, MD, HTML, XML
+                        </p>
+
+                        {uploadProgress && (
+                            <div style={{marginTop: '15px', padding: '10px', background: 'white', borderRadius: '4px'}}>
+                                <div>📊 上传进度: {uploadProgress.current}/{uploadProgress.total}</div>
+                                <div style={{fontSize: '14px', color: '#666', marginTop: '5px'}}>
+                                    ✅ 成功: {uploadProgress.success} | ❌ 失败: {uploadProgress.failed}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 文档列表 */}
+                    {error && <div className="error">❌ {error}</div>}
+
+                    {!error && documents.length === 0 && (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">📁</div>
+                            <p>暂无文档</p>
+                            <p style={{fontSize: '14px', marginTop: '10px', color: '#ccc'}}>
+                                点击上方按钮上传文档
+                            </p>
+                        </div>
+                    )}
+
+                    {!error && documents.length > 0 && (
+                        <div>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                                <h3>📚 文档列表 ({documents.length})</h3>
+                                <button className="btn btn-secondary" onClick={loadDocuments}>
+                                    🔄 刷新
+                                </button>
+                            </div>
+
+                            <div style={{display: 'grid', gap: '10px'}}>
+                                {documents.map((doc, index) => (
+                                    <div key={index} className="document-card" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                        <div style={{flex: 1}}>
+                                            <div className="document-title">
+                                                📄 {doc.fileName}
+                                            </div>
+                                            <div style={{fontSize: '13px', color: '#999', marginTop: '5px'}}>
+                                                📦 {formatFileSize(doc.fileSize)} |
+                                                📅 {doc.uploadTime} |
+                                                🏷️ {doc.fileType.toUpperCase()}
+                                                {doc.indexed && <span style={{marginLeft: '5px'}}>| ✅ 已索引</span>}
+                                            </div>
+                                        </div>
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={() => handleDelete(doc.fileName)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: '#ff4d4f',
+                                                color: 'white',
+                                                marginLeft: '10px'
+                                            }}
+                                        >
+                                            🗑️ 删除
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{marginTop: '20px', padding: '15px', background: '#fff3cd', borderRadius: '8px', fontSize: '14px'}}>
+                                💡 <strong>提示：</strong>上传或删除文档后，建议前往"统计信息"页面<strong>重建索引</strong>，以便搜索到最新内容。
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         // 统计信息组件
         function StatisticsTab() {
             const [stats, setStats] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
+            const [rebuilding, setRebuilding] = useState(false);
+            const [rebuildResult, setRebuildResult] = useState(null);
 
             useEffect(() => {
                 loadStatistics();
@@ -603,6 +808,32 @@
                     setError(err.message || '加载统计信息失败');
                 } finally {
                     setLoading(false);
+                }
+            };
+
+            const handleRebuild = async () => {
+                if (!confirm('确定要重建知识库索引吗？\n\n这将重新处理所有文档，可能需要较长时间。')) {
+                    return;
+                }
+
+                setRebuilding(true);
+                setError(null);
+                setRebuildResult(null);
+
+                try {
+                    const result = await api.rebuild();
+                    setRebuildResult(result);
+
+                    if (result.success) {
+                        // 重建成功后刷新统计信息
+                        setTimeout(() => {
+                            loadStatistics();
+                        }, 1000);
+                    }
+                } catch (err) {
+                    setError(err.message || '重建失败');
+                } finally {
+                    setRebuilding(false);
                 }
             };
 
@@ -651,9 +882,51 @@
                         </div>
                     </div>
 
-                    <div style={{marginTop: '30px', textAlign: 'center'}}>
-                        <button className="btn btn-secondary" onClick={loadStatistics}>
+                    {rebuilding && (
+                        <div className="loading" style={{marginTop: '30px'}}>
+                            <div className="spinner"></div>
+                            <p>正在重建知识库索引...</p>
+                            <p style={{fontSize: '14px', color: '#999', marginTop: '10px'}}>
+                                这可能需要几分钟时间，请耐心等待
+                            </p>
+                        </div>
+                    )}
+
+                    {rebuildResult && !rebuilding && (
+                        <div className={rebuildResult.success ? 'answer-card' : 'error'} style={{marginTop: '30px'}}>
+                            <h3>{rebuildResult.success ? '✅ 重建成功' : '❌ 重建失败'}</h3>
+                            <div style={{marginTop: '10px'}}>
+                                <p>{rebuildResult.message}</p>
+                                {rebuildResult.success && (
+                                    <div style={{marginTop: '15px', fontSize: '14px'}}>
+                                        <p>📄 处理文件: {rebuildResult.processedFiles} 个</p>
+                                        <p>📚 生成文档: {rebuildResult.totalDocuments} 个</p>
+                                        <p>⏱️ 耗时: {(rebuildResult.durationMs / 1000).toFixed(2)} 秒</p>
+                                    </div>
+                                )}
+                                {rebuildResult.suggestion && (
+                                    <p style={{marginTop: '10px', fontSize: '14px', color: '#666'}}>
+                                        💡 {rebuildResult.suggestion}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{marginTop: '30px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center'}}>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={loadStatistics}
+                            disabled={rebuilding}
+                        >
                             🔄 刷新统计
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleRebuild}
+                            disabled={rebuilding}
+                        >
+                            {rebuilding ? '⏳ 重建中...' : '🔨 重建索引'}
                         </button>
                     </div>
                 </div>
@@ -705,6 +978,12 @@
                                 🔍 文档搜索
                             </button>
                             <button
+                                className={`tab ${activeTab === 'documents' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('documents')}
+                            >
+                                📁 文档管理
+                            </button>
+                            <button
                                 className={`tab ${activeTab === 'stats' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('stats')}
                             >
@@ -715,6 +994,7 @@
                         <div className="tab-content">
                             {activeTab === 'qa' && <QATab />}
                             {activeTab === 'search' && <SearchTab />}
+                            {activeTab === 'documents' && <DocumentsTab />}
                             {activeTab === 'stats' && <StatisticsTab />}
                         </div>
                     </main>

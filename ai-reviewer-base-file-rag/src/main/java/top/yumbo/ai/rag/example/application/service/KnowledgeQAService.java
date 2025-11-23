@@ -307,6 +307,31 @@ public class KnowledgeQAService {
     }
 
     /**
+     * 重建知识库
+     */
+    public top.yumbo.ai.rag.example.application.model.BuildResult rebuildKnowledgeBase() {
+        log.info("🔄 开始重建知识库...");
+
+        String storagePath = properties.getKnowledgeBase().getStoragePath();
+        String sourcePath = properties.getKnowledgeBase().getSourcePath();
+
+        // 强制重建
+        var result = knowledgeBaseService.buildKnowledgeBase(sourcePath, storagePath, true);
+
+        if (result.getError() != null) {
+            log.error("❌ 知识库重建失败: {}", result.getError());
+            throw new RuntimeException("知识库重建失败: " + result.getError());
+        }
+
+        log.info("✅ 知识库重建完成！");
+        log.info("   - 成功: {} 个文件", result.getSuccessCount());
+        log.info("   - 失败: {} 个文件", result.getFailedCount());
+        log.info("   - 总文档: {} 个", result.getTotalDocuments());
+
+        return result;
+    }
+
+    /**
      * 搜索文档
      */
     public List<Document> searchDocuments(String query, int limit) {
@@ -342,4 +367,3 @@ public class KnowledgeQAService {
         log.info("✅ 知识库问答系统已安全关闭");
     }
 }
-

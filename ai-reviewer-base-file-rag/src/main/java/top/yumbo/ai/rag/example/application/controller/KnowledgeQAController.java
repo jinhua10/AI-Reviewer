@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.example.application.model.AIAnswer;
+import top.yumbo.ai.rag.example.application.model.BuildResult;
 import top.yumbo.ai.rag.example.application.service.KnowledgeQAService;
 import top.yumbo.ai.rag.model.Document;
 
@@ -98,12 +99,27 @@ public class KnowledgeQAController {
     public RebuildResponse rebuild() {
         log.info("收到知识库重建请求");
 
-        // 这个功能需要重新初始化系统，暂时返回提示
-        RebuildResponse response = new RebuildResponse();
-        response.setMessage("知识库重建功能需要重启应用");
-        response.setSuggestion("请设置 knowledge.qa.knowledge-base.rebuild-on-startup=true 并重启应用");
+        try {
+            BuildResult result = qaService.rebuildKnowledgeBase();
 
-        return response;
+            RebuildResponse response = new RebuildResponse();
+            response.setSuccess(true);
+            response.setMessage("知识库重建完成");
+            response.setProcessedFiles(result.getSuccessCount());
+            response.setTotalDocuments(result.getTotalDocuments());
+            response.setDurationMs(result.getBuildTimeMs());
+
+            return response;
+        } catch (Exception e) {
+            log.error("知识库重建失败", e);
+
+            RebuildResponse response = new RebuildResponse();
+            response.setSuccess(false);
+            response.setMessage("知识库重建失败: " + e.getMessage());
+            response.setSuggestion("请检查日志文件获取详细错误信息");
+
+            return response;
+        }
     }
 
     // ========== DTO 类 ==========
@@ -150,8 +166,12 @@ public class KnowledgeQAController {
 
     @Data
     public static class RebuildResponse {
+        private boolean success;
         private String message;
         private String suggestion;
+        private int processedFiles;
+        private int totalDocuments;
+        private long durationMs;
     }
 
     // ========== 辅助方法 ==========
