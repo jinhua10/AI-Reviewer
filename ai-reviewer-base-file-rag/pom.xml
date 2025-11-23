@@ -250,6 +250,7 @@
                     <encoding>UTF-8</encoding>
                 </configuration>
                 <executions>
+                    <!-- 编译时：包含所有资源（包括 simpleExcel），用于开发测试 -->
                     <execution>
                         <id>default-resources</id>
                         <phase>process-resources</phase>
@@ -261,10 +262,7 @@
                                 <resource>
                                     <directory>src/main/resources</directory>
                                     <filtering>false</filtering>
-                                    <excludes>
-                                        <!-- 排除simpleExcel目录，不打包到jar中 -->
-                                        <exclude>simpleExcel/**</exclude>
-                                    </excludes>
+                                    <!-- 编译时不排除任何文件，保留 simpleExcel 用于开发 -->
                                 </resource>
                             </resources>
                         </configuration>
@@ -278,7 +276,23 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <argLine>-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</argLine>
+                    <!-- 增加堆内存大小，解决测试时的 OutOfMemoryError -->
+                    <argLine>
+                        -Xms1024m
+                        -Xmx4096m
+                        -XX:MaxMetaspaceSize=512m
+                        -XX:+UseG1GC
+                        -XX:MaxGCPauseMillis=200
+                        -Dfile.encoding=UTF-8
+                        -Dconsole.encoding=UTF-8
+                        -Dsun.stdout.encoding=UTF-8
+                        -Dsun.stderr.encoding=UTF-8
+                    </argLine>
+                    <!-- 防止内存泄漏 -->
+                    <reuseForks>false</reuseForks>
+                    <forkCount>1</forkCount>
+                    <!-- 超时设置（秒） -->
+                    <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
                 </configuration>
             </plugin>
             <!-- Exec Maven 插件 - UTF-8 编码 -->
@@ -310,6 +324,7 @@
             </plugin>
 
             <!-- Spring Boot Maven 插件 -->
+            <!-- Spring Boot Maven 插件 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -327,6 +342,28 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Ant 插件 - 用于在打包时删除不需要的资源 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>remove-simpleExcel-before-package</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="删除 target/classes/simpleExcel 目录（打包时不包含）"/>
+                                <delete dir="${project.build.outputDirectory}/simpleExcel" quiet="true"/>
+                            </target>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

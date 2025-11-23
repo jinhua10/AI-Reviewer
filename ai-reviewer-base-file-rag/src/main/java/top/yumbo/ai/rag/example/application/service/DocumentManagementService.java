@@ -8,6 +8,8 @@ import top.yumbo.ai.rag.example.application.controller.DocumentManagementControl
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,7 +39,7 @@ public class DocumentManagementService {
 
     // 支持的文件格式
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
-        "xlsx", "xls", "docx", "doc", "pptx", "ppt", "pdf", "txt", "md", "html", "xml"
+            "xlsx", "xls", "docx", "doc", "pptx", "ppt", "pdf", "txt", "md", "html", "xml"
     );
 
     public DocumentManagementService(KnowledgeQAProperties properties) {
@@ -45,23 +47,54 @@ public class DocumentManagementService {
 
         // 获取文档路径
         String sourcePath = properties.getKnowledgeBase().getSourcePath();
+        Path resolvedPath;
 
         // 处理 classpath 路径
         if (sourcePath.startsWith("classpath:")) {
-            // classpath 路径不支持上传，使用默认路径
-            this.documentsPath = Paths.get("./data/documents");
-            log.warn("⚠️  源路径是 classpath，上传文档将保存到: {}", this.documentsPath.toAbsolutePath());
+            // 从 classpath 获取资源路径
+            String resourcePath = sourcePath.substring("classpath:".length());
+            try {
+                var resource = getClass().getClassLoader().getResource(resourcePath);
+                if (resource != null) {
+                    Path tempPath = Paths.get(resource.toURI());
+                    log.info("✅ 从 classpath 找到资源: {}", tempPath.toAbsolutePath());
+
+                    // 检查是否在 JAR 内
+                    if (tempPath.toString().contains(".jar!")) {
+                        log.warn("⚠️  classpath 路径在 JAR 内，不支持写入");
+                        log.warn("💡 上传文档将保存到外部路径: ./data/documents");
+                        resolvedPath = Paths.get("./data/documents");
+                    } else {
+                        // 开发环境，使用 classpath 的实际路径
+                        resolvedPath = tempPath;
+                        log.info("💡 使用 classpath 实际路径: {}", resolvedPath.toAbsolutePath());
+                    }
+                } else {
+                    // 如果 classpath 资源不存在，使用默认路径
+                    log.warn("⚠️  classpath 资源不存在: {}", resourcePath);
+                    log.info("💡 使用默认路径: ./data/documents");
+                    resolvedPath = Paths.get("./data/documents");
+                }
+            } catch (Exception e) {
+                log.warn("⚠️  无法从 classpath 加载资源: {}, 错误: {}", resourcePath, e.getMessage());
+                log.info("💡 使用默认路径: ./data/documents");
+                resolvedPath = Paths.get("./data/documents");
+            }
         } else {
-            this.documentsPath = Paths.get(sourcePath);
+            // 使用文件系统路径
+            resolvedPath = Paths.get(sourcePath);
+            log.info("✅ 使用文件系统路径: {}", resolvedPath.toAbsolutePath());
         }
+
+        this.documentsPath = resolvedPath;
 
         // 确保目录存在
         try {
             Files.createDirectories(this.documentsPath);
             log.info("✅ 文档目录已就绪: {}", this.documentsPath.toAbsolutePath());
         } catch (IOException e) {
-            log.error("❌ 创建文档目录失败", e);
-            throw new RuntimeException("无法创建文档目录", e);
+            log.error("❌ 创建文档目录失败: {}", e.getMessage());
+            throw new RuntimeException("无法创建文档目录: " + e.getMessage(), e);
         }
     }
 
@@ -88,9 +121,9 @@ public class DocumentManagementService {
         long maxSize = properties.getDocument().getMaxFileSizeMb() * 1024 * 1024;
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException(
-                String.format("文件过大: %.2f MB (最大: %d MB)",
-                    file.getSize() / 1024.0 / 1024.0,
-                    properties.getDocument().getMaxFileSizeMb())
+                    String.format("文件过大: %.2f MB (最大: %d MB)",
+                            file.getSize() / 1024.0 / 1024.0,
+                            properties.getDocument().getMaxFileSizeMb())
             );
         }
 
@@ -148,12 +181,12 @@ public class DocumentManagementService {
 
         try (Stream<Path> paths = Files.walk(documentsPath, 1)) {
             List<Path> files = paths
-                .filter(Files::isRegularFile)
-                .filter(path -> {
-                    String extension = getFileExtension(path.getFileName().toString());
-                    return SUPPORTED_EXTENSIONS.contains(extension.toLowerCase());
-                })
-                .collect(Collectors.toList());
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String extension = getFileExtension(path.getFileName().toString());
+                        return SUPPORTED_EXTENSIONS.contains(extension.toLowerCase());
+                    })
+                    .collect(Collectors.toList());
 
             for (Path path : files) {
                 DocumentInfo info = new DocumentInfo();

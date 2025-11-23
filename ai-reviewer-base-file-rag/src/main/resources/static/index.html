@@ -622,14 +622,22 @@
                 setError(null);
 
                 try {
+                    console.log('开始加载文档列表...');
                     const result = await api.listDocuments();
+                    console.log('文档列表响应:', result);
+
                     if (result.success) {
                         setDocuments(result.documents || []);
+                        console.log('加载到', result.documents?.length || 0, '个文档');
                     } else {
-                        setError(result.message);
+                        const errorMsg = result.message || '获取文档列表失败';
+                        console.error('加载失败:', errorMsg);
+                        setError(errorMsg);
                     }
                 } catch (err) {
-                    setError(err.message || '加载文档列表失败');
+                    console.error('加载文档列表异常:', err);
+                    const errorMsg = err.response?.data?.message || err.message || '加载文档列表失败，请检查服务是否正常运行';
+                    setError(errorMsg);
                 } finally {
                     setLoading(false);
                 }
@@ -684,15 +692,6 @@
                 return (bytes / 1024 / 1024).toFixed(2) + ' MB';
             };
 
-            if (loading) {
-                return (
-                    <div className="loading">
-                        <div className="spinner"></div>
-                        <p>加载文档列表...</p>
-                    </div>
-                );
-            }
-
             return (
                 <div>
                     {/* 上传区域 */}
@@ -724,27 +723,54 @@
                         )}
                     </div>
 
-                    {/* 文档列表 */}
-                    {error && <div className="error">❌ {error}</div>}
-
-                    {!error && documents.length === 0 && (
-                        <div className="empty-state">
-                            <div className="empty-state-icon">📁</div>
-                            <p>暂无文档</p>
-                            <p style={{fontSize: '14px', marginTop: '10px', color: '#ccc'}}>
-                                点击上方按钮上传文档
-                            </p>
+                    {/* 文档列表区域 */}
+                    <div>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                            <h3>📚 文档列表 {!loading && `(${documents.length})`}</h3>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={loadDocuments}
+                                disabled={loading}
+                            >
+                                {loading ? '⏳ 加载中...' : '🔄 刷新'}
+                            </button>
                         </div>
-                    )}
 
-                    {!error && documents.length > 0 && (
-                        <div>
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                                <h3>📚 文档列表 ({documents.length})</h3>
-                                <button className="btn btn-secondary" onClick={loadDocuments}>
-                                    🔄 刷新
+                        {/* 加载状态 */}
+                        {loading && (
+                            <div className="loading">
+                                <div className="spinner"></div>
+                                <p>加载文档列表...</p>
+                            </div>
+                        )}
+
+                        {/* 错误状态 */}
+                        {error && !loading && (
+                            <div className="error">
+                                ❌ {error}
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={loadDocuments}
+                                    style={{marginTop: '10px', display: 'block'}}
+                                >
+                                    重试
                                 </button>
                             </div>
+                        )}
+
+                        {/* 空状态 */}
+                        {!error && !loading && documents.length === 0 && (
+                            <div className="empty-state">
+                                <div className="empty-state-icon">📁</div>
+                                <p>暂无文档</p>
+                                <p style={{fontSize: '14px', marginTop: '10px', color: '#ccc'}}>
+                                    点击上方按钮上传文档
+                                </p>
+                            </div>
+                        )}
+
+                        {/* 文档列表 */}
+                        {!error && !loading && documents.length > 0 && (
 
                             <div style={{display: 'grid', gap: '10px'}}>
                                 {documents.map((doc, index) => (
@@ -775,12 +801,15 @@
                                     </div>
                                 ))}
                             </div>
+                        )}
 
+                        {/* 提示信息 */}
+                        {!error && !loading && documents.length > 0 && (
                             <div style={{marginTop: '20px', padding: '15px', background: '#fff3cd', borderRadius: '8px', fontSize: '14px'}}>
                                 💡 <strong>提示：</strong>上传或删除文档后，建议前往"统计信息"页面<strong>重建索引</strong>，以便搜索到最新内容。
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             );
         }
