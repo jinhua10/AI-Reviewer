@@ -17,6 +17,8 @@ import top.yumbo.ai.rag.model.SearchResult;
 import top.yumbo.ai.rag.model.ScoredDocument;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -54,7 +56,20 @@ public class LuceneIndexEngine implements IndexEngine {
         try {
             // 初始化目录
             String indexPath = Paths.get(basePath, "index", "lucene-index").toString();
-            this.directory = FSDirectory.open(Paths.get(indexPath));
+            Path indexDir = Paths.get(indexPath);
+
+            // 清理旧的锁文件（如果存在）
+            Path lockFile = indexDir.resolve("write.lock");
+            if (Files.exists(lockFile)) {
+                try {
+                    Files.delete(lockFile);
+                    log.info("Removed stale lock file: {}", lockFile);
+                } catch (IOException e) {
+                    log.warn("Failed to remove stale lock file: {}", lockFile, e);
+                }
+            }
+
+            this.directory = FSDirectory.open(indexDir);
 
             // 初始化分析器
             this.analyzer = new StandardAnalyzer();

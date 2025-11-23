@@ -2,4 +2,7 @@
 /logs/
 .mvn
 *.log
-/release
+/release/models/*.onnx
+/release/data
+/release/logs
+/release/*.jar

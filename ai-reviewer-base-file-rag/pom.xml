@@ -360,7 +360,7 @@
                 <version>3.1.0</version>
                 <executions>
                     <execution>
-                        <id>remove-simpleExcel-before-package</id>
+                        <id>remove-resources-before-package</id>
                         <phase>prepare-package</phase>
                         <goals>
                             <goal>run</goal>
@@ -369,11 +369,34 @@
                             <target>
                                 <echo message="删除 target/classes/simpleExcel 目录（打包时不包含）"/>
                                 <delete dir="${project.build.outputDirectory}/simpleExcel" quiet="true"/>
-                                <delete>
-                                    <fileset dir="${project.build.outputDirectory}/simpleExcel">
-                                        <include name="*.md"/>
+
+                                <echo message="删除 target/classes/models 目录（打包时不包含）"/>
+                                <delete dir="${project.build.outputDirectory}/models" quiet="true"/>
+                            </target>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>copy-models-to-release</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="复制模型文件到 release 目录"/>
+
+                                <!-- 创建 release/models 目录 -->
+                                <mkdir dir="${project.basedir}/release/models"/>
+
+                                <!-- 复制 models 目录到 release -->
+                                <copy todir="${project.basedir}/release/models" failonerror="false">
+                                    <fileset dir="${project.basedir}/src/main/resources/models">
+                                        <include name="**/*.onnx"/>
                                     </fileset>
-                                </delete>
+                                </copy>
+
+                                <echo message="✅ 模型文件已复制到: ${project.basedir}/release/models"/>
                             </target>
                         </configuration>
                     </execution>

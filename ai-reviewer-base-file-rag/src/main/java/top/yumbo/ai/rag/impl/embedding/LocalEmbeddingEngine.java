@@ -74,48 +74,53 @@ public class LocalEmbeddingEngine implements AutoCloseable {
 
         this.maxSequenceLength = maxSequenceLength;
 
-        // 尝试多种方式加载模型
         String actualModelPath = null;
 
-        // 1. 尝试从 classpath 加载（优先，适用于打包后的 JAR）
+        // 1. 优先从文件系统加载（支持外部模型目录）
         try {
-            var resource = getClass().getClassLoader().getResource(modelPath);
-            if (resource != null) {
-                actualModelPath = resource.getPath();
-                // Windows 路径修正：移除开头的 /
-                if (actualModelPath.startsWith("/") && actualModelPath.contains(":")) {
-                    actualModelPath = actualModelPath.substring(1);
-                }
-                log.debug("✓ 从 classpath 加载模型: {}", actualModelPath);
-            }
-        } catch (Exception e) {
-            log.debug("无法从 classpath 加载模型: {}", e.getMessage());
-        }
-
-        // 2. 尝试从文件系统加载（开发环境）
-        if (actualModelPath == null || !Files.exists(Paths.get(actualModelPath))) {
             Path modelFile = Paths.get(modelPath);
             if (Files.exists(modelFile)) {
                 actualModelPath = modelFile.toAbsolutePath().toString();
-                log.debug("✓ 从文件系统加载模型: {}", actualModelPath);
+                log.info("✅ 从文件系统加载模型: {}", actualModelPath);
+            }
+        } catch (Exception e) {
+            log.debug("文件系统路径无效: {}", e.getMessage());
+        }
+
+        // 2. 尝试从 classpath 加载（仅开发环境）
+        if (actualModelPath == null) {
+            try {
+                var resource = getClass().getClassLoader().getResource(modelPath);
+                if (resource != null) {
+                    Path path = Paths.get(resource.toURI());
+                    actualModelPath = path.toAbsolutePath().toString();
+                    log.info("✅ 从 classpath 加载模型: {}", actualModelPath);
+                }
+            } catch (Exception e) {
+                log.debug("无法从 classpath 加载模型: {}", e.getMessage());
             }
         }
 
         // 3. 如果都失败，抛出异常
-        if (actualModelPath == null || !Files.exists(Paths.get(actualModelPath))) {
+        if (actualModelPath == null) {
             throw new IOException(String.format(
                 "模型文件不存在: %s\n" +
                 "请下载模型文件到该路径。\n" +
-                "推荐模型：\n" +
+                "\n" +
+                "📥 推荐模型：\n" +
                 "  多语言（推荐）：https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
                 "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
                 "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2\n" +
                 "\n" +
-                "提示：\n" +
-                "  1. 开发环境：将模型放到 src/main/resources/%s\n" +
-                "  2. 生产环境：确保模型已打包到 JAR 的 resources/%s\n" +
-                "  3. 或将模型文件放到当前目录下的 %s",
-                modelPath, modelPath, modelPath, modelPath
+                "📁 模型放置位置：\n" +
+                "  1. 外部目录（推荐）：./models/xxx/model.onnx\n" +
+                "  2. 开发环境：src/main/resources/models/xxx/model.onnx\n" +
+                "\n" +
+                "💡 配置示例（application.yml）：\n" +
+                "  vector:\n" +
+                "    model:\n" +
+                "      path: ./models/paraphrase-multilingual/model.onnx",
+                modelPath
             ));
         }
 
@@ -130,11 +135,12 @@ public class LocalEmbeddingEngine implements AutoCloseable {
         // 配置会话选项
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-        options.setInterOpNumThreads(4); // 使用4个线程加速推理
+        options.setInterOpNumThreads(4);
         options.setIntraOpNumThreads(4);
 
         // 加载模型
         this.session = env.createSession(actualModelPath, options);
+
 
         // 获取输出维度
         this.embeddingDim = inferEmbeddingDimension();
