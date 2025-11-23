@@ -367,6 +367,66 @@ public class KnowledgeQAService {
     }
 
     /**
+     * 增量索引知识库
+     * 只处理新增和修改的文档，性能更优
+     */
+    public synchronized top.yumbo.ai.rag.example.application.model.BuildResult incrementalIndexKnowledgeBase() {
+        log.info("🔄 开始增量索引知识库...");
+
+        try {
+            // 1. 关闭现有的 RAG 实例，释放索引锁
+            if (rag != null) {
+                log.info("📌 关闭现有知识库实例...");
+                try {
+                    rag.close();
+                    log.info("✅ 现有知识库实例已关闭");
+                } catch (Exception e) {
+                    log.warn("⚠️  关闭现有知识库实例时出现警告: {}", e.getMessage());
+                }
+                rag = null;
+            }
+
+            // 2. 执行增量索引
+            String storagePath = properties.getKnowledgeBase().getStoragePath();
+            String sourcePath = properties.getKnowledgeBase().getSourcePath();
+
+            var result = knowledgeBaseService.incrementalIndex(sourcePath, storagePath);
+
+            if (result.getError() != null) {
+                log.error("❌ 增量索引失败: {}", result.getError());
+                throw new RuntimeException("增量索引失败: " + result.getError());
+            }
+
+            log.info("✅ 增量索引完成！");
+            log.info("   - 成功: {} 个文件", result.getSuccessCount());
+            log.info("   - 失败: {} 个文件", result.getFailedCount());
+            log.info("   - 总文档: {} 个", result.getTotalDocuments());
+
+            // 3. 重新初始化知识库实例
+            log.info("🔄 重新初始化知识库实例...");
+            initializeKnowledgeBase();
+            log.info("✅ 知识库实例重新初始化完成");
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("❌ 增量索引过程出错", e);
+
+            // 尝试恢复知识库实例
+            try {
+                if (rag == null) {
+                    log.info("🔄 尝试恢复知识库实例...");
+                    initializeKnowledgeBase();
+                }
+            } catch (Exception ex) {
+                log.error("❌ 恢复知识库实例失败", ex);
+            }
+
+            throw new RuntimeException("增量索引失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 搜索文档
      */
     public List<Document> searchDocuments(String query, int limit) {

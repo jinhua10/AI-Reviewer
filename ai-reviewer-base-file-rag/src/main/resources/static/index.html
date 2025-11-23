@@ -419,6 +419,10 @@
                 const response = await axios.post(`${API_BASE_URL}/rebuild`);
                 return response.data;
             },
+            incrementalIndex: async () => {
+                const response = await axios.post(`${API_BASE_URL}/incremental-index`);
+                return response.data;
+            },
             // 文档管理 API
             uploadDocument: async (file) => {
                 const formData = new FormData();
@@ -990,6 +994,7 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [rebuilding, setRebuilding] = useState(false);
+            const [incrementalIndexing, setIncrementalIndexing] = useState(false);
             const [rebuildResult, setRebuildResult] = useState(null);
 
             useEffect(() => {
@@ -1033,6 +1038,32 @@
                     setError(err.message || '重建失败');
                 } finally {
                     setRebuilding(false);
+                }
+            };
+
+            const handleIncrementalIndex = async () => {
+                if (!confirm('确定要执行增量索引吗？\n\n只会处理新增和修改的文档，速度更快。')) {
+                    return;
+                }
+
+                setIncrementalIndexing(true);
+                setError(null);
+                setRebuildResult(null);
+
+                try {
+                    const result = await api.incrementalIndex();
+                    setRebuildResult(result);
+
+                    if (result.success) {
+                        // 增量索引成功后刷新统计信息
+                        setTimeout(() => {
+                            loadStatistics();
+                        }, 1000);
+                    }
+                } catch (err) {
+                    setError(err.message || '增量索引失败');
+                } finally {
+                    setIncrementalIndexing(false);
                 }
             };
 
@@ -1081,25 +1112,25 @@
                         </div>
                     </div>
 
-                    {rebuilding && (
+                    {(rebuilding || incrementalIndexing) && (
                         <div className="loading" style={{marginTop: '30px'}}>
                             <div className="spinner"></div>
-                            <p>正在重建知识库索引...</p>
+                            <p>{rebuilding ? '正在重建知识库索引...' : '正在执行增量索引...'}</p>
                             <p style={{fontSize: '14px', color: '#999', marginTop: '10px'}}>
-                                这可能需要几分钟时间，请耐心等待
+                                {rebuilding ? '这可能需要几分钟时间，请耐心等待' : '只处理新增和修改的文档，速度较快'}
                             </p>
                         </div>
                     )}
 
-                    {rebuildResult && !rebuilding && (
+                    {rebuildResult && !rebuilding && !incrementalIndexing && (
                         <div className={rebuildResult.success ? 'answer-card' : 'error'} style={{marginTop: '30px'}}>
-                            <h3>{rebuildResult.success ? '✅ 重建成功' : '❌ 重建失败'}</h3>
+                            <h3>{rebuildResult.success ? '✅ 操作成功' : '❌ 操作失败'}</h3>
                             <div style={{marginTop: '10px'}}>
                                 <p>{rebuildResult.message}</p>
-                                {rebuildResult.success && (
+                                {rebuildResult.success && rebuildResult.processedFiles > 0 && (
                                     <div style={{marginTop: '15px', fontSize: '14px'}}>
                                         <p>📄 处理文件: {rebuildResult.processedFiles} 个</p>
-                                        <p>📚 生成文档: {rebuildResult.totalDocuments} 个</p>
+                                        <p>📚 总文档数: {rebuildResult.totalDocuments} 个</p>
                                         <p>⏱️ 耗时: {(rebuildResult.durationMs / 1000).toFixed(2)} 秒</p>
                                     </div>
                                 )}
@@ -1112,21 +1143,45 @@
                         </div>
                     )}
 
-                    <div style={{marginTop: '30px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center'}}>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={loadStatistics}
-                            disabled={rebuilding}
-                        >
-                            🔄 刷新统计
-                        </button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleRebuild}
-                            disabled={rebuilding}
-                        >
-                            {rebuilding ? '⏳ 重建中...' : '🔨 重建索引'}
-                        </button>
+                    <div style={{marginTop: '30px'}}>
+                        <div style={{padding: '20px', background: '#f8f9ff', borderRadius: '8px', marginBottom: '20px'}}>
+                            <h4 style={{marginBottom: '10px', color: '#667eea'}}>📖 索引说明</h4>
+                            <div style={{fontSize: '14px', lineHeight: '1.8', color: '#666'}}>
+                                <p style={{marginBottom: '8px'}}>
+                                    <strong>🔄 增量索引：</strong>只处理新增和修改的文档，性能更优，推荐日常使用
+                                </p>
+                                <p>
+                                    <strong>🔨 重建索引：</strong>完全重建所有文档索引，耗时较长，适用于首次构建或大规模变更
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style={{textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap'}}>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={loadStatistics}
+                                disabled={rebuilding || incrementalIndexing}
+                            >
+                                🔄 刷新统计
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleIncrementalIndex}
+                                disabled={rebuilding || incrementalIndexing}
+                                style={{
+                                    background: incrementalIndexing ? '#ccc' : 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)'
+                                }}
+                            >
+                                {incrementalIndexing ? '⏳ 索引中...' : '⚡ 增量索引'}
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleRebuild}
+                                disabled={rebuilding || incrementalIndexing}
+                            >
+                                {rebuilding ? '⏳ 重建中...' : '🔨 重建索引'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             );

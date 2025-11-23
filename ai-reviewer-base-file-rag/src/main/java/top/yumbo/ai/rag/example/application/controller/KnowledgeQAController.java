@@ -122,6 +122,43 @@ public class KnowledgeQAController {
         }
     }
 
+    /**
+     * 触发知识库增量索引（管理接口）
+     * 只处理新增和修改的文档，性能更优
+     */
+    @PostMapping("/incremental-index")
+    public RebuildResponse incrementalIndex() {
+        log.info("收到知识库增量索引请求");
+
+        try {
+            BuildResult result = qaService.incrementalIndexKnowledgeBase();
+
+            RebuildResponse response = new RebuildResponse();
+            response.setSuccess(true);
+
+            if (result.getSuccessCount() > 0) {
+                response.setMessage(String.format("增量索引完成，更新了 %d 个文件", result.getSuccessCount()));
+            } else {
+                response.setMessage("所有文件都是最新的，无需更新");
+            }
+
+            response.setProcessedFiles(result.getSuccessCount());
+            response.setTotalDocuments(result.getTotalDocuments());
+            response.setDurationMs(result.getBuildTimeMs());
+
+            return response;
+        } catch (Exception e) {
+            log.error("增量索引失败", e);
+
+            RebuildResponse response = new RebuildResponse();
+            response.setSuccess(false);
+            response.setMessage("增量索引失败: " + e.getMessage());
+            response.setSuggestion("请检查日志文件获取详细错误信息");
+
+            return response;
+        }
+    }
+
     // ========== DTO 类 ==========
 
     @Data

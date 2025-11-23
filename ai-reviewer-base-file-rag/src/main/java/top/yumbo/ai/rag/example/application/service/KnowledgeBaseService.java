@@ -33,11 +33,14 @@ public class KnowledgeBaseService {
     private final TikaDocumentParser documentParser;
     private final DocumentChunker documentChunker;
     private final DocumentProcessingOptimizer optimizer;
+    private final FileTrackingService fileTrackingService;
 
     public KnowledgeBaseService(KnowledgeQAProperties properties,
-                                DocumentProcessingOptimizer optimizer) {
+                                DocumentProcessingOptimizer optimizer,
+                                FileTrackingService fileTrackingService) {
         this.properties = properties;
         this.optimizer = optimizer;
+        this.fileTrackingService = fileTrackingService;
         this.documentParser = new TikaDocumentParser();
         this.documentChunker = optimizer.createChunker();
     }
@@ -102,6 +105,11 @@ public class KnowledgeBaseService {
                 // 清空知识库
                 rag.deleteAllDocuments();
                 log.info("✓ 已清空旧知识库");
+
+                // 清空文件追踪信息
+                fileTrackingService.initialize(storagePath);
+                fileTrackingService.clearAll();
+                log.info("✓ 已清空文件追踪信息");
             }
 
             // 3. 处理文档
@@ -143,6 +151,11 @@ public class KnowledgeBaseService {
                     if (docs != null && !docs.isEmpty()) {
                         batchDocuments.addAll(docs);
                         successCount++;
+
+                        // 标记文件已索引（用于增量索引）
+                        if (rebuild) {
+                            fileTrackingService.markAsIndexed(file);
+                        }
 
                         // 估算内存使用
                         long estimatedMemory = docs.stream()
@@ -203,16 +216,22 @@ public class KnowledgeBaseService {
             log.info("   - 峰值内存: {} MB", result.getPeakMemoryMB());
             log.info("=".repeat(80));
 
-            // 6. 优化和提交
+            // 6. 保存文件追踪信息（用于增量索引）
+            if (rebuild) {
+                fileTrackingService.saveTracking();
+                log.info("✓ 已保存文件追踪信息");
+            }
+
+            // 7. 优化和提交
             optimizer.commitAndOptimize(rag);
 
-            // 7. 保存向量索引
+            // 8. 保存向量索引
             optimizer.saveVectorIndex(vectorIndexEngine);
 
-            // 8. 清理资源
+            // 9. 清理资源
             optimizer.closeEmbeddingEngine(embeddingEngine);
 
-            // 9. 最终内存状态
+            // 10. 最终内存状态
             optimizer.logMemoryUsage("构建完成");
 
             rag.close();
@@ -221,6 +240,199 @@ public class KnowledgeBaseService {
 
         } catch (Exception e) {
             log.error("❌ 知识库构建失败", e);
+
+            result.setError(e.getMessage());
+            result.setBuildTimeMs(System.currentTimeMillis() - startTime);
+
+            return result;
+        }
+    }
+
+    /**
+     * 增量索引知识库
+     * 只处理新增和修改的文档，大幅提升性能
+     *
+     * @param sourcePath 文档源路径
+     * @param storagePath 知识库存储路径
+     * @return 构建结果
+     */
+    public top.yumbo.ai.rag.example.application.model.BuildResult incrementalIndex(
+            String sourcePath, String storagePath) {
+
+        log.info("🔄 开始增量索引...");
+        log.info("📂 扫描文档: {}", sourcePath);
+
+        top.yumbo.ai.rag.example.application.model.BuildResult result =
+            new top.yumbo.ai.rag.example.application.model.BuildResult();
+
+        long startTime = System.currentTimeMillis();
+
+        try {
+            // 1. 初始化文件追踪
+            fileTrackingService.initialize(storagePath);
+
+            // 2. 扫描所有文件
+            List<File> allFiles = scanDocuments(sourcePath);
+            result.setTotalFiles(allFiles.size());
+
+            if (allFiles.isEmpty()) {
+                log.warn("⚠️  未找到支持的文档文件");
+                result.setBuildTimeMs(System.currentTimeMillis() - startTime);
+                return result;
+            }
+
+            log.info("✅ 找到 {} 个文档文件", allFiles.size());
+
+            // 3. 筛选需要更新的文件
+            List<File> filesToUpdate = new ArrayList<>();
+            for (File file : allFiles) {
+                if (fileTrackingService.needsUpdate(file)) {
+                    filesToUpdate.add(file);
+                }
+            }
+
+            log.info("📝 需要更新的文件: {} 个", filesToUpdate.size());
+
+            if (filesToUpdate.isEmpty()) {
+                log.info("✅ 所有文件都是最新的，无需更新");
+                LocalFileRAG rag = LocalFileRAG.builder()
+                    .storagePath(storagePath)
+                    .build();
+                var stats = rag.getStatistics();
+                result.setSuccessCount(0);
+                result.setFailedCount(0);
+                result.setTotalDocuments((int) stats.getDocumentCount());
+                result.setBuildTimeMs(System.currentTimeMillis() - startTime);
+                rag.close();
+                return result;
+            }
+
+            // 4. 打开知识库
+            LocalFileRAG rag = LocalFileRAG.builder()
+                .storagePath(storagePath)
+                .build();
+
+            // 5. 初始化向量检索引擎（如果启用）
+            LocalEmbeddingEngine embeddingEngine = null;
+            SimpleVectorIndexEngine vectorIndexEngine = null;
+
+            if (properties.getVectorSearch().isEnabled()) {
+                try {
+                    embeddingEngine = new LocalEmbeddingEngine();
+                    vectorIndexEngine = new SimpleVectorIndexEngine(
+                        properties.getVectorSearch().getIndexPath(),
+                        embeddingEngine.getEmbeddingDim()
+                    );
+                    log.info("✅ 向量检索引擎已启用");
+                } catch (Exception e) {
+                    log.warn("⚠️  向量检索引擎初始化失败，将只使用关键词索引", e);
+                }
+            }
+
+            // 6. 处理需要更新的文档
+            log.info("\n📝 开始处理文档...");
+            int successCount = 0;
+            int failedCount = 0;
+            List<Document> batchDocuments = new ArrayList<>();
+
+            optimizer.logMemoryUsage("增量索引开始前");
+
+            for (int i = 0; i < filesToUpdate.size(); i++) {
+                File file = filesToUpdate.get(i);
+
+                try {
+                    // 处理文档
+                    List<Document> docs = processDocumentOptimized(
+                        file, rag, embeddingEngine, vectorIndexEngine);
+
+                    if (docs != null && !docs.isEmpty()) {
+                        batchDocuments.addAll(docs);
+                        successCount++;
+
+                        // 标记为已索引
+                        fileTrackingService.markAsIndexed(file);
+
+                        // 估算内存使用
+                        long estimatedMemory = docs.stream()
+                            .mapToLong(d -> optimizer.estimateMemoryUsage(d.getContent().length()))
+                            .sum();
+                        optimizer.addBatchMemory(estimatedMemory);
+
+                        // 检查是否需要批处理或GC
+                        if (optimizer.shouldBatch(estimatedMemory) || (i + 1) % 10 == 0) {
+                            log.info("📦 批处理: {} 个文档 ({} / {})",
+                                batchDocuments.size(), i + 1, filesToUpdate.size());
+
+                            rag.commit();
+                            batchDocuments.clear();
+                            optimizer.resetBatchMemory();
+                            optimizer.checkAndTriggerGC();
+                        }
+                    }
+
+                } catch (Exception e) {
+                    log.error("❌ 处理文件失败: {}", file.getName(), e);
+                    failedCount++;
+                }
+
+                // 定期打印进度
+                if ((i + 1) % 5 == 0 || i == filesToUpdate.size() - 1) {
+                    optimizer.logMemoryUsage(
+                        String.format("进度 %d/%d", i + 1, filesToUpdate.size()));
+                }
+            }
+
+            // 处理剩余的批次
+            if (!batchDocuments.isEmpty()) {
+                log.info("📦 处理最后一批: {} 个文档", batchDocuments.size());
+                rag.commit();
+            }
+
+            // 7. 保存文件追踪信息
+            fileTrackingService.saveTracking();
+
+            long processEndTime = System.currentTimeMillis();
+
+            // 8. 填充构建结果
+            result.setSuccessCount(successCount);
+            result.setFailedCount(failedCount);
+            result.setTotalDocuments((int) rag.getStatistics().getDocumentCount());
+            result.setBuildTimeMs(processEndTime - startTime);
+
+            // 获取峰值内存使用
+            long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            result.setPeakMemoryMB(usedMemory / 1024 / 1024);
+
+            // 9. 显示结果
+            log.info("\n" + "=".repeat(80));
+            log.info("✅ 增量索引完成");
+            log.info("=".repeat(80));
+            log.info("   - 更新文件: {} 个", filesToUpdate.size());
+            log.info("   - 成功: {} 个文件", result.getSuccessCount());
+            log.info("   - 失败: {} 个文件", result.getFailedCount());
+            log.info("   - 总文档: {} 个", result.getTotalDocuments());
+            log.info("   - 耗时: {} 秒", String.format("%.2f", result.getBuildTimeMs() / 1000.0));
+            log.info("   - 峰值内存: {} MB", result.getPeakMemoryMB());
+            log.info("=".repeat(80));
+
+            // 10. 优化和提交
+            optimizer.commitAndOptimize(rag);
+
+            // 11. 保存向量索引
+            optimizer.saveVectorIndex(vectorIndexEngine);
+
+            // 12. 清理资源
+            optimizer.closeEmbeddingEngine(embeddingEngine);
+
+            // 13. 最终内存状态
+            optimizer.logMemoryUsage("增量索引完成");
+
+            rag.close();
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("❌ 增量索引失败", e);
 
             result.setError(e.getMessage());
             result.setBuildTimeMs(System.currentTimeMillis() - startTime);
