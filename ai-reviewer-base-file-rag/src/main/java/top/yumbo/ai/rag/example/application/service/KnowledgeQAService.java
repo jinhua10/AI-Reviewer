@@ -89,7 +89,12 @@ public class KnowledgeQAService {
 
         log.info("   - 存储路径: {}", storagePath);
         log.info("   - 文档路径: {}", sourcePath);
-        log.info("   - 重建模式: {}", rebuildOnStartup ? "是（每次启动重建）" : "否（使用已有知识库）");
+
+        if (rebuildOnStartup) {
+            log.info("   - 索引模式: 完全重建（配置要求）");
+        } else {
+            log.info("   - 索引模式: 增量索引（默认模式）");
+        }
 
         // 检查源路径类型
         if (sourcePath.startsWith("classpath:")) {
@@ -98,9 +103,16 @@ public class KnowledgeQAService {
             log.info("   - 路径类型: 文件系统路径");
         }
 
-        // 构建知识库
-        log.info("   🚀 开始构建知识库...");
-        var buildResult = knowledgeBaseService.buildKnowledgeBase(sourcePath, storagePath, rebuildOnStartup);
+        // 构建知识库 - 启动时使用增量索引，除非配置要求重建
+        top.yumbo.ai.rag.example.application.model.BuildResult buildResult;
+
+        if (rebuildOnStartup) {
+            log.info("   🚀 开始完全重建知识库...");
+            buildResult = knowledgeBaseService.buildKnowledgeBase(sourcePath, storagePath, true);
+        } else {
+            log.info("   🔄 开始增量索引知识库...");
+            buildResult = knowledgeBaseService.buildKnowledgeBaseWithIncrementalIndex(sourcePath, storagePath);
+        }
 
         if (buildResult.getError() != null) {
             throw new RuntimeException("知识库构建失败: " + buildResult.getError());
@@ -108,12 +120,9 @@ public class KnowledgeQAService {
 
         log.info("   ✅ 知识库构建完成");
         log.info("      - 总文件数: {}", buildResult.getTotalFiles());
-        log.info("      - 成功: {}", buildResult.getSuccessCount());
-        log.info("      - 失败: {}", buildResult.getFailedCount());
-        log.info("      - 总文档: {}", buildResult.getTotalDocuments());
-        log.info("      - 总文件: {}", buildResult.getTotalFiles());
-        log.info("      - 成功: {}", buildResult.getSuccessCount());
-        log.info("      - 文档数: {}", buildResult.getTotalDocuments());
+        log.info("      - 处理文件: {}", buildResult.getSuccessCount());
+        log.info("      - 失败文件: {}", buildResult.getFailedCount());
+        log.info("      - 总文档数: {}", buildResult.getTotalDocuments());
 
         // 连接到知识库
         rag = LocalFileRAG.builder()

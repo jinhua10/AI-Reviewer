@@ -210,14 +210,14 @@ public class DocumentManagementController {
 
         try {
             Path filePath = documentService.getDocumentPath(fileName);
-
+            
             if (!Files.exists(filePath)) {
                 log.warn("文件不存在: {}", fileName);
                 return ResponseEntity.notFound().build();
             }
 
             Resource resource = new UrlResource(filePath.toUri());
-
+            
             if (!resource.exists() || !resource.isReadable()) {
                 log.warn("文件不可读: {}", fileName);
                 return ResponseEntity.notFound().build();
@@ -225,7 +225,7 @@ public class DocumentManagementController {
 
             // 设置响应头
             String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
-
+            
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
@@ -247,19 +247,19 @@ public class DocumentManagementController {
         try {
             // 创建临时ZIP文件
             Path tempZipFile = Files.createTempFile("documents_", ".zip");
-
+            
             try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(tempZipFile.toFile()))) {
                 for (String fileName : fileNames) {
                     try {
                         Path filePath = documentService.getDocumentPath(fileName);
-
+                        
                         if (Files.exists(filePath)) {
                             ZipEntry zipEntry = new ZipEntry(fileName);
                             zipOut.putNextEntry(zipEntry);
-
+                            
                             Files.copy(filePath, zipOut);
                             zipOut.closeEntry();
-
+                            
                             log.debug("已添加到ZIP: {}", fileName);
                         } else {
                             log.warn("文件不存在，跳过: {}", fileName);
@@ -271,7 +271,7 @@ public class DocumentManagementController {
             }
 
             Resource resource = new UrlResource(tempZipFile.toUri());
-
+            
             if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
             }

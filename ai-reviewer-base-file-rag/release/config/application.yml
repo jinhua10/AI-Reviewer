@@ -49,9 +49,10 @@ knowledge:
       #   - ./data/documents/file.xlsx # 单个文件
       source-path: ./data/documents
 
-      # 启动时是否重建知识库
-      # true: 每次启动时重新构建
-      # false: 使用已有知识库（推荐生产环境）
+      # 启动时索引模式
+      # true: 完全重建（删除旧索引，重新索引所有文件）
+      # false: 增量索引（只索引新增和修改的文件，默认推荐）
+      # 注意：UI界面可以随时触发完全重建或增量索引
       rebuild-on-startup: false
 
       # 是否启用缓存
