@@ -2,7 +2,6 @@ package top.yumbo.ai.rag.example.application.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -13,7 +12,6 @@ import java.util.List;
  * @since 2025-11-22
  */
 @Data
-@Component
 @ConfigurationProperties(prefix = "knowledge.qa")
 public class KnowledgeQAProperties {
 
