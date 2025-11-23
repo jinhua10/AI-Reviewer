@@ -612,6 +612,7 @@
             const [error, setError] = useState(null);
             const [uploading, setUploading] = useState(false);
             const [uploadProgress, setUploadProgress] = useState(null);
+            const [filterText, setFilterText] = useState('');
 
             useEffect(() => {
                 loadDocuments();
@@ -692,6 +693,11 @@
                 return (bytes / 1024 / 1024).toFixed(2) + ' MB';
             };
 
+            // 过滤文档列表
+            const filteredDocuments = documents.filter(doc =>
+                doc.fileName.toLowerCase().includes(filterText.toLowerCase())
+            );
+
             return (
                 <div>
                     {/* 上传区域 */}
@@ -726,7 +732,7 @@
                     {/* 文档列表区域 */}
                     <div>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                            <h3>📚 文档列表 {!loading && `(${documents.length})`}</h3>
+                            <h3>📚 文档列表 {!loading && `(${filteredDocuments.length}/${documents.length})`}</h3>
                             <button
                                 className="btn btn-secondary"
                                 onClick={loadDocuments}
@@ -735,6 +741,39 @@
                                 {loading ? '⏳ 加载中...' : '🔄 刷新'}
                             </button>
                         </div>
+
+                        {/* 文件名过滤输入框 */}
+                        {!loading && documents.length > 0 && (
+                            <div style={{marginBottom: '15px'}}>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="🔍 输入文件名进行过滤..."
+                                    value={filterText}
+                                    onChange={(e) => setFilterText(e.target.value)}
+                                    style={{width: '100%'}}
+                                />
+                                {filterText && (
+                                    <div style={{fontSize: '13px', color: '#666', marginTop: '5px'}}>
+                                        过滤结果: {filteredDocuments.length} / {documents.length} 个文档
+                                        <button
+                                            onClick={() => setFilterText('')}
+                                            style={{
+                                                marginLeft: '10px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#667eea',
+                                                cursor: 'pointer',
+                                                textDecoration: 'underline',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            清除过滤
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* 加载状态 */}
                         {loading && (
@@ -771,9 +810,10 @@
 
                         {/* 文档列表 */}
                         {!error && !loading && documents.length > 0 && (
-
+                            <>
+                            {filteredDocuments.length > 0 ? (
                             <div style={{display: 'grid', gap: '10px'}}>
-                                {documents.map((doc, index) => (
+                                {filteredDocuments.map((doc, index) => (
                                     <div key={index} className="document-card" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                         <div style={{flex: 1}}>
                                             <div className="document-title">
@@ -801,6 +841,20 @@
                                     </div>
                                 ))}
                             </div>
+                            ) : (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">🔍</div>
+                                    <p>没有找到匹配 "{filterText}" 的文档</p>
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setFilterText('')}
+                                        style={{marginTop: '15px'}}
+                                    >
+                                        清除过滤
+                                    </button>
+                                </div>
+                            )}
+                            </>
                         )}
 
                         {/* 提示信息 */}
