@@ -76,18 +76,34 @@ knowledge:
     # LLM 配置
     llm:
       # LLM 提供商
-      # 可选值: mock, deepseek, openai
+      # 可选值:
+      #   - mock: 模拟客户端（默认，用于测试）
+      #   - openai: OpenAI (GPT-4o, GPT-4, GPT-3.5)
+      #   - deepseek: DeepSeek
       provider: mock
 
       # API Key（从环境变量读取）
-      # 设置环境变量: export AI_API_KEY=your-api-key
+      # OpenAI: export OPENAI_API_KEY=sk-your-key
+      # 或通用: export AI_API_KEY=your-key
       api-key: ${AI_API_KEY:}
 
       # API 端点
-      api-url: https://api.deepseek.com/v1/chat/completions
+      # OpenAI 默认: https://api.openai.com/v1/chat/completions
+      # DeepSeek: https://api.deepseek.com/v1/chat/completions
+      # 自定义端点（如使用代理）: https://your-proxy.com/v1/chat/completions
+      api-url: https://api.openai.com/v1/chat/completions
 
       # 模型名称
-      model: deepseek-chat
+      # OpenAI 可选模型:
+      #   - gpt-4o (推荐，最新多模态模型，2024)
+      #   - gpt-4o-mini (轻量版)
+      #   - gpt-4-turbo (GPT-4 Turbo，高性能)
+      #   - gpt-4 (GPT-4 标准版)
+      #   - gpt-3.5-turbo (经济实惠)
+      #   - gpt-5 (未来版本，发布后可用)
+      # DeepSeek:
+      #   - deepseek-chat
+      model: gpt-4o
 
       # 最大上下文长度（字符数）
       max-context-length: 20000
