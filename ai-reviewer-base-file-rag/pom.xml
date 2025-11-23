@@ -332,7 +332,6 @@
             </plugin>
 
             <!-- Spring Boot Maven 插件 -->
-            <!-- Spring Boot Maven 插件 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -370,6 +369,11 @@
                             <target>
                                 <echo message="删除 target/classes/simpleExcel 目录（打包时不包含）"/>
                                 <delete dir="${project.build.outputDirectory}/simpleExcel" quiet="true"/>
+                                <delete>
+                                    <fileset dir="${project.build.outputDirectory}/simpleExcel">
+                                        <include name="*.md"/>
+                                    </fileset>
+                                </delete>
                             </target>
                         </configuration>
                     </execution>
