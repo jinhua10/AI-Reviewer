@@ -5,9 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import top.yumbo.ai.rag.LocalFileRAG;
 import top.yumbo.ai.rag.example.application.config.KnowledgeQAProperties;
-import top.yumbo.ai.rag.example.application.model.AIAnswer;
 import top.yumbo.ai.rag.example.llm.LLMClient;
-import top.yumbo.ai.rag.example.llm.MockLLMClient;
 import top.yumbo.ai.rag.impl.embedding.LocalEmbeddingEngine;
 import top.yumbo.ai.rag.impl.index.SimpleVectorIndexEngine;
 import top.yumbo.ai.rag.model.Document;
@@ -30,19 +28,21 @@ public class KnowledgeQAService {
     private final KnowledgeQAProperties properties;
     private final KnowledgeBaseService knowledgeBaseService;
     private final HybridSearchService hybridSearchService;
+    private final LLMClient llmClient;
 
     private LocalFileRAG rag;
     private LocalEmbeddingEngine embeddingEngine;
     private SimpleVectorIndexEngine vectorIndexEngine;
-    private LLMClient llmClient;
     private top.yumbo.ai.rag.optimization.SmartContextBuilder contextBuilder;
 
     public KnowledgeQAService(KnowledgeQAProperties properties,
                               KnowledgeBaseService knowledgeBaseService,
-                              HybridSearchService hybridSearchService) {
+                              HybridSearchService hybridSearchService,
+                              LLMClient llmClient) {
         this.properties = properties;
         this.knowledgeBaseService = knowledgeBaseService;
         this.hybridSearchService = hybridSearchService;
+        this.llmClient = llmClient;
     }
 
     /**
@@ -162,9 +162,7 @@ public class KnowledgeQAService {
 
         String provider = properties.getLlm().getProvider();
         log.info("   - 提供商: {}", provider);
-
-        // 目前使用Mock客户端，后续可扩展
-        llmClient = new MockLLMClient();
+        log.info("   - 客户端类型: {}", llmClient.getClass().getSimpleName());
 
         log.info("   ✅ LLM客户端已就绪");
     }
