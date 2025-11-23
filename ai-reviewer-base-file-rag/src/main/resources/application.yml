@@ -21,7 +21,7 @@ knowledge:
       #   - ./data/documents           # 文件夹
       #   - E:/文档/知识库             # 中文路径
       #   - ./data/documents/file.xlsx # 单个文件
-      source-path: E:/excel
+      source-path: ./simpleExcel
 
       # 启动时是否重建知识库
       # true: 每次启动时重新构建（适合开发）
