@@ -384,19 +384,62 @@
                         </goals>
                         <configuration>
                             <target>
-                                <echo message="复制模型文件到 release 目录"/>
+                                <echo message="检查并复制模型文件到 release 目录"/>
 
-                                <!-- 创建 release/models 目录 -->
+                                <!-- 检查模型文件是否已存在 -->
+                                <available file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx" property="model.already.exists"/>
+
+                                <!-- 调用子任务 -->
+                                <antcall target="show-model-exists"/>
+                                <antcall target="copy-model-files"/>
+                            </target>
+
+                            <!-- 子任务: 显示模型已存在 -->
+                            <target name="show-model-exists" if="model.already.exists">
+                                <echo message="✅ 模型文件已存在，跳过复制"/>
+                                <echo message="📁 现有路径: release/models/paraphrase-multilingual/model.onnx"/>
+                            </target>
+
+                            <!-- 子任务: 复制模型文件 -->
+                            <target name="copy-model-files" unless="model.already.exists">
+                                <echo message="📦 模型文件不存在，开始复制..."/>
+
+                                <!-- 创建目录 -->
                                 <mkdir dir="${project.basedir}/release/models"/>
 
-                                <!-- 复制 models 目录到 release -->
-                                <copy todir="${project.basedir}/release/models" failonerror="false">
+                                <!-- 复制模型文件，保持完整目录结构 -->
+                                <copy todir="${project.basedir}/release/models" failonerror="false" preservelastmodified="true">
                                     <fileset dir="${project.basedir}/src/main/resources/models">
                                         <include name="**/*.onnx"/>
+                                        <include name="**/*.txt"/>
+                                        <include name="**/*.json"/>
                                     </fileset>
                                 </copy>
 
-                                <echo message="✅ 模型文件已复制到: ${project.basedir}/release/models"/>
+                                <!-- 验证复制结果 -->
+                                <available file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx" property="copy.success"/>
+
+                                <antcall target="show-copy-success"/>
+                                <antcall target="show-copy-failed"/>
+                            </target>
+
+                            <!-- 子任务: 显示成功消息 -->
+                            <target name="show-copy-success" if="copy.success">
+                                <echo message="✅ 模型文件复制成功"/>
+                                <echo message="📁 目标路径: release/models/paraphrase-multilingual/model.onnx"/>
+                            </target>
+
+                            <!-- 子任务: 显示失败消息（反向条件） -->
+                            <target name="show-copy-failed">
+                                <condition property="copy.failed">
+                                    <not><isset property="copy.success"/></not>
+                                </condition>
+                                <antcall target="show-failure-msg"/>
+                            </target>
+
+                            <target name="show-failure-msg" if="copy.failed">
+                                <echo message="⚠️  模型文件复制失败或源文件不存在"/>
+                                <echo message="💡 请手动下载模型文件到 release/models/ 目录"/>
                             </target>
                         </configuration>
                     </execution>
