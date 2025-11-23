@@ -370,8 +370,18 @@
                                 <echo message="删除 target/classes/simpleExcel 目录（打包时不包含）"/>
                                 <delete dir="${project.build.outputDirectory}/simpleExcel" quiet="true"/>
 
-                                <echo message="删除 target/classes/models 目录（打包时不包含）"/>
-                                <delete dir="${project.build.outputDirectory}/models" quiet="true"/>
+                                <echo message="删除 target/classes/models 目录下的模型文件（保留脚本文件）"/>
+                                <!-- 只删除模型文件，保留 .bat/.sh 等脚本文件 -->
+                                <delete quiet="true">
+                                    <fileset dir="${project.build.outputDirectory}/models" erroronmissingdir="false">
+                                        <include name="**/*.onnx"/>
+                                        <include name="**/*.bin"/>
+                                        <include name="**/*.safetensors"/>
+                                        <include name="**/*.pt"/>
+                                        <include name="**/*.pth"/>
+                                        <!-- 不删除 .bat .sh .md 等文件 -->
+                                    </fileset>
+                                </delete>
                             </target>
                         </configuration>
                     </execution>
