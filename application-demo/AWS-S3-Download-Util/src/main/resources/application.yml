@@ -1,7 +1,0 @@
-# ...existing code...
-
-aws:
-  s3:
-    bucket-name: hackathon2025-project-artifacts
-    download-path: .  # 下载到当前目录，可根据需要修改
-
