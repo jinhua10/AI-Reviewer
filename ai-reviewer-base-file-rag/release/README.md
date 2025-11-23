@@ -10,13 +10,19 @@ release/
 ├── start.bat                           # 启动脚本（Windows）
 ├── stop.bat                            # 停止脚本（Windows）
 ├── fix-lock.bat                        # 修复索引锁脚本（Windows）
+├── download-tessdata.bat               # OCR语言包下载脚本
 ├── README.md                           # 本文件
 ├── 模型下载说明.md                     # 模型下载指南
+├── 图片识别快速启用.md                 # 🆕 OCR配置快速指南
+├── OCR配置指南.md                      # 🆕 OCR详细配置文档
 ├── config/
 │   └── application.yml                 # 外置配置文件
 ├── models/                             # 模型目录（外部）
 │   └── paraphrase-multilingual/
 │       └── model.onnx                  # 向量模型文件
+├── tessdata/                           # 🆕 OCR语言包目录（运行download-tessdata.bat后生成）
+│   ├── chi_sim.traineddata            # 中文简体
+│   └── eng.traineddata                # 英文
 ├── data/
 │   ├── documents/                      # 文档目录（放置要索引的文档）
 │   ├── knowledge-base/                 # 知识库存储（自动生成）
@@ -50,10 +56,16 @@ data/documents/
 **支持的格式**:
 - Excel: `.xlsx`, `.xls`
 - Word: `.docx`, `.doc`
-- PowerPoint: `.pptx`, `.ppt`
+- PowerPoint: `.pptx`, `.ppt` 🆕 **支持提取图片中的文字**
 - PDF: `.pdf`
 - 文本: `.txt`, `.md`
 - 其他: `.html`, `.xml`
+
+> 💡 **新功能**：支持从PPTX/DOCX/XLSX中的**图片提取文字**！
+> 
+> 如果您的文档中只有图片，没有文字，可以启用OCR功能自动识别图片中的内容。
+> 
+> 📖 快速启用指南：[图片识别快速启用.md](图片识别快速启用.md)
 
 ### 3. 启动应用
 

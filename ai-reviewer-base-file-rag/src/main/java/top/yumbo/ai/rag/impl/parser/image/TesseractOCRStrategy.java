@@ -77,25 +77,50 @@ public class TesseractOCRStrategy implements ImageContentExtractorStrategy {
         }
 
         try {
-            // TODO: 使用 Tesseract 进行 OCR
-            // Tesseract tesseract = new Tesseract();
-            // if (tessdataPath != null) {
-            //     tesseract.setDatapath(tessdataPath);
-            // }
-            // tesseract.setLanguage(language);
-            //
-            // BufferedImage image = ImageIO.read(imageStream);
-            // String text = tesseract.doOCR(image);
-            //
-            // log.debug("OCR提取文字 [{}]: {} 字符", imageName, text.length());
-            // return text;
+            net.sourceforge.tess4j.Tesseract tesseract = new net.sourceforge.tess4j.Tesseract();
 
-            // 临时实现：返回提示信息
-            return String.format("[图片: %s - OCR功能待完整实现]", imageName);
+            // 配置 tessdata 路径
+            if (tessdataPath != null && !tessdataPath.isEmpty()) {
+                tesseract.setDatapath(tessdataPath);
+            } else {
+                // 尝试使用环境变量
+                String envPath = System.getenv("TESSDATA_PREFIX");
+                if (envPath != null && !envPath.isEmpty()) {
+                    tesseract.setDatapath(envPath);
+                }
+            }
 
+            // 设置语言
+            if (language != null && !language.isEmpty()) {
+                tesseract.setLanguage(language);
+            }
+
+            // 读取图片并进行OCR
+            java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(imageStream);
+            if (image == null) {
+                log.warn("无法读取图片: {}", imageName);
+                return String.format("[图片: %s - 无法读取图片数据]", imageName);
+            }
+
+            String text = tesseract.doOCR(image);
+
+            if (text == null || text.trim().isEmpty()) {
+                log.debug("OCR未识别到文字 [{}]", imageName);
+                return String.format("[图片: %s - 未识别到文字]", imageName);
+            }
+
+            // 清理文本
+            text = text.trim();
+
+            log.info("✅ OCR提取文字 [{}]: {} 字符", imageName, text.length());
+            return String.format("\n=== 图片: %s ===\n%s\n=== /图片 ===\n", imageName, text);
+
+        } catch (net.sourceforge.tess4j.TesseractException e) {
+            log.error("Tesseract OCR处理失败: {}", imageName, e);
+            return String.format("[图片: %s - OCR识别失败: %s]", imageName, e.getMessage());
         } catch (Exception e) {
             log.error("OCR处理失败: {}", imageName, e);
-            return String.format("[图片: %s - OCR处理失败]", imageName);
+            return String.format("[图片: %s - OCR处理失败: %s]", imageName, e.getMessage());
         }
     }
 
@@ -106,24 +131,43 @@ public class TesseractOCRStrategy implements ImageContentExtractorStrategy {
         }
 
         try {
-            // TODO: 使用 Tesseract 进行 OCR
-            // Tesseract tesseract = new Tesseract();
-            // if (tessdataPath != null) {
-            //     tesseract.setDatapath(tessdataPath);
-            // }
-            // tesseract.setLanguage(language);
-            //
-            // String text = tesseract.doOCR(imageFile);
-            //
-            // log.info("OCR提取文字 [{}]: {} 字符", imageFile.getName(), text.length());
-            // return text;
+            net.sourceforge.tess4j.Tesseract tesseract = new net.sourceforge.tess4j.Tesseract();
 
-            // 临时实现：返回提示信息
-            return String.format("[图片: %s - OCR功能待完整实现]", imageFile.getName());
+            // 配置 tessdata 路径
+            if (tessdataPath != null && !tessdataPath.isEmpty()) {
+                tesseract.setDatapath(tessdataPath);
+            } else {
+                // 尝试使用环境变量
+                String envPath = System.getenv("TESSDATA_PREFIX");
+                if (envPath != null && !envPath.isEmpty()) {
+                    tesseract.setDatapath(envPath);
+                }
+            }
 
+            // 设置语言
+            if (language != null && !language.isEmpty()) {
+                tesseract.setLanguage(language);
+            }
+
+            String text = tesseract.doOCR(imageFile);
+
+            if (text == null || text.trim().isEmpty()) {
+                log.debug("OCR未识别到文字 [{}]", imageFile.getName());
+                return String.format("[图片: %s - 未识别到文字]", imageFile.getName());
+            }
+
+            // 清理文本
+            text = text.trim();
+
+            log.info("✅ OCR提取文字 [{}]: {} 字符", imageFile.getName(), text.length());
+            return String.format("\n=== 图片: %s ===\n%s\n=== /图片 ===\n", imageFile.getName(), text);
+
+        } catch (net.sourceforge.tess4j.TesseractException e) {
+            log.error("Tesseract OCR处理失败: {}", imageFile.getName(), e);
+            return String.format("[图片: %s - OCR识别失败: %s]", imageFile.getName(), e.getMessage());
         } catch (Exception e) {
             log.error("OCR处理失败: {}", imageFile.getName(), e);
-            return String.format("[图片: %s - OCR处理失败]", imageFile.getName());
+            return String.format("[图片: %s - OCR处理失败: %s]", imageFile.getName(), e.getMessage());
         }
     }
 

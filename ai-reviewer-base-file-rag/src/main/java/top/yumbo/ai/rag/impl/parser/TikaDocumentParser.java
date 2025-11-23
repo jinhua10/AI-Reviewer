@@ -109,16 +109,40 @@ public class TikaDocumentParser implements DocumentParser {
             return "";
         }
 
-        try (InputStream stream = Files.newInputStream(file.toPath())) {
+        try {
             // 检测MIME类型
             String mimeType = tika.detect(file);
             log.debug("Detected MIME type: {} for file: {}", mimeType, file.getName());
 
-            // 使用增强的解析方法
-            String content = parseWithMetadata(stream, file.getName(), mimeType);
+            // 对于Office文档，使用专门的图片提取器
+            String filename = file.getName().toLowerCase();
+            if (filename.endsWith(".pptx") || filename.endsWith(".docx") || filename.endsWith(".xlsx")) {
+                OfficeImageExtractor officeExtractor = new OfficeImageExtractor(imageExtractor);
 
-            log.debug("Parsed file: {}, content length: {}", file.getName(), content.length());
-            return content;
+                String content = "";
+                if (filename.endsWith(".pptx")) {
+                    log.info("使用Office图片提取器处理PPTX: {}", file.getName());
+                    content = officeExtractor.extractFromPPTX(file);
+                } else if (filename.endsWith(".docx")) {
+                    log.info("使用Office图片提取器处理DOCX: {}", file.getName());
+                    content = officeExtractor.extractFromDOCX(file);
+                } else if (filename.endsWith(".xlsx")) {
+                    log.info("使用Office图片提取器处理XLSX: {}", file.getName());
+                    content = officeExtractor.extractFromXLSX(file);
+                }
+
+                if (content != null && !content.trim().isEmpty()) {
+                    log.info("✅ Office文档处理完成: {}, 内容长度: {}", file.getName(), content.length());
+                    return content;
+                }
+            }
+
+            // 默认使用Tika解析
+            try (InputStream stream = Files.newInputStream(file.toPath())) {
+                String content = parseWithMetadata(stream, file.getName(), mimeType);
+                log.debug("Parsed file: {}, content length: {}", file.getName(), content.length());
+                return content;
+            }
 
         } catch (IOException | TikaException | SAXException e) {
             log.error("Failed to parse file: {}", file.getAbsolutePath(), e);
