@@ -89,9 +89,17 @@ public class KnowledgeQAService {
 
         log.info("   - 存储路径: {}", storagePath);
         log.info("   - 文档路径: {}", sourcePath);
-        log.info("   - 重建模式: {}", rebuildOnStartup ? "是" : "否");
+        log.info("   - 重建模式: {}", rebuildOnStartup ? "是（每次启动重建）" : "否（使用已有知识库）");
+
+        // 检查源路径类型
+        if (sourcePath.startsWith("classpath:")) {
+            log.info("   - 路径类型: classpath 资源");
+        } else {
+            log.info("   - 路径类型: 文件系统路径");
+        }
 
         // 构建知识库
+        log.info("   🚀 开始构建知识库...");
         var buildResult = knowledgeBaseService.buildKnowledgeBase(sourcePath, storagePath, rebuildOnStartup);
 
         if (buildResult.getError() != null) {
@@ -99,6 +107,10 @@ public class KnowledgeQAService {
         }
 
         log.info("   ✅ 知识库构建完成");
+        log.info("      - 总文件数: {}", buildResult.getTotalFiles());
+        log.info("      - 成功: {}", buildResult.getSuccessCount());
+        log.info("      - 失败: {}", buildResult.getFailedCount());
+        log.info("      - 总文档: {}", buildResult.getTotalDocuments());
         log.info("      - 总文件: {}", buildResult.getTotalFiles());
         log.info("      - 成功: {}", buildResult.getSuccessCount());
         log.info("      - 文档数: {}", buildResult.getTotalDocuments());

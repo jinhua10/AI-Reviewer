@@ -27,7 +27,7 @@ knowledge:
       # 启动时是否重建知识库
       # true: 每次启动时重新构建（适合开发）
       # false: 使用已有知识库（适合生产）
-      rebuild-on-startup: false
+      rebuild-on-startup: true
 
       # 是否启用缓存
       enable-cache: true

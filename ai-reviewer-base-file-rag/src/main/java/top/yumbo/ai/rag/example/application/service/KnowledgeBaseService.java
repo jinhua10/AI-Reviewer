@@ -12,6 +12,7 @@ import top.yumbo.ai.rag.optimization.DocumentChunker;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -232,6 +233,14 @@ public class KnowledgeBaseService {
      * 扫描文档文件
      */
     private List<File> scanDocuments(String sourcePath) throws IOException {
+        log.info("📂 源路径: {}", sourcePath);
+
+        // 处理 classpath: 前缀
+        if (sourcePath.startsWith("classpath:")) {
+            return scanClasspathResources(sourcePath.substring("classpath:".length()));
+        }
+
+        // 处理普通文件系统路径
         File sourceFile = new File(sourcePath);
 
         if (!sourceFile.exists()) {
@@ -254,6 +263,64 @@ public class KnowledgeBaseService {
                     .filter(this::isSupportedFile)
                     .forEach(files::add);
             }
+        }
+
+        return files;
+    }
+
+    /**
+     * 扫描 classpath 资源
+     */
+    private List<File> scanClasspathResources(String resourcePath) throws IOException {
+        log.info("📦 扫描 classpath 资源: {}", resourcePath);
+
+        List<File> files = new ArrayList<>();
+
+        try {
+            // 获取资源 URL
+            var resource = getClass().getClassLoader().getResource(resourcePath);
+
+            if (resource == null) {
+                log.warn("⚠️  classpath 资源不存在: {}", resourcePath);
+                return files;
+            }
+
+            log.info("✓ 找到资源: {}", resource);
+
+            // 转换为 File 对象
+            File resourceFile = new File(resource.toURI());
+
+            if (!resourceFile.exists()) {
+                log.warn("⚠️  资源文件不存在: {}", resourceFile.getAbsolutePath());
+                return files;
+            }
+
+            log.info("✓ 资源路径: {}", resourceFile.getAbsolutePath());
+
+            if (resourceFile.isFile()) {
+                // 单个文件
+                if (isSupportedFile(resourceFile)) {
+                    files.add(resourceFile);
+                    log.info("✓ 添加文件: {}", resourceFile.getName());
+                }
+            } else if (resourceFile.isDirectory()) {
+                // 目录 - 递归扫描
+                log.info("✓ 扫描目录...");
+                try (var stream = Files.walk(resourceFile.toPath())) {
+                    stream.filter(Files::isRegularFile)
+                        .map(Path::toFile)
+                        .filter(this::isSupportedFile)
+                        .forEach(f -> {
+                            files.add(f);
+                            log.debug("   - {}", f.getName());
+                        });
+                }
+                log.info("✓ 找到 {} 个支持的文件", files.size());
+            }
+
+        } catch (Exception e) {
+            log.error("❌ 扫描 classpath 资源失败: {}", resourcePath, e);
+            throw new IOException("扫描 classpath 资源失败", e);
         }
 
         return files;
