@@ -439,10 +439,10 @@
                         </configuration>
                     </execution>
 
-                    <!-- 步骤3: 安装后复制 JAR 到 release 目录 -->
+                    <!-- 步骤3: 打包后立即复制 JAR 到 release 目录 -->
                     <execution>
                         <id>copy-jar-to-release</id>
-                        <phase>install</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>run</goal>
                         </goals>
