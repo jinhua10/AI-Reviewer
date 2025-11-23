@@ -3,6 +3,7 @@ package top.yumbo.ai.rag.spring.boot.autoconfigure;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.yumbo.ai.rag.LocalFileRAG;
+import top.yumbo.ai.rag.impl.parser.TikaDocumentParser;
 import top.yumbo.ai.rag.model.Document;
 import top.yumbo.ai.rag.model.Query;
 import top.yumbo.ai.rag.model.SearchResult;
@@ -72,8 +73,7 @@ public class SimpleRAGService {
 
         try {
             // 使用 Tika 解析文件内容
-            top.yumbo.ai.rag.impl.parser.TikaDocumentParser parser =
-                new top.yumbo.ai.rag.impl.parser.TikaDocumentParser();
+            TikaDocumentParser parser = new TikaDocumentParser();
             String content = parser.parse(file);
 
             if (content == null || content.trim().isEmpty()) {
