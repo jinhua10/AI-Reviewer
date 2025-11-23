@@ -12,9 +12,10 @@ import java.util.List;
  *
  * 核心功能：
  * 1. 动态调整文档长度以适应LLM上下文限制
- * 2. 提取最相关的片段而不是简单截断
+ * 2. 智能分块策略，确保内容不丢失
  * 3. 在句子边界处切分，保持语义完整性
  * 4. 优先保留包含查询关键词的内容
+ * 5. 当文档过长时，分成多个语义完整的块
  *
  * @author AI Reviewer Team
  * @since 2025-11-22
@@ -26,20 +27,27 @@ public class SmartContextBuilder {
     private static final int DEFAULT_MAX_DOC_LENGTH = 2000;      // 单个文档最大长度
     private static final int KEYWORD_WINDOW_SIZE = 500;          // 关键词搜索窗口
     private static final int SENTENCE_BOUNDARY_SEARCH = 100;     // 句子边界搜索范围
+    private static final int CHUNK_OVERLAP = 100;                // 分块重叠大小，保证上下文连贯
 
     private final int maxContextLength;
     private final int maxDocLength;
+    private final boolean preserveFullContent;  // 是否保留完整内容
 
     public SmartContextBuilder() {
-        this(DEFAULT_MAX_CONTEXT_LENGTH, DEFAULT_MAX_DOC_LENGTH);
+        this(DEFAULT_MAX_CONTEXT_LENGTH, DEFAULT_MAX_DOC_LENGTH, true);
     }
 
     public SmartContextBuilder(int maxContextLength, int maxDocLength) {
+        this(maxContextLength, maxDocLength, true);
+    }
+
+    public SmartContextBuilder(int maxContextLength, int maxDocLength, boolean preserveFullContent) {
         this.maxContextLength = maxContextLength;
         this.maxDocLength = maxDocLength;
+        this.preserveFullContent = preserveFullContent;
 
-        log.info("SmartContextBuilder initialized: maxContext={}chars, maxDoc={}chars",
-            maxContextLength, maxDocLength);
+        log.info("SmartContextBuilder initialized: maxContext={}chars, maxDoc={}chars, preserveFullContent={}",
+            maxContextLength, maxDocLength, preserveFullContent);
     }
 
     /**
@@ -101,6 +109,9 @@ public class SmartContextBuilder {
 
     /**
      * 提取最相关的片段
+     * 支持两种模式：
+     * 1. preserveFullContent=true: 智能分块，保留所有内容
+     * 2. preserveFullContent=false: 提取最相关片段（旧逻辑）
      */
     private String extractRelevantPart(String query, String content, int maxLength) {
         if (content == null || content.isEmpty()) {
@@ -112,6 +123,82 @@ public class SmartContextBuilder {
             return content;
         }
 
+        // 根据配置选择策略
+        if (preserveFullContent) {
+            return extractWithChunking(query, content, maxLength);
+        } else {
+            return extractMostRelevantPart(query, content, maxLength);
+        }
+    }
+
+    /**
+     * 智能分块策略 - 保留所有内容
+     * 将长文档分成多个语义完整的块，每个块优先包含关键词
+     */
+    private String extractWithChunking(String query, String content, int maxLength) {
+        String[] keywords = extractKeywords(query);
+        StringBuilder result = new StringBuilder();
+
+        // 找到所有关键词位置
+        List<Integer> keywordPositions = findAllKeywordPositions(content.toLowerCase(), keywords);
+
+        if (keywordPositions.isEmpty()) {
+            // 如果没有关键词，按顺序分块
+            return chunkBySize(content, maxLength);
+        }
+
+        // 按关键词位置分块
+        int processedLength = 0;
+        for (int i = 0; i < keywordPositions.size() && processedLength < content.length(); i++) {
+            int keywordPos = keywordPositions.get(i);
+
+            // 跳过已经处理过的位置
+            if (keywordPos < processedLength) {
+                continue;
+            }
+
+            // 计算这个块的起始和结束位置
+            int start = Math.max(processedLength, keywordPos - maxLength / 3);
+            int end = Math.min(content.length(), keywordPos + maxLength * 2 / 3);
+
+            // 确保不超过maxLength
+            if (end - start > maxLength) {
+                end = start + maxLength;
+            }
+
+            // 调整到句子边界
+            start = adjustToSentenceStart(content, start);
+            end = adjustToSentenceEnd(content, end);
+
+            // 提取块
+            String chunk = content.substring(start, end).trim();
+
+            if (!chunk.isEmpty()) {
+                if (!result.isEmpty()) {
+                    result.append("\n...\n");
+                }
+                result.append(chunk);
+                processedLength = end;
+            }
+        }
+
+        // 如果还有未处理的内容，添加剩余部分的摘要
+        if (processedLength < content.length()) {
+            int remaining = content.length() - processedLength;
+            result.append(String.format("\n[... 还有 %d 字符未显示，内容已按关键词优先级提取]", remaining));
+        }
+
+        String extracted = result.toString();
+        log.debug("Extracted with chunking: original={}chars, extracted={}chars, chunks={}",
+            content.length(), extracted.length(), keywordPositions.size());
+
+        return extracted;
+    }
+
+    /**
+     * 提取最相关片段策略（原有逻辑）
+     */
+    private String extractMostRelevantPart(String query, String content, int maxLength) {
         // 提取查询关键词
         String[] keywords = extractKeywords(query);
 
@@ -142,11 +229,64 @@ public class SmartContextBuilder {
             extracted = extracted + "...";
         }
 
-        log.debug("Extracted relevant part: original={}chars, extracted={}chars, " +
+        log.debug("Extracted most relevant part: original={}chars, extracted={}chars, " +
                 "bestPos={}, range=[{}, {}]",
             content.length(), extracted.length(), bestPosition, start, end);
 
         return extracted;
+    }
+
+    /**
+     * 按大小简单分块（当没有找到关键词时使用）
+     */
+    private String chunkBySize(String content, int chunkSize) {
+        StringBuilder result = new StringBuilder();
+        int pos = 0;
+        int chunkCount = 0;
+
+        while (pos < content.length() && chunkCount < 3) { // 最多3块
+            int end = Math.min(content.length(), pos + chunkSize);
+            end = adjustToSentenceEnd(content, end);
+
+            String chunk = content.substring(pos, end).trim();
+            if (!chunk.isEmpty()) {
+                if (!result.isEmpty()) {
+                    result.append("\n...\n");
+                }
+                result.append(chunk);
+                chunkCount++;
+            }
+
+            pos = end;
+        }
+
+        if (pos < content.length()) {
+            int remaining = content.length() - pos;
+            result.append(String.format("\n[... 还有 %d 字符未显示]", remaining));
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * 找到所有关键词出现的位置
+     */
+    private List<Integer> findAllKeywordPositions(String content, String[] keywords) {
+        List<Integer> positions = new java.util.ArrayList<>();
+
+        for (String keyword : keywords) {
+            int index = 0;
+            while ((index = content.indexOf(keyword, index)) != -1) {
+                positions.add(index);
+                index += keyword.length();
+            }
+        }
+
+        // 排序并去重
+        return positions.stream()
+            .distinct()
+            .sorted()
+            .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -308,6 +448,7 @@ public class SmartContextBuilder {
     public static class Builder {
         private int maxContextLength = DEFAULT_MAX_CONTEXT_LENGTH;
         private int maxDocLength = DEFAULT_MAX_DOC_LENGTH;
+        private boolean preserveFullContent = true;
 
         public Builder maxContextLength(int length) {
             this.maxContextLength = length;
@@ -319,8 +460,13 @@ public class SmartContextBuilder {
             return this;
         }
 
+        public Builder preserveFullContent(boolean preserve) {
+            this.preserveFullContent = preserve;
+            return this;
+        }
+
         public SmartContextBuilder build() {
-            return new SmartContextBuilder(maxContextLength, maxDocLength);
+            return new SmartContextBuilder(maxContextLength, maxDocLength, preserveFullContent);
         }
     }
 
