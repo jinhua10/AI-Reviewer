@@ -62,8 +62,114 @@ public class SimpleRAGService {
      * 索引文件
      */
     public String indexFile(File file) {
-        // TODO: 实现文件解析和索引
-        throw new UnsupportedOperationException("文件索引功能待实现");
+        if (file == null || !file.exists()) {
+            throw new IllegalArgumentException("文件不存在: " + file);
+        }
+
+        if (!file.isFile()) {
+            throw new IllegalArgumentException("不是文件: " + file);
+        }
+
+        try {
+            // 使用 Tika 解析文件内容
+            top.yumbo.ai.rag.impl.parser.TikaDocumentParser parser =
+                new top.yumbo.ai.rag.impl.parser.TikaDocumentParser();
+            String content = parser.parse(file);
+
+            if (content == null || content.trim().isEmpty()) {
+                log.warn("文件内容为空: {}", file.getName());
+                throw new IllegalArgumentException("文件内容为空: " + file.getName());
+            }
+
+            // 构建元数据
+            Map<String, Object> metadata = new java.util.HashMap<>();
+            metadata.put("file_path", file.getAbsolutePath());
+            metadata.put("file_name", file.getName());
+            metadata.put("file_size", file.length());
+            metadata.put("file_type", getFileExtension(file));
+            metadata.put("last_modified", new java.util.Date(file.lastModified()));
+
+            // 索引文档
+            String docId = index(file.getName(), content, metadata);
+            log.info("索引文件: {} -> {} ({} 字节)", file.getName(), docId, file.length());
+
+            return docId;
+
+        } catch (Exception e) {
+            log.error("索引文件失败: {}", file.getName(), e);
+            throw new RuntimeException("索引文件失败: " + file.getName(), e);
+        }
+    }
+
+    /**
+     * 批量索引文件
+     */
+    public int indexFiles(List<File> files) {
+        if (files == null || files.isEmpty()) {
+            return 0;
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+
+        for (File file : files) {
+            try {
+                indexFile(file);
+                successCount++;
+            } catch (Exception e) {
+                log.error("索引文件失败: {}", file.getName(), e);
+                failCount++;
+            }
+        }
+
+        log.info("批量索引文件完成: 成功 {}, 失败 {}", successCount, failCount);
+        return successCount;
+    }
+
+    /**
+     * 索引目录下的所有文件
+     */
+    public int indexDirectory(File directory, boolean recursive) {
+        if (directory == null || !directory.exists()) {
+            throw new IllegalArgumentException("目录不存在: " + directory);
+        }
+
+        if (!directory.isDirectory()) {
+            throw new IllegalArgumentException("不是目录: " + directory);
+        }
+
+        List<File> files = new java.util.ArrayList<>();
+        collectFiles(directory, files, recursive);
+
+        log.info("扫描到 {} 个文件", files.size());
+        return indexFiles(files);
+    }
+
+    /**
+     * 递归收集文件
+     */
+    private void collectFiles(File directory, List<File> files, boolean recursive) {
+        File[] listFiles = directory.listFiles();
+        if (listFiles == null) {
+            return;
+        }
+
+        for (File file : listFiles) {
+            if (file.isFile()) {
+                files.add(file);
+            } else if (file.isDirectory() && recursive) {
+                collectFiles(file, files, recursive);
+            }
+        }
+    }
+
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(File file) {
+        String name = file.getName();
+        int lastDot = name.lastIndexOf('.');
+        return lastDot > 0 ? name.substring(lastDot + 1).toLowerCase() : "";
     }
 
     /**
