@@ -182,7 +182,7 @@ knowledge:
         # Tesseract 数据路径（从环境变量读取）
         # Linux/Mac: export TESSDATA_PREFIX=/path/to/tessdata
         # Windows: set TESSDATA_PREFIX=C:\path\to\tessdata
-        tessdata-path: ${TESSDATA_PREFIX:}
+        tessdata-path: ${TESSDATA_PREFIX:classpath:tessdata}
 
         # 识别语言
         # chi_sim: 简体中文

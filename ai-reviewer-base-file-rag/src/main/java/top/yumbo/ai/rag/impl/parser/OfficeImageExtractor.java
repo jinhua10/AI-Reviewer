@@ -73,14 +73,17 @@ public class OfficeImageExtractor {
                         String imageName = String.format("slide%d_image%d.%s", 
                             slideNumber, imageCount, getPPTExtension(pictureData.getType()));
                         
-                        log.info("提取图片: {} ({}KB)", imageName, imageData.length / 1024);
-                        
+                        log.info("📷 提取图片: {} ({}KB)", imageName, imageData.length / 1024);
+
                         // 使用OCR提取图片文字
                         String extractedText = imageExtractor.extractContent(
                             new ByteArrayInputStream(imageData), imageName);
                         
                         if (extractedText != null && !extractedText.trim().isEmpty()) {
+                            log.info("✅ 图片内容提取成功: {} -> {} 字符", imageName, extractedText.length());
                             content.append("\n【图片内容】\n").append(extractedText);
+                        } else {
+                            log.warn("⚠️  图片内容为空: {}", imageName);
                         }
                     }
                 }
@@ -131,13 +134,16 @@ public class OfficeImageExtractor {
                     String imageName = String.format("image%d.%s", 
                         imageCount, getExtension(picture.getPictureType()));
                     
-                    log.info("提取图片: {} ({}KB)", imageName, imageData.length / 1024);
-                    
+                    log.info("📷 提取图片: {} ({}KB)", imageName, imageData.length / 1024);
+
                     String extractedText = imageExtractor.extractContent(
                         new ByteArrayInputStream(imageData), imageName);
                     
                     if (extractedText != null && !extractedText.trim().isEmpty()) {
+                        log.info("✅ 图片内容提取成功: {} -> {} 字符", imageName, extractedText.length());
                         content.append(extractedText);
+                    } else {
+                        log.warn("⚠️  图片内容为空: {}", imageName);
                     }
                 }
                 
@@ -219,13 +225,16 @@ public class OfficeImageExtractor {
                         String imageName = String.format("sheet%d_image%d.%s", 
                             sheetIndex + 1, imageCount, getExtension(pictureData.getPictureType()));
                         
-                        log.info("提取图片: {} ({}KB)", imageName, imageData.length / 1024);
-                        
+                        log.info("📷 提取图片: {} ({}KB)", imageName, imageData.length / 1024);
+
                         String extractedText = imageExtractor.extractContent(
                             new ByteArrayInputStream(imageData), imageName);
                         
                         if (extractedText != null && !extractedText.trim().isEmpty()) {
+                            log.info("✅ 图片内容提取成功: {} -> {} 字符", imageName, extractedText.length());
                             content.append("\n【图片内容】\n").append(extractedText);
+                        } else {
+                            log.warn("⚠️  图片内容为空: {}", imageName);
                         }
                     }
                 }

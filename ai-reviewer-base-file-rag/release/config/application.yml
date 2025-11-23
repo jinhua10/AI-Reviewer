@@ -189,7 +189,7 @@ knowledge:
 
       # OCR 配置
       ocr:
-        tessdata-path: ${TESSDATA_PREFIX:}
+        tessdata-path: ${TESSDATA_PREFIX:./tessdata}
         language: chi_sim+eng
 
       # Vision LLM 配置

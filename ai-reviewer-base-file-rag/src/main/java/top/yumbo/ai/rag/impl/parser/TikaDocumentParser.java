@@ -96,10 +96,25 @@ public class TikaDocumentParser implements DocumentParser {
         // 初始化智能图片提取器（从环境变量自动配置）
         this.imageExtractor = top.yumbo.ai.rag.impl.parser.image.SmartImageExtractor.fromEnv();
 
-        log.info("TikaDocumentParser initialized with config: maxContentLength={}MB, " +
-                "extractImageMetadata={}, includeImagePlaceholders={}, imageStrategy={}",
-                maxContentLength / 1024 / 1024, extractImageMetadata, includeImagePlaceholders,
-                imageExtractor.getActiveStrategy().getStrategyName());
+        // 显示OCR配置详情
+        String enableOCR = System.getenv("ENABLE_OCR");
+        String tessdataPrefix = System.getenv("TESSDATA_PREFIX");
+        String ocrLanguage = System.getenv("OCR_LANGUAGE");
+
+        log.info("📊 TikaDocumentParser 初始化完成:");
+        log.info("  ├─ 最大内容长度: {}MB", maxContentLength / 1024 / 1024);
+        log.info("  ├─ 提取图片元数据: {}", extractImageMetadata);
+        log.info("  ├─ 图片占位符: {}", includeImagePlaceholders);
+        log.info("  └─ 图片处理策略: {}", imageExtractor.getActiveStrategy().getStrategyName());
+
+        if ("true".equalsIgnoreCase(enableOCR)) {
+            log.info("🔍 OCR配置:");
+            log.info("  ├─ ENABLE_OCR: {}", enableOCR);
+            log.info("  ├─ TESSDATA_PREFIX: {}", tessdataPrefix != null ? tessdataPrefix : "未设置");
+            log.info("  └─ OCR_LANGUAGE: {}", ocrLanguage != null ? ocrLanguage : "未设置");
+        } else {
+            log.info("⚠️  OCR未启用 (ENABLE_OCR={})", enableOCR);
+        }
     }
 
     @Override
