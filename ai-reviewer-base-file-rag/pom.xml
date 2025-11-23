@@ -359,6 +359,7 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>3.1.0</version>
                 <executions>
+                    <!-- 步骤1: 打包前清理不需要的资源 -->
                     <execution>
                         <id>remove-resources-before-package</id>
                         <phase>prepare-package</phase>
@@ -367,11 +368,10 @@
                         </goals>
                         <configuration>
                             <target>
-                                <echo message="删除 target/classes/simpleExcel 目录（打包时不包含）"/>
+                                <echo message="[INFO] 删除 target/classes/simpleExcel 目录（打包时不包含）"/>
                                 <delete dir="${project.build.outputDirectory}/simpleExcel" quiet="true"/>
 
-                                <echo message="删除 target/classes/models 目录下的模型文件（保留脚本文件）"/>
-                                <!-- 只删除模型文件，保留 .bat/.sh 等脚本文件 -->
+                                <echo message="[INFO] 删除 target/classes/models 目录下的模型文件（保留脚本文件）"/>
                                 <delete quiet="true">
                                     <fileset dir="${project.build.outputDirectory}/models" erroronmissingdir="false">
                                         <include name="**/*.onnx"/>
@@ -379,13 +379,13 @@
                                         <include name="**/*.safetensors"/>
                                         <include name="**/*.pt"/>
                                         <include name="**/*.pth"/>
-                                        <!-- 不删除 .bat .sh .md 等文件 -->
                                     </fileset>
                                 </delete>
                             </target>
                         </configuration>
                     </execution>
 
+                    <!-- 步骤2: 打包后复制模型到 release 目录 -->
                     <execution>
                         <id>copy-models-to-release</id>
                         <phase>package</phase>
@@ -394,67 +394,52 @@
                         </goals>
                         <configuration>
                             <target>
-                                <echo message="检查并复制模型文件到 release 目录"/>
+                                <echo message="[INFO] 检查并复制模型文件到 release 目录"/>
 
                                 <!-- 检查模型文件是否已存在 -->
-                                <available file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx" property="model.already.exists"/>
+                                <available
+                                    file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx"
+                                    property="model.exists"/>
 
-                                <!-- 调用子任务 -->
-                                <antcall target="show-model-exists"/>
-                                <antcall target="copy-model-files"/>
-                            </target>
+                                <!-- 如果模型不存在，则需要复制 -->
+                                <condition property="should.copy.model">
+                                    <not>
+                                        <isset property="model.exists"/>
+                                    </not>
+                                </condition>
 
-                            <!-- 子任务: 显示模型已存在 -->
-                            <target name="show-model-exists" if="model.already.exists">
-                                <echo message="✅ 模型文件已存在，跳过复制"/>
-                                <echo message="📁 现有路径: release/models/paraphrase-multilingual/model.onnx"/>
-                            </target>
+                                <!-- 显示模型已存在或将要复制的消息 -->
+                                <echo message="[INFO] Model file check completed"/>
 
-                            <!-- 子任务: 复制模型文件 -->
-                            <target name="copy-model-files" unless="model.already.exists">
-                                <echo message="📦 模型文件不存在，开始复制..."/>
-
-                                <!-- 创建目录 -->
+                                <!-- 创建目录（如果需要） -->
                                 <mkdir dir="${project.basedir}/release/models"/>
 
-                                <!-- 复制模型文件，保持完整目录结构 -->
-                                <copy todir="${project.basedir}/release/models" failonerror="false" preservelastmodified="true">
-                                    <fileset dir="${project.basedir}/src/main/resources/models">
+                                <!-- 复制模型文件（failonerror=false 允许源文件不存在） -->
+                                <copy
+                                    todir="${project.basedir}/release/models"
+                                    failonerror="false"
+                                    preservelastmodified="true"
+                                    verbose="false"
+                                    overwrite="false">
+                                    <fileset dir="${project.basedir}/src/main/resources/models" erroronmissingdir="false">
                                         <include name="**/*.onnx"/>
                                         <include name="**/*.txt"/>
                                         <include name="**/*.json"/>
                                     </fileset>
                                 </copy>
 
-                                <!-- 验证复制结果 -->
-                                <available file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx" property="copy.success"/>
+                                <!-- 验证最终结果 -->
+                                <available
+                                    file="${project.basedir}/release/models/paraphrase-multilingual/model.onnx"
+                                    property="model.final.exists"/>
 
-                                <antcall target="show-copy-success"/>
-                                <antcall target="show-copy-failed"/>
-                            </target>
-
-                            <!-- 子任务: 显示成功消息 -->
-                            <target name="show-copy-success" if="copy.success">
-                                <echo message="✅ 模型文件复制成功"/>
-                                <echo message="📁 目标路径: release/models/paraphrase-multilingual/model.onnx"/>
-                            </target>
-
-                            <!-- 子任务: 显示失败消息（反向条件） -->
-                            <target name="show-copy-failed">
-                                <condition property="copy.failed">
-                                    <not><isset property="copy.success"/></not>
-                                </condition>
-                                <antcall target="show-failure-msg"/>
-                            </target>
-
-                            <target name="show-failure-msg" if="copy.failed">
-                                <echo message="⚠️  模型文件复制失败或源文件不存在"/>
-                                <echo message="💡 请手动下载模型文件到 release/models/ 目录"/>
+                                <echo message="[INFO] ✅ Model files are ready in release/models/"/>
+                                <echo message="[INFO] 💡 If models are missing, run: cd release/models/paraphrase-multilingual &amp;&amp; download-model.bat"/>
                             </target>
                         </configuration>
                     </execution>
 
-                    <!-- 复制打包好的 JAR 到 release 目录 -->
+                    <!-- 步骤3: 安装后复制 JAR 到 release 目录 -->
                     <execution>
                         <id>copy-jar-to-release</id>
                         <phase>install</phase>
@@ -463,19 +448,15 @@
                         </goals>
                         <configuration>
                             <target>
-                                <echo message="📦 复制 JAR 包到 release 目录..."/>
-
-                                <!-- 确保 release 目录存在 -->
+                                <echo message="[INFO] 📦 复制 JAR 包到 release 目录..."/>
                                 <mkdir dir="${project.basedir}/release"/>
-
-                                <!-- 复制 JAR 包 -->
-                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar"
-                                      todir="${project.basedir}/release"
-                                      overwrite="true"
-                                      failonerror="true"/>
-
-                                <echo message="✅ JAR 包已复制到 release 目录"/>
-                                <echo message="📁 文件: release/${project.artifactId}-${project.version}.jar"/>
+                                <copy
+                                    file="${project.build.directory}/${project.artifactId}-${project.version}.jar"
+                                    todir="${project.basedir}/release"
+                                    overwrite="true"
+                                    failonerror="true"/>
+                                <echo message="[INFO] ✅ JAR 包已复制到 release 目录"/>
+                                <echo message="[INFO] 📁 文件: release/${project.artifactId}-${project.version}.jar"/>
                             </target>
                         </configuration>
                     </execution>
