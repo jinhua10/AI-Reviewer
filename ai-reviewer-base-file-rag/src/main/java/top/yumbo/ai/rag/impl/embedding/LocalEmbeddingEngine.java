@@ -72,21 +72,57 @@ public class LocalEmbeddingEngine implements AutoCloseable {
     public LocalEmbeddingEngine(String modelPath, int maxSequenceLength)
             throws OrtException, IOException {
 
-        Path modelFile = Paths.get(modelPath);
-        if (!Files.exists(modelFile)) {
+        this.maxSequenceLength = maxSequenceLength;
+
+        // 尝试多种方式加载模型
+        String actualModelPath = null;
+
+        // 1. 尝试从 classpath 加载（优先，适用于打包后的 JAR）
+        try {
+            var resource = getClass().getClassLoader().getResource(modelPath);
+            if (resource != null) {
+                actualModelPath = resource.getPath();
+                // Windows 路径修正：移除开头的 /
+                if (actualModelPath.startsWith("/") && actualModelPath.contains(":")) {
+                    actualModelPath = actualModelPath.substring(1);
+                }
+                log.debug("✓ 从 classpath 加载模型: {}", actualModelPath);
+            }
+        } catch (Exception e) {
+            log.debug("无法从 classpath 加载模型: {}", e.getMessage());
+        }
+
+        // 2. 尝试从文件系统加载（开发环境）
+        if (actualModelPath == null || !Files.exists(Paths.get(actualModelPath))) {
+            Path modelFile = Paths.get(modelPath);
+            if (Files.exists(modelFile)) {
+                actualModelPath = modelFile.toAbsolutePath().toString();
+                log.debug("✓ 从文件系统加载模型: {}", actualModelPath);
+            }
+        }
+
+        // 3. 如果都失败，抛出异常
+        if (actualModelPath == null || !Files.exists(Paths.get(actualModelPath))) {
             throw new IOException(String.format(
                 "模型文件不存在: %s\n" +
                 "请下载模型文件到该路径。\n" +
                 "推荐模型：\n" +
                 "  多语言（推荐）：https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2\n" +
                 "  中文：https://huggingface.co/shibing624/text2vec-base-chinese\n" +
-                "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
-                modelPath
+                "  英文：https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2\n" +
+                "\n" +
+                "提示：\n" +
+                "  1. 开发环境：将模型放到 src/main/resources/%s\n" +
+                "  2. 生产环境：确保模型已打包到 JAR 的 resources/%s\n" +
+                "  3. 或将模型文件放到当前目录下的 %s",
+                modelPath, modelPath, modelPath, modelPath
             ));
         }
 
-        this.maxSequenceLength = maxSequenceLength;
-        this.modelName = modelFile.getParent().getFileName().toString();
+        // 提取模型名称
+        Path finalPath = Paths.get(actualModelPath);
+        this.modelName = finalPath.getParent() != null ?
+            finalPath.getParent().getFileName().toString() : "unknown";
 
         // 初始化 ONNX Runtime 环境
         this.env = OrtEnvironment.getEnvironment();
@@ -98,7 +134,7 @@ public class LocalEmbeddingEngine implements AutoCloseable {
         options.setIntraOpNumThreads(4);
 
         // 加载模型
-        this.session = env.createSession(modelPath, options);
+        this.session = env.createSession(actualModelPath, options);
 
         // 获取输出维度
         this.embeddingDim = inferEmbeddingDimension();

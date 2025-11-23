@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import top.yumbo.ai.rag.example.llm.DeepSeekLLMClient;
 import top.yumbo.ai.rag.example.llm.LLMClient;
 import top.yumbo.ai.rag.example.llm.MockLLMClient;
 import top.yumbo.ai.rag.example.llm.OpenAILLMClient;
@@ -14,9 +13,16 @@ import top.yumbo.ai.rag.example.llm.OpenAILLMClient;
  * LLM 客户端配置
  *
  * 支持多种 LLM 提供商：
- * - deepseek: DeepSeek（默认，从环境变量 AI_API_KEY 读取）
- * - openai: OpenAI（从环境变量 OPENAI_API_KEY 读取）
+ * - openai: OpenAI 兼容 API（默认，支持 OpenAI、DeepSeek 等）
  * - mock: Mock 模式（测试用，返回固定回答）
+ *
+ * OpenAI 兼容 API 说明：
+ * OpenAILLMClient 支持所有 OpenAI API 兼容的服务，包括：
+ * - OpenAI (GPT-4o, GPT-4, GPT-3.5)
+ * - DeepSeek (deepseek-chat)
+ * - 其他兼容 OpenAI API 格式的服务
+ *
+ * 通过配置不同的 api-url 和 model 即可切换不同的服务
  *
  * @author AI Reviewer Team
  * @since 2025-11-23
@@ -32,39 +38,15 @@ public class LLMConfiguration {
     }
 
     /**
-     * DeepSeek LLM 客户端
+     * OpenAI 兼容 LLM 客户端（默认）
+     * 支持 OpenAI、DeepSeek 等所有 OpenAI API 兼容的服务
      */
     @Bean
     @ConditionalOnProperty(
         prefix = "knowledge.qa.llm",
         name = "provider",
-        havingValue = "deepseek",
-        matchIfMissing = true  // 默认使用 DeepSeek
-    )
-    @ConditionalOnMissingBean
-    public LLMClient deepSeekLLMClient() {
-        String apiKey = resolveEnvVariable(properties.getLlm().getApiKey());
-
-        if (apiKey == null || apiKey.isEmpty()) {
-            log.warn("⚠️  未设置环境变量 AI_API_KEY");
-            log.warn("💡 提示：如需使用 DeepSeek API，请配置:");
-            log.warn("      export AI_API_KEY=your-deepseek-key");
-            log.warn("💡 将降级使用 Mock 模式");
-            return new MockLLMClient();
-        }
-
-        String model = properties.getLlm().getModel();
-        return new DeepSeekLLMClient(apiKey, model);
-    }
-
-    /**
-     * OpenAI LLM 客户端
-     */
-    @Bean
-    @ConditionalOnProperty(
-        prefix = "knowledge.qa.llm",
-        name = "provider",
-        havingValue = "openai"
+        havingValue = "openai",
+        matchIfMissing = true  // 默认使用 openai（支持所有兼容 API）
     )
     @ConditionalOnMissingBean
     public LLMClient openAILLMClient() {
@@ -73,11 +55,23 @@ public class LLMConfiguration {
         String apiUrl = properties.getLlm().getApiUrl();
 
         if (apiKey == null || apiKey.isEmpty()) {
-            log.warn("⚠️  未配置 OpenAI API Key");
-            log.warn("💡 提示: 设置环境变量 OPENAI_API_KEY 或 AI_API_KEY");
+            log.warn("⚠️  未配置 LLM API Key");
+            log.warn("💡 提示: 设置环境变量:");
+            log.warn("      - DeepSeek: export AI_API_KEY=your-deepseek-key");
+            log.warn("      - OpenAI: export OPENAI_API_KEY=your-openai-key");
             log.warn("💡 将降级使用 Mock 模式");
             return new MockLLMClient();
         }
+
+        // 根据 API URL 判断使用的服务
+        String serviceName = "OpenAI";
+        if (apiUrl != null && apiUrl.contains("deepseek")) {
+            serviceName = "DeepSeek";
+        }
+
+        log.info("🤖 创建 {} LLM 客户端", serviceName);
+        log.info("   - 模型: {}", model);
+        log.info("   - API: {}", apiUrl);
 
         return new OpenAILLMClient(apiKey, model, apiUrl);
     }
@@ -96,8 +90,8 @@ public class LLMConfiguration {
         log.info("🤖 创建 Mock LLM 客户端（仅用于测试）");
         log.info("   ⚠️  Mock 模式将返回固定的模拟回答");
         log.info("   💡 如需使用真实 LLM，请配置:");
-        log.info("      - DeepSeek: export AI_API_KEY=your-deepseek-key");
-        log.info("      - OpenAI: knowledge.qa.llm.provider=openai 并 export OPENAI_API_KEY=your-key");
+        log.info("      knowledge.qa.llm.provider=openai");
+        log.info("      并设置相应的 API Key 和 URL");
         return new MockLLMClient();
     }
 

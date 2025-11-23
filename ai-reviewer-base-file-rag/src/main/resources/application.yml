@@ -78,33 +78,28 @@ knowledge:
     llm:
       # LLM 提供商
       # 可选值:
-      #   - deepseek: DeepSeek（默认，从环境变量 AI_API_KEY 读取，未设置时降级为 Mock 模式）
-      #   - openai: OpenAI (GPT-4o, GPT-4, GPT-3.5)
-      provider: deepseek
+      #   - openai: OpenAI 兼容 API（默认，支持 OpenAI、DeepSeek 等所有兼容服务）
+      #   - mock: Mock 模式（测试用，返回固定回答）
+      #
+      # 说明: OpenAI 客户端支持所有 OpenAI API 兼容的服务
+      #       通过配置不同的 api-url 和 model 即可切换不同的服务
+      provider: openai
 
       # API Key（从环境变量读取）
       # DeepSeek: export AI_API_KEY=your-deepseek-key
-      # OpenAI: export OPENAI_API_KEY=sk-your-openai-key
-      # 或通用: export AI_API_KEY=your-key
+      # OpenAI: export OPENAI_API_KEY=your-openai-key
       api-key: ${AI_API_KEY:}
 
       # API 端点
-      # DeepSeek 默认: https://api.deepseek.com/v1/chat/completions
+      # DeepSeek: https://api.deepseek.com/v1/chat/completions（默认配置）
       # OpenAI: https://api.openai.com/v1/chat/completions
-      # 自定义端点（如使用代理）: https://your-proxy.com/v1/chat/completions
+      # 其他兼容服务: 配置相应的 API 端点
       api-url: https://api.deepseek.com/v1/chat/completions
 
       # 模型名称
-      # OpenAI 可选模型:
-      #   - gpt-4o (推荐，最新多模态模型，2024)
-      #   - gpt-4o-mini (轻量版)
-      #   - gpt-4-turbo (GPT-4 Turbo，高性能)
-      #   - gpt-4 (GPT-4 标准版)
-      #   - gpt-3.5-turbo (经济实惠)
-      #   - gpt-5 (未来版本，发布后可用)
-      # DeepSeek:
-      #   - deepseek-chat
-      model: gpt-4o
+      # DeepSeek: deepseek-chat（默认配置）
+      # OpenAI: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo
+      model: deepseek-chat
 
       # 最大上下文长度（字符数）
       max-context-length: 20000
