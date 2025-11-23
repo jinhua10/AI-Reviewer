@@ -2,13 +2,24 @@ package top.yumbo.ai.rag.example.application.controller;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.yumbo.ai.rag.example.application.service.DocumentManagementService;
 
+import java.io.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * 文档管理 REST API 控制器
@@ -188,6 +199,137 @@ public class DocumentManagementController {
         response.setMessage(String.format("成功: %d, 失败: %d", successCount, failureCount));
 
         return response;
+    }
+
+    /**
+     * 下载单个文档
+     */
+    @GetMapping("/download/{fileName}")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable String fileName) {
+        log.info("下载文档: {}", fileName);
+
+        try {
+            Path filePath = documentService.getDocumentPath(fileName);
+
+            if (!Files.exists(filePath)) {
+                log.warn("文件不存在: {}", fileName);
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                log.warn("文件不可读: {}", fileName);
+                return ResponseEntity.notFound().build();
+            }
+
+            // 设置响应头
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("下载文档失败: {}", fileName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 批量下载文档（打包为ZIP）
+     */
+    @PostMapping("/download-batch")
+    public ResponseEntity<Resource> downloadBatch(@RequestBody List<String> fileNames) {
+        log.info("批量下载文档: {} 个", fileNames.size());
+
+        try {
+            // 创建临时ZIP文件
+            Path tempZipFile = Files.createTempFile("documents_", ".zip");
+
+            try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(tempZipFile.toFile()))) {
+                for (String fileName : fileNames) {
+                    try {
+                        Path filePath = documentService.getDocumentPath(fileName);
+
+                        if (Files.exists(filePath)) {
+                            ZipEntry zipEntry = new ZipEntry(fileName);
+                            zipOut.putNextEntry(zipEntry);
+
+                            Files.copy(filePath, zipOut);
+                            zipOut.closeEntry();
+
+                            log.debug("已添加到ZIP: {}", fileName);
+                        } else {
+                            log.warn("文件不存在，跳过: {}", fileName);
+                        }
+                    } catch (Exception e) {
+                        log.error("添加文件到ZIP失败: {}", fileName, e);
+                    }
+                }
+            }
+
+            Resource resource = new UrlResource(tempZipFile.toUri());
+
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String zipFileName = "documents_" + System.currentTimeMillis() + ".zip";
+            String encodedFileName = URLEncoder.encode(zipFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+            // 返回ZIP文件，并在传输完成后删除临时文件
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
+                    .body(new Resource() {
+                        @Override
+                        public InputStream getInputStream() throws IOException {
+                            return new FileInputStream(tempZipFile.toFile()) {
+                                @Override
+                                public void close() throws IOException {
+                                    super.close();
+                                    try {
+                                        Files.deleteIfExists(tempZipFile);
+                                        log.debug("临时ZIP文件已删除: {}", tempZipFile);
+                                    } catch (IOException e) {
+                                        log.warn("删除临时ZIP文件失败: {}", tempZipFile, e);
+                                    }
+                                }
+                            };
+                        }
+
+                        @Override
+                        public boolean exists() { return resource.exists(); }
+                        @Override
+                        public boolean isReadable() { return resource.isReadable(); }
+                        @Override
+                        public boolean isOpen() { return resource.isOpen(); }
+                        @Override
+                        public boolean isFile() { return resource.isFile(); }
+                        @Override
+                        public java.net.URL getURL() throws IOException { return resource.getURL(); }
+                        @Override
+                        public java.net.URI getURI() throws IOException { return resource.getURI(); }
+                        @Override
+                        public File getFile() throws IOException { return resource.getFile(); }
+                        @Override
+                        public long contentLength() throws IOException { return resource.contentLength(); }
+                        @Override
+                        public long lastModified() throws IOException { return resource.lastModified(); }
+                        @Override
+                        public Resource createRelative(String relativePath) throws IOException { return resource.createRelative(relativePath); }
+                        @Override
+                        public String getFilename() { return zipFileName; }
+                        @Override
+                        public String getDescription() { return resource.getDescription(); }
+                    });
+
+        } catch (Exception e) {
+            log.error("批量下载失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // ========== DTO 类 ==========

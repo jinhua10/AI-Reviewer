@@ -6,10 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import top.yumbo.ai.rag.example.application.config.KnowledgeQAProperties;
 import top.yumbo.ai.rag.example.application.controller.DocumentManagementController.DocumentInfo;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -231,6 +228,23 @@ public class DocumentManagementService {
      */
     public String getDocumentsPath() {
         return documentsPath.toAbsolutePath().toString();
+    }
+
+    /**
+     * 获取指定文件的完整路径
+     *
+     * @param fileName 文件名
+     * @return 文件完整路径
+     */
+    public Path getDocumentPath(String fileName) {
+        Path filePath = documentsPath.resolve(fileName);
+
+        // 安全检查：确保文件在文档目录内
+        if (!filePath.normalize().startsWith(documentsPath.normalize())) {
+            throw new SecurityException("非法的文件路径");
+        }
+
+        return filePath;
     }
 }
 

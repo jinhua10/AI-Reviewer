@@ -202,6 +202,53 @@
             margin-bottom: 5px;
             font-size: 14px;
             color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .source-text {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .source-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-icon {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #667eea;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-batch-download {
+            margin-top: 10px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-batch-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         .search-results {
@@ -388,6 +435,18 @@
             deleteDocument: async (fileName) => {
                 const response = await axios.delete(`${API_DOCS_URL}/${encodeURIComponent(fileName)}`);
                 return response.data;
+            },
+            downloadDocument: async (fileName) => {
+                const response = await axios.get(`${API_DOCS_URL}/download/${encodeURIComponent(fileName)}`, {
+                    responseType: 'blob'
+                });
+                return response.data;
+            },
+            downloadBatch: async (fileNames) => {
+                const response = await axios.post(`${API_DOCS_URL}/download-batch`, fileNames, {
+                    responseType: 'blob'
+                });
+                return response.data;
             }
         };
 
@@ -422,6 +481,44 @@
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleAsk();
+                }
+            };
+
+            // 下载单个文件
+            const handleDownload = async (fileName) => {
+                try {
+                    const blob = await api.downloadDocument(fileName);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('下载失败: ' + err.message);
+                }
+            };
+
+            // 批量下载所有参考文件
+            const handleBatchDownload = async () => {
+                if (!answer || !answer.sources || answer.sources.length === 0) {
+                    return;
+                }
+
+                try {
+                    const blob = await api.downloadBatch(answer.sources);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `参考文档_${new Date().getTime()}.zip`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    alert('批量下载失败: ' + err.message);
                 }
             };
 
@@ -469,9 +566,28 @@
                                     <h4>📚 参考来源</h4>
                                     {answer.sources.map((source, index) => (
                                         <div key={index} className="source-item">
-                                            {index + 1}. {source}
+                                            <span className="source-text">
+                                                {index + 1}. {source}
+                                            </span>
+                                            <div className="source-actions">
+                                                <button
+                                                    className="btn-icon"
+                                                    onClick={() => handleDownload(source)}
+                                                    title="下载此文件"
+                                                >
+                                                    💾 下载
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
+                                    {answer.sources.length > 1 && (
+                                        <button
+                                            className="btn-batch-download"
+                                            onClick={handleBatchDownload}
+                                        >
+                                            📦 批量下载全部 ({answer.sources.length} 个文件)
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
