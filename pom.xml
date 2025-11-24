@@ -16,7 +16,6 @@
         <module>ai-reviewer-api</module>
         <module>ai-reviewer-common</module>
         <module>ai-reviewer-core</module>
-        <module>ai-reviewer-base-file-rag</module>
         <module>ai-reviewer-adaptor-parser</module>
         <module>ai-reviewer-adaptor-ai</module>
         <module>ai-reviewer-adaptor-processor</module>
