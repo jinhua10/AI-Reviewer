@@ -75,10 +75,37 @@ public class HackathonAIEngine extends AIEngine {
             long parseTimeMs = System.currentTimeMillis() - parseStartMs;
             context.setParsingTimeMs(parseTimeMs);
             log.info("File parsing took {} ms", parseTimeMs);
-            StringBuilder sb = new StringBuilder();
-            for (PreProcessedData preProcessedData : preprocessedDataList) {
-                sb.append(getFileContent(preProcessedData));
+
+            // Separate README.md files from other files
+            List<PreProcessedData> readmeFiles = new ArrayList<>();
+            List<PreProcessedData> otherFiles = new ArrayList<>();
+
+            for (PreProcessedData data : preprocessedDataList) {
+                String fileName = data.getMetadata().getFileName();
+                if (fileName != null && fileName.equalsIgnoreCase("README.md")) {
+                    readmeFiles.add(data);
+                    log.debug("Found README.md file: {}", data.getMetadata().getFilePath());
+                } else {
+                    otherFiles.add(data);
+                }
             }
+
+            // Build content with README.md first, then other source files
+            StringBuilder sb = new StringBuilder();
+
+            // Add README.md files first
+            for (PreProcessedData readmeData : readmeFiles) {
+                sb.append(getFileContent(readmeData));
+            }
+
+            // Then add other source files
+            for (PreProcessedData otherData : otherFiles) {
+                sb.append(getFileContent(otherData));
+            }
+
+            log.info("Built prompt with {} README.md file(s) at the beginning, followed by {} source file(s)",
+                    readmeFiles.size(), otherFiles.size());
+
             PreProcessedData oneContent = PreProcessedData.builder()
                     .metadata(FileMetadata.builder().build())
                     .content(sb.toString())
