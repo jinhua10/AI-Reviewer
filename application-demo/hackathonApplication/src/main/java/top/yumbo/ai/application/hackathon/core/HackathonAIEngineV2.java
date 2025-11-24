@@ -26,6 +26,13 @@ import java.util.Comparator;
 /**
  * Enhanced AI Engine for batch processing multiple projects from ZIP files
  * Supports hierarchical directory structure: FolderA -> FolderB (with done.txt) -> ZipC
+ *
+ * Features:
+ * - Batch processing with parallel execution
+ * - README.md priority sorting in prompts
+ * - Anti-cheat filtering (automatically applied via HackathonAIEngine)
+ * - CSV-based progress tracking and resume capability
+ * - Smart report naming: FolderBName-Score-ZipFileName.md
  */
 @Slf4j
 public class HackathonAIEngineV2 {
@@ -382,6 +389,11 @@ public class HackathonAIEngineV2 {
                     .threadPoolSize(properties.getExecutor().getThreadPoolSize())
                     .build();
 
+            // Execute review with automatic anti-cheat filtering and README priority sorting
+            // The baseEngine (HackathonAIEngine) will:
+            // 1. Apply anti-cheat filter to remove suspicious comments
+            // 2. Sort files with README.md first
+            // 3. Build prompt and send to AI for review
             ProcessResult processResult = baseEngine.execute(context);
 
             if (processResult.isSuccess()) {
