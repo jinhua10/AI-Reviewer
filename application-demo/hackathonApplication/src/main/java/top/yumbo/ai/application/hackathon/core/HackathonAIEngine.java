@@ -26,11 +26,15 @@ public class HackathonAIEngine extends AIEngine {
         super(registry);
     }
 
+    /**
+     * Format file content with improved structure and metadata
+     */
     public String getFileContent(PreProcessedData preProcessedData) {
         String content = preProcessedData.getContent();
         FileMetadata metadata = preProcessedData.getMetadata();
         String fileName = metadata.getFileName();
         Path filePath = metadata.getFilePath();
+        String fileType = metadata.getFileType();
 
         // Apply anti-cheat filter to remove suspicious comments
         String filteredContent = AntiCheatFilter.filterSuspiciousContent(
@@ -38,14 +42,112 @@ public class HackathonAIEngine extends AIEngine {
                 filePath != null ? filePath.toString() : fileName
         );
 
+        // Calculate content statistics
+        int lineCount = filteredContent.split("\n").length;
+        Long fileSizeObj = metadata.getFileSize();
+        long fileSize = fileSizeObj != null ? fileSizeObj : 0L;
+
+        // Build structured file entry with metadata
         return String.format("""
-                file path: %s
-                file content:
-                ```
+                
+                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                📄 File: %s
+                📂 Path: %s
+                📊 Type: %s | Lines: %d | Size: %d bytes
+                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                
+                ```%s
                 %s
                 ```
                 
-                """, filePath, filteredContent);
+                """,
+                fileName,
+                filePath,
+                fileType != null ? fileType : "unknown",
+                lineCount,
+                fileSize,
+                fileType != null ? fileType : "",
+                filteredContent);
+    }
+
+    /**
+     * Build project overview section with file tree and statistics
+     */
+    private String buildProjectOverview(List<PreProcessedData> allFiles) {
+        StringBuilder overview = new StringBuilder();
+
+        overview.append("""
+                
+                ╔═══════════════════════════════════════════════════════════════╗
+                ║                     PROJECT OVERVIEW                          ║
+                ╚═══════════════════════════════════════════════════════════════╝
+                
+                """);
+
+        // Count by file type
+        Map<String, Integer> fileTypeCount = new HashMap<>();
+        int totalLines = 0;
+        long totalSize = 0;
+
+        overview.append("📁 File Structure:\n");
+        for (PreProcessedData data : allFiles) {
+            FileMetadata metadata = data.getMetadata();
+            String fileName = metadata.getFileName();
+            String fileType = metadata.getFileType() != null ? metadata.getFileType() : "unknown";
+
+            fileTypeCount.put(fileType, fileTypeCount.getOrDefault(fileType, 0) + 1);
+
+            int lines = data.getContent().split("\n").length;
+            totalLines += lines;
+
+            Long sizeObj = metadata.getFileSize();
+            long size = sizeObj != null ? sizeObj : 0L;
+            totalSize += size;
+
+            // Show file with icon based on type
+            String icon = getFileIcon(fileType);
+            overview.append(String.format("  %s %s (%d lines)\n", icon, fileName, lines));
+        }
+
+        overview.append("""
+                
+                📊 Statistics:
+                """);
+        overview.append(String.format("  • Total Files: %d\n", allFiles.size()));
+        overview.append(String.format("  • Total Lines: %d\n", totalLines));
+        overview.append(String.format("  • Total Size: %d bytes (%.2f KB)\n", totalSize, totalSize / 1024.0));
+
+        overview.append("\n  File Types Distribution:\n");
+        fileTypeCount.forEach((type, count) ->
+            overview.append(String.format("    - %s: %d file(s)\n", type, count))
+        );
+
+        overview.append("""
+                
+                ═══════════════════════════════════════════════════════════════
+                
+                """);
+
+        return overview.toString();
+    }
+
+    /**
+     * Get appropriate icon for file type
+     */
+    private String getFileIcon(String fileType) {
+        return switch (fileType != null ? fileType.toLowerCase() : "unknown") {
+            case "java" -> "☕";
+            case "python" -> "🐍";
+            case "javascript", "typescript" -> "📜";
+            case "markdown", "md" -> "📝";
+            case "xml", "html" -> "🏷️";
+            case "json", "yaml", "yml" -> "⚙️";
+            case "c", "cpp", "c++" -> "⚡";
+            case "go" -> "🔷";
+            case "rust" -> "🦀";
+            case "kotlin" -> "🎯";
+            default -> "📄";
+        };
     }
 
     /**
@@ -98,28 +200,56 @@ public class HackathonAIEngine extends AIEngine {
                 }
             }
 
-            // Build content with README.md first, then other source files
+            // Build content with improved structure
             StringBuilder sb = new StringBuilder();
             int filesWithSuspiciousContent = 0;
 
-            // Add README.md files first (with anti-cheat filtering)
-            for (PreProcessedData readmeData : readmeFiles) {
-                AntiCheatFilter.FilterStatistics stats = AntiCheatFilter.analyzeContent(
-                        readmeData.getContent());
-                if (stats.hasSuspiciousContent()) {
-                    filesWithSuspiciousContent++;
+            // Step 1: Add project overview at the very beginning
+            sb.append(buildProjectOverview(preprocessedDataList));
+
+            // Step 2: Add anti-cheat notice if needed (before file contents)
+            // This will be updated later if suspicious content is found
+
+            // Step 3: Add README.md section header and files first
+            if (!readmeFiles.isEmpty()) {
+                sb.append("""
+                        
+                        ╔═══════════════════════════════════════════════════════════════╗
+                        ║                   📖 PROJECT DOCUMENTATION                     ║
+                        ╚═══════════════════════════════════════════════════════════════╝
+                        
+                        """);
+
+                // Add README.md files first (with anti-cheat filtering)
+                for (PreProcessedData readmeData : readmeFiles) {
+                    AntiCheatFilter.FilterStatistics stats = AntiCheatFilter.analyzeContent(
+                            readmeData.getContent());
+                    if (stats.hasSuspiciousContent()) {
+                        filesWithSuspiciousContent++;
+                    }
+                    sb.append(getFileContent(readmeData));
                 }
-                sb.append(getFileContent(readmeData));
             }
 
-            // Then add other source files (with anti-cheat filtering)
-            for (PreProcessedData otherData : otherFiles) {
-                AntiCheatFilter.FilterStatistics stats = AntiCheatFilter.analyzeContent(
-                        otherData.getContent());
-                if (stats.hasSuspiciousContent()) {
-                    filesWithSuspiciousContent++;
+            // Step 4: Add source code section header and files
+            if (!otherFiles.isEmpty()) {
+                sb.append("""
+                        
+                        ╔═══════════════════════════════════════════════════════════════╗
+                        ║                    💻 SOURCE CODE FILES                        ║
+                        ╚═══════════════════════════════════════════════════════════════╝
+                        
+                        """);
+
+                // Then add other source files (with anti-cheat filtering)
+                for (PreProcessedData otherData : otherFiles) {
+                    AntiCheatFilter.FilterStatistics stats = AntiCheatFilter.analyzeContent(
+                            otherData.getContent());
+                    if (stats.hasSuspiciousContent()) {
+                        filesWithSuspiciousContent++;
+                    }
+                    sb.append(getFileContent(otherData));
                 }
-                sb.append(getFileContent(otherData));
             }
 
             log.info("Built prompt with {} README.md file(s) at the beginning, followed by {} source file(s)",
@@ -130,10 +260,11 @@ public class HackathonAIEngine extends AIEngine {
                         filesWithSuspiciousContent);
             }
 
-            // Add anti-cheat notice if needed
+            // Add anti-cheat notice at the beginning if needed
             String finalContent = sb.toString();
             if (filesWithSuspiciousContent > 0) {
-                finalContent = AntiCheatFilter.addAntiCheatNotice(finalContent, filesWithSuspiciousContent);
+                String notice = AntiCheatFilter.addAntiCheatNotice("", filesWithSuspiciousContent);
+                finalContent = notice + finalContent;
             }
 
             PreProcessedData oneContent = PreProcessedData.builder()
