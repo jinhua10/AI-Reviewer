@@ -15,19 +15,25 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.Comparator;
 
 /**
  * Enhanced AI Engine for batch processing multiple projects from ZIP files
+ * Supports hierarchical directory structure: FolderA -> FolderB (with done.txt) -> ZipC
  */
 @Slf4j
 public class HackathonAIEngineV2 {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final String CSV_FILENAME = "completed-reviews.csv";
+    private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime\n";
+    private static final String DONE_MARKER_FILE = "done.txt";
 
     private final HackathonAIEngine baseEngine;
     private final AIReviewerProperties properties;
@@ -82,34 +88,34 @@ public class HackathonAIEngineV2 {
     }
 
     /**
-     * Review all projects from ZIP files in a directory
+     * Review all projects from ZIP files in a hierarchical directory structure
+     * Structure: FolderA (root) -> FolderB (subfolders) -> ZipC (zip files)
+     * Only processes FolderB that contains done.txt file
      */
-    public BatchResult reviewAllProjects(String zipDirectory) {
-        log.info("Starting batch review for all projects in: {}", zipDirectory);
+    public BatchResult reviewAllProjects(String rootDirectory) {
+        log.info("Starting batch review for all projects in: {}", rootDirectory);
         long startTime = System.currentTimeMillis();
 
         BatchResult batchResult = new BatchResult();
         batchResult.setStartTime(LocalDateTime.now());
 
         try {
-            // Find all ZIP files
-            Path zipDir = Paths.get(zipDirectory);
-            if (!Files.exists(zipDir) || !Files.isDirectory(zipDir)) {
-                String error = "Directory does not exist or is not a directory: " + zipDirectory;
+            // Validate root directory (FolderA)
+            Path rootDir = Paths.get(rootDirectory);
+            if (!Files.exists(rootDir) || !Files.isDirectory(rootDir)) {
+                String error = "Directory does not exist or is not a directory: " + rootDirectory;
                 log.error(error);
                 batchResult.setSuccess(false);
                 batchResult.setErrorMessage(error);
                 return batchResult;
             }
 
-            List<Path> zipFiles = Files.list(zipDir)
-                    .filter(path -> path.toString().toLowerCase().endsWith(".zip"))
-                    .collect(Collectors.toList());
+            // Find all subfolders (FolderB) that contain done.txt
+            List<Path> eligibleFolders = findEligibleFolders(rootDir);
+            log.info("Found {} eligible folders (with done.txt) to process", eligibleFolders.size());
 
-            log.info("Found {} ZIP files to process", zipFiles.size());
-            batchResult.setTotalProjects(zipFiles.size());
-
-            if (zipFiles.isEmpty()) {
+            if (eligibleFolders.isEmpty()) {
+                log.info("No eligible folders found. Make sure subfolders contain 'done.txt' file.");
                 batchResult.setSuccess(true);
                 batchResult.setEndTime(LocalDateTime.now());
                 return batchResult;
@@ -118,23 +124,43 @@ public class HackathonAIEngineV2 {
             // Create temp extraction directory
             Files.createDirectories(tempExtractDir);
 
-            // Get list of already reviewed projects to skip
-            Set<String> completedProjects = getCompletedProjects();
-            log.info("Found {} already completed projects, will skip them", completedProjects.size());
+            // Load completed reviews from CSV
+            Map<String, CompletedReview> completedReviews = loadCompletedReviews();
+            log.info("Found {} already completed reviews in CSV", completedReviews.size());
 
-            // Create tasks for projects that haven't been reviewed yet
+            // Create tasks for each eligible folder
             List<ProjectReviewTask> tasks = new ArrayList<>();
-            for (Path zipFile : zipFiles) {
-                String projectName = ZipUtil.getProjectNameFromZip(zipFile);
-                if (completedProjects.contains(projectName)) {
-                    log.info("Skipping already reviewed project: {}", projectName);
+            for (Path folderB : eligibleFolders) {
+                String folderBName = folderB.getFileName().toString();
+
+                // Find the latest ZIP file in this folder
+                Path latestZip = findLatestZipFile(folderB);
+                if (latestZip == null) {
+                    log.warn("No ZIP files found in folder: {}", folderBName);
+                    continue;
+                }
+
+                String zipFileName = latestZip.getFileName().toString();
+                String taskKey = folderBName + "|" + zipFileName;
+
+                // Check if already completed
+                if (completedReviews.containsKey(taskKey)) {
+                    log.info("Skipping already reviewed: {} - {}", folderBName, zipFileName);
                     batchResult.incrementSkipped();
                     continue;
                 }
-                tasks.add(new ProjectReviewTask(projectName, zipFile));
+
+                tasks.add(new ProjectReviewTask(folderBName, latestZip));
             }
 
+            batchResult.setTotalProjects(tasks.size() + batchResult.getSkippedCount());
             log.info("Will process {} new projects with {} threads", tasks.size(), batchThreadPoolSize);
+
+            if (tasks.isEmpty()) {
+                batchResult.setSuccess(true);
+                batchResult.setEndTime(LocalDateTime.now());
+                return batchResult;
+            }
 
             // Process projects in parallel using thread pool
             ExecutorService executorService = Executors.newFixedThreadPool(batchThreadPoolSize);
@@ -152,11 +178,14 @@ public class HackathonAIEngineV2 {
                     batchResult.addProjectResult(result);
 
                     if (result.isSuccess()) {
-                        log.info("Successfully reviewed project: {} (Score: {})",
-                            result.getProjectName(), result.getScore());
+                        log.info("Successfully reviewed: {} - {} (Score: {})",
+                            result.getFolderBName(), result.getZipFileName(), result.getScore());
+
+                        // Append to CSV
+                        appendToCompletedReviewsCsv(result);
                     } else {
-                        log.error("Failed to review project: {} - {}",
-                            result.getProjectName(), result.getErrorMessage());
+                        log.error("Failed to review: {} - {} - {}",
+                            result.getFolderBName(), result.getZipFileName(), result.getErrorMessage());
                     }
                 } catch (ExecutionException e) {
                     log.error("Task execution failed", e);
@@ -203,22 +232,138 @@ public class HackathonAIEngineV2 {
     }
 
     /**
+     * Find all subfolders that contain done.txt file
+     */
+    private List<Path> findEligibleFolders(Path rootDir) throws IOException {
+        List<Path> eligibleFolders = new ArrayList<>();
+
+        try (Stream<Path> folders = Files.list(rootDir)) {
+            folders.filter(Files::isDirectory).forEach(folderB -> {
+                Path doneFile = folderB.resolve(DONE_MARKER_FILE);
+                if (Files.exists(doneFile)) {
+                    eligibleFolders.add(folderB);
+                    log.debug("Found eligible folder: {}", folderB.getFileName());
+                }
+            });
+        }
+
+        return eligibleFolders;
+    }
+
+    /**
+     * Find the latest (most recently modified) ZIP file in a folder
+     */
+    private Path findLatestZipFile(Path folder) throws IOException {
+        try (Stream<Path> files = Files.list(folder)) {
+            return files
+                .filter(path -> path.toString().toLowerCase().endsWith(".zip"))
+                .max(Comparator.comparingLong(path -> {
+                    try {
+                        return Files.getLastModifiedTime(path).toMillis();
+                    } catch (IOException e) {
+                        log.warn("Failed to get last modified time for: {}", path, e);
+                        return 0L;
+                    }
+                }))
+                .orElse(null);
+        }
+    }
+
+    /**
+     * Load completed reviews from CSV file
+     */
+    private Map<String, CompletedReview> loadCompletedReviews() {
+        Map<String, CompletedReview> completed = new HashMap<>();
+
+        try {
+            Path csvPath = Paths.get(properties.getProcessor().getOutputPath(), CSV_FILENAME);
+            if (!Files.exists(csvPath)) {
+                // Create CSV file with header
+                Files.createDirectories(csvPath.getParent());
+                Files.writeString(csvPath, CSV_HEADER, StandardCharsets.UTF_8);
+                return completed;
+            }
+
+            List<String> lines = Files.readAllLines(csvPath, StandardCharsets.UTF_8);
+            for (int i = 1; i < lines.size(); i++) { // Skip header
+                String line = lines.get(i).trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split(",", 5);
+                if (parts.length >= 4) {
+                    String folderB = parts[0];
+                    String zipFileName = parts[1];
+                    String key = folderB + "|" + zipFileName;
+
+                    CompletedReview review = new CompletedReview();
+                    review.folderBName = folderB;
+                    review.zipFileName = zipFileName;
+                    review.score = parts[2];
+                    review.reportFileName = parts[3];
+                    if (parts.length >= 5) {
+                        review.completedTime = parts[4];
+                    }
+
+                    completed.put(key, review);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Failed to load completed reviews CSV", e);
+        }
+
+        return completed;
+    }
+
+    /**
+     * Append a completed review to the CSV file
+     */
+    private synchronized void appendToCompletedReviewsCsv(ProjectReviewResult result) {
+        try {
+            Path csvPath = Paths.get(properties.getProcessor().getOutputPath(), CSV_FILENAME);
+
+            String scoreStr = result.getScore() != null ?
+                String.format("%.1f", result.getScore()) : "N/A";
+            String reportFileName = result.getReportPath() != null ?
+                result.getReportPath().getFileName().toString() : "";
+            String completedTime = LocalDateTime.now().format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+            String csvLine = String.format("%s,%s,%s,%s,%s\n",
+                result.getFolderBName(),
+                result.getZipFileName(),
+                scoreStr,
+                reportFileName,
+                completedTime);
+
+            Files.writeString(csvPath, csvLine, StandardCharsets.UTF_8,
+                java.nio.file.StandardOpenOption.CREATE,
+                java.nio.file.StandardOpenOption.APPEND);
+
+            log.debug("Appended to CSV: {}", csvLine.trim());
+        } catch (IOException e) {
+            log.error("Failed to append to completed reviews CSV", e);
+        }
+    }
+
+    /**
      * Process a single project (extract, review, cleanup)
+     * Report naming: FolderBName-Score-ZipFileName.md
      */
     private ProjectReviewResult processProject(ProjectReviewTask task) {
         ProjectReviewResult result = new ProjectReviewResult();
-        result.setProjectName(task.getProjectName());
+        result.setFolderBName(task.getFolderBName());
+        result.setZipFileName(task.getZipFilePath().getFileName().toString());
         result.setStartTime(LocalDateTime.now());
 
         Path extractedPath = null;
 
         try {
             // Extract ZIP
-            log.info("Extracting project: {}", task.getProjectName());
+            log.info("Extracting project from folder {}: {}", task.getFolderBName(), result.getZipFileName());
             extractedPath = ZipUtil.extractZip(task.getZipFilePath(), tempExtractDir);
 
             // Review project
-            log.info("Reviewing project: {}", task.getProjectName());
+            log.info("Reviewing project: {}/{}", task.getFolderBName(), result.getZipFileName());
             AIConfig aiConfig = properties.getAi();
 
             // Create processor config with custom output path
@@ -244,9 +389,13 @@ public class HackathonAIEngineV2 {
                 Double score = ScoreExtractor.extractScore(processResult.getContent());
                 result.setScore(score);
 
-                // Generate report filename with score
-                String reportFileName = task.getProjectName() + "_" +
-                    ScoreExtractor.formatScoreForFilename(score) + "_review-report.md";
+                // Get ZIP file name without extension for report
+                String zipNameWithoutExt = ZipUtil.getProjectNameFromZip(task.getZipFilePath());
+
+                // Generate report filename: FolderBName-Score-ZipFileName.md
+                String reportFileName = task.getFolderBName() + "-" +
+                    ScoreExtractor.formatScoreForFilename(score) + "-" +
+                    zipNameWithoutExt + ".md";
                 Path reportPath = Paths.get(properties.getProcessor().getOutputPath(), reportFileName);
 
                 // Write report with score in filename
@@ -256,24 +405,28 @@ public class HackathonAIEngineV2 {
                 result.setReportPath(reportPath);
                 result.setSuccess(true);
 
-                log.info("Project {} reviewed successfully with score: {}", task.getProjectName(), score);
+                log.info("Project {}/{} reviewed successfully with score: {}",
+                    task.getFolderBName(), result.getZipFileName(), score);
             } else {
                 result.setSuccess(false);
                 result.setErrorMessage(processResult.getErrorMessage());
-                log.error("Project {} review failed: {}", task.getProjectName(), processResult.getErrorMessage());
+                log.error("Project {}/{} review failed: {}",
+                    task.getFolderBName(), result.getZipFileName(), processResult.getErrorMessage());
             }
 
         } catch (Exception e) {
             result.setSuccess(false);
             result.setErrorMessage(e.getMessage());
-            log.error("Failed to process project: {}", task.getProjectName(), e);
+            log.error("Failed to process project {}/{}: {}",
+                task.getFolderBName(), result.getZipFileName(), e.getMessage(), e);
         } finally {
             // Cleanup extracted directory
             if (extractedPath != null) {
                 try {
                     ZipUtil.cleanupExtractedDir(extractedPath);
                 } catch (Exception e) {
-                    log.warn("Failed to cleanup extracted directory for {}", task.getProjectName(), e);
+                    log.warn("Failed to cleanup extracted directory for {}/{}",
+                        task.getFolderBName(), result.getZipFileName(), e);
                 }
             }
         }
@@ -282,43 +435,7 @@ public class HackathonAIEngineV2 {
         return result;
     }
 
-    /**
-     * Get list of already completed projects by checking existing reports
-     */
-    private Set<String> getCompletedProjects() {
-        Set<String> completed = new HashSet<>();
 
-        try {
-            Path reportDir = Paths.get(properties.getProcessor().getOutputPath());
-            if (!Files.exists(reportDir)) {
-                return completed;
-            }
-
-            Files.list(reportDir)
-                .filter(path -> path.toString().endsWith("-review-report.md"))
-                .forEach(path -> {
-                    String fileName = path.getFileName().toString();
-                    // Extract project name from filename like "projectName_85_5_review-report.md"
-                    int lastUnderscore = fileName.lastIndexOf("_review-report.md");
-                    if (lastUnderscore > 0) {
-                        String fullName = fileName.substring(0, lastUnderscore);
-                        // Find the last score pattern (X_Y_review-report.md)
-                        int scoreStart = fullName.lastIndexOf("_");
-                        if (scoreStart > 0) {
-                            int prevUnderscore = fullName.lastIndexOf("_", scoreStart - 1);
-                            if (prevUnderscore > 0) {
-                                String projectName = fullName.substring(0, prevUnderscore);
-                                completed.add(projectName);
-                            }
-                        }
-                    }
-                });
-        } catch (IOException e) {
-            log.warn("Failed to scan for completed projects", e);
-        }
-
-        return completed;
-    }
 
     /**
      * Generate a summary report for the batch review
@@ -380,13 +497,19 @@ public class HackathonAIEngineV2 {
      */
     @Data
     public static class ProjectReviewResult {
-        private String projectName;
+        private String folderBName;
+        private String zipFileName;
         private boolean success;
         private Double score;
         private String errorMessage;
         private Path reportPath;
         private LocalDateTime startTime;
         private LocalDateTime endTime;
+
+        // For backward compatibility with summary report
+        public String getProjectName() {
+            return folderBName + "/" + zipFileName;
+        }
     }
 
     /**
@@ -424,13 +547,25 @@ public class HackathonAIEngineV2 {
      */
     @Data
     public static class ProjectReviewTask {
-        private final String projectName;
+        private final String folderBName;
         private final Path zipFilePath;
 
-        public ProjectReviewTask(String projectName, Path zipFilePath) {
-            this.projectName = projectName;
+        public ProjectReviewTask(String folderBName, Path zipFilePath) {
+            this.folderBName = folderBName;
             this.zipFilePath = zipFilePath;
         }
+    }
+
+    /**
+     * Inner class for completed review record from CSV
+     */
+    @Data
+    static class CompletedReview {
+        String folderBName;
+        String zipFileName;
+        String score;
+        String reportFileName;
+        String completedTime;
     }
 }
 

@@ -31,7 +31,7 @@ ai-reviewer:
     sys-prompt: "You are an experienced hackathon review expert."
     #use String.format(userPrompt,code/content) to insert code snippet
     user-prompt: |-
-      Reply in English, Please conduct a comprehensive assessment based on the following project source code and provide a score and detailed comments.
+      Reply in English, Please first read the README file to understand the background and goals of the project, then analyze the project source code for a comprehensive assessment, and provide a score and detailed comments.
 
       Scoring Criteria (Total 100 Points):
       1. Innovation (25 Points) - Uniqueness and creativity of ideas
@@ -75,7 +75,7 @@ ai-reviewer:
       (Summary evaluation within 200 words)
       
       【Please begin analyze】
-      Project source code: %s
+      Project content: %s
     temperature: 0.7
     max-tokens: 8190 # 生成的最大内容限制
     timeout-seconds: 600
