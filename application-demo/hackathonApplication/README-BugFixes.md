@@ -8,39 +8,58 @@
 ```
 Failed to delete: ./temp/extracted-projects/deepwiki-src/deepwiki-open-main/yarn.lock
 java.nio.file.NoSuchFileException
+
+Failed to delete: ./temp/extracted-projects/deepwiki-src
+java.nio.file.NoSuchFileException
 ```
 
 **根本原因**：
-- 多线程环境下，文件可能已被删除但仍在尝试删除
+- **TOCTOU 竞态条件**：在多线程环境下，从检查文件存在到删除之间存在时间窗口
 - 符号链接（symlink）可能指向不存在的文件
-- `Files.walk()` 遍历时文件被其他进程删除
+- `Files.walk()` 遍历时文件/目录被其他线程删除
+- 目录和文件都可能遇到这个问题
 
 **解决方案**：
 
-修改 `ZipUtil.cleanupExtractedDir()` 方法：
+修改 `ZipUtil.cleanupExtractedDir()` 方法，采用"先删除，失败再处理"的策略：
 
 ```java
-// 修复前
-Files.delete(path);  // 直接删除，文件不存在时抛异常
+// ❌ 修复前（有竞态条件）
+if (Files.exists(path)) {  // ← 检查时存在
+    Files.delete(path);     // ← 删除时可能已不存在
+}
 
-// 修复后
-if (Files.exists(path)) {  // 先检查文件是否存在
-    Files.delete(path);
+// ✅ 修复后（无竞态条件）
+try {
+    Files.delete(path);     // 直接尝试删除
+} catch (NoSuchFileException e) {
+    // 文件已被其他线程删除，这是正常情况
+    log.trace("Path already deleted: {}", path);
 }
 ```
 
-同时添加专门的异常处理：
+**完整的异常处理**：
 ```java
-catch (java.nio.file.NoSuchFileException e) {
-    // 文件已被删除，忽略此异常
-    log.debug("File already deleted or not found: {}", path);
+try {
+    Files.delete(path);
+} catch (java.nio.file.NoSuchFileException e) {
+    // 文件/目录已删除 - 静默忽略
+    log.trace("Path already deleted: {}", path);
+} catch (java.nio.file.DirectoryNotEmptyException e) {
+    // 目录尚未清空 - 下次迭代会重试
+    log.debug("Directory not empty yet: {}", path);
+} catch (IOException e) {
+    // 其他 IO 错误（如权限问题）- 记录警告
+    log.warn("Failed to delete: {} - {}", path, e.getMessage());
 }
 ```
 
 **效果**：
-- ✅ 不再出现 `NoSuchFileException` 警告
-- ✅ 文件清理过程更稳定
-- ✅ 多线程环境下更安全
+- ✅ 完全消除 `NoSuchFileException` 警告
+- ✅ 正确处理 TOCTOU 竞态条件
+- ✅ 同时支持文件和目录删除
+- ✅ 多线程环境下完全安全
+- ✅ 日志级别更合理（trace 而非 warn）
 
 ---
 

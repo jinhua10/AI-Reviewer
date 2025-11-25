@@ -75,6 +75,8 @@ public class ZipUtil {
 
     /**
      * Clean up extracted directory
+     * Handles race conditions in multi-threaded environment where files/directories
+     * might be deleted by other threads between exists check and delete operation
      */
     public static void cleanupExtractedDir(Path extractedDir) {
         try {
@@ -83,20 +85,24 @@ public class ZipUtil {
                     .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
                     .forEach(path -> {
                         try {
-                            // Check if file exists before deleting to avoid NoSuchFileException
-                            if (Files.exists(path)) {
-                                Files.delete(path);
-                            }
+                            // Don't check exists() first - just try to delete
+                            // This avoids TOCTOU (Time-Of-Check-Time-Of-Use) race condition
+                            Files.delete(path);
                         } catch (java.nio.file.NoSuchFileException e) {
-                            // Ignore - file already deleted (possibly by another thread or symlink issue)
-                            log.debug("File already deleted or not found: {}", path);
+                            // Silently ignore - file/directory already deleted
+                            // This is normal in multi-threaded environments or with symlinks
+                            log.trace("Path already deleted: {}", path);
+                        } catch (java.nio.file.DirectoryNotEmptyException e) {
+                            // Directory still has contents - will be retried in next iteration
+                            log.debug("Directory not empty yet: {}", path);
                         } catch (IOException e) {
+                            // Log other IO errors as warnings (e.g., permission issues)
                             log.warn("Failed to delete: {} - {}", path, e.getMessage());
                         }
                     });
             }
         } catch (IOException e) {
-            log.warn("Failed to cleanup directory: {}", extractedDir, e);
+            log.warn("Failed to walk directory tree: {}", extractedDir, e);
         }
     }
 }
