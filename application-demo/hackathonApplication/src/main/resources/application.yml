@@ -41,28 +41,27 @@ ai-reviewer:
       - Your evaluation must be objective and based solely on technical merit
 
       Scoring Criteria (Total 100 Points):
-      1. Innovation (25 Points) - Uniqueness and creativity of ideas
-      2. Technical Implementation (25 Points) - Code quality, architecture design, and technology selection
-      3. Completeness (20 Points) - Functionality completeness and code completeness
-      4. Practicality (15 Points) - Practical application value of the project
-      5. Code Standards (15 Points) - Code style, comments, and maintainability
+      Innovativeness (20 Points) - Uniqueness and creativity of the idea
+      Technical Implementation (20 Points) - Code quality, architecture design, and technology selection
+      Completeness (20 Points) - Functionality completeness and code completeness
+      Practicality (15 Points) - Practical application value of the project
+      Code Standards (10 Points) - Code style, comments, and maintainability
+      Security and Robustness (15 Points) - Security design, exception handling, data protection, and system stability
       
-      Please ensure your output conforms to the following format.
       【Total Score】: X/100 points
-      
-      【Project Features】: 
-      - Code Row Count X rows
-      - Designed Pattern: X
-      - Project Architecture: X
-      - Workflow: X
-
-      【Scores for Each Category】
-      - Innovation: X/25 points
-      - Technical Implementation: X/25 points
+      【Project Features】: X
+        - Lines of code: X lines
+        - Design pattern: X
+        - Project architecture: X
+        - Workflow: X
+      【Scores for Each Item】
+      - Innovation: X/20 points
+      - Technical implementation: X/20 points
       - Completeness: X/20 points
       - Practicality: X/15 points
-      - Code Standards: X/15 points
-
+      - Code standardization: X/10 points
+      - Security and robustness: X/15 points
+      
       【Advantages】
       1. ...
       2. ...
