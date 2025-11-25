@@ -75,5 +75,40 @@ public class ScoreExtractor {
         String formatted = String.format("%.1f", score);
         return formatted.replace(".", "_");
     }
+
+    /**
+     * Extract Overall Comment from AI response content
+     * @param content The AI response content
+     * @return The extracted overall comment, or empty string if not found
+     */
+    public static String extractOverallComment(String content) {
+        if (content == null || content.isEmpty()) {
+            log.warn("Empty content provided for overall comment extraction");
+            return "";
+        }
+
+        // Pattern to match overall comment section
+        // Matches: 【Overall Comment】 or 【Overall Comment】: followed by content
+        Pattern pattern = Pattern.compile(
+            "(?:【)?Overall Comment(?:】)?\\s*[:\\：]?\\s*\\n?(.+?)(?=\\n\\n|\\n【|$)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(content);
+        if (matcher.find()) {
+            String comment = matcher.group(1).trim();
+            // Remove any leading/trailing whitespace and newlines
+            comment = comment.replaceAll("^\\s+|\\s+$", "");
+            // Replace internal newlines with spaces for CSV compatibility
+            comment = comment.replaceAll("\\n+", " ");
+            // Escape quotes for CSV
+            comment = comment.replace("\"", "\"\"");
+            log.debug("Extracted overall comment: {} chars", comment.length());
+            return comment;
+        }
+
+        log.warn("No overall comment found in content");
+        return "";
+    }
 }
 

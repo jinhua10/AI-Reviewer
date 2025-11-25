@@ -39,7 +39,7 @@ public class HackathonAIEngineV2 {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
     private static final String CSV_FILENAME = "completed-reviews.csv";
-    private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime\n";
+    private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime,OverallComment\n";
     private static final String DONE_MARKER_FILE = "done.txt";
     private static final long DEFAULT_SCAN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -406,7 +406,7 @@ public class HackathonAIEngineV2 {
                 String line = lines.get(i).trim();
                 if (line.isEmpty()) continue;
 
-                String[] parts = line.split(",", 5);
+                String[] parts = line.split(",", 6);
                 if (parts.length >= 4) {
                     String folderB = parts[0];
                     String zipFileName = parts[1];
@@ -419,6 +419,9 @@ public class HackathonAIEngineV2 {
                     review.reportFileName = parts[3];
                     if (parts.length >= 5) {
                         review.completedTime = parts[4];
+                    }
+                    if (parts.length >= 6) {
+                        review.overallComment = parts[5];
                     }
 
                     completed.put(key, review);
@@ -444,13 +447,17 @@ public class HackathonAIEngineV2 {
                 result.getReportPath().getFileName().toString() : "";
             String completedTime = LocalDateTime.now().format(
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String overallComment = result.getOverallComment() != null ?
+                result.getOverallComment() : "";
 
-            String csvLine = String.format("%s,%s,%s,%s,%s\n",
+            // Wrap overall comment in quotes for CSV if it contains commas or quotes
+            String csvLine = String.format("%s,%s,%s,%s,%s,\"%s\"\n",
                 result.getFolderBName(),
                 result.getZipFileName(),
                 scoreStr,
                 reportFileName,
-                completedTime);
+                completedTime,
+                overallComment);
 
             Files.writeString(csvPath, csvLine, StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE,
@@ -514,6 +521,10 @@ public class HackathonAIEngineV2 {
                 // Extract score from content
                 Double score = ScoreExtractor.extractScore(processResult.getContent());
                 result.setScore(score);
+
+                // Extract overall comment from content
+                String overallComment = ScoreExtractor.extractOverallComment(processResult.getContent());
+                result.setOverallComment(overallComment);
 
                 // Get ZIP file name without extension for report
                 String zipNameWithoutExt = ZipUtil.getProjectNameFromZip(task.getZipFilePath());
@@ -631,6 +642,7 @@ public class HackathonAIEngineV2 {
         private Path reportPath;
         private LocalDateTime startTime;
         private LocalDateTime endTime;
+        private String overallComment;
 
         // For backward compatibility with summary report
         public String getProjectName() {
@@ -692,6 +704,7 @@ public class HackathonAIEngineV2 {
         String score;
         String reportFileName;
         String completedTime;
+        String overallComment;
     }
 }
 
