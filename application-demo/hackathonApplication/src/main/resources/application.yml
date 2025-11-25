@@ -105,10 +105,3 @@ ai-reviewer:
 spring:
   application:
     name: ai-reviewer
-# Logging Configuration
-logging:
-  level:
-    root: INFO
-    top.yumbo.ai: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
