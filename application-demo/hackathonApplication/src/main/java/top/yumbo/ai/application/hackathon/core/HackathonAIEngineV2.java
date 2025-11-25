@@ -41,6 +41,7 @@ public class HackathonAIEngineV2 {
     private static final String CSV_FILENAME = "completed-reviews.csv";
     private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime\n";
     private static final String DONE_MARKER_FILE = "done.txt";
+    private static final long DEFAULT_SCAN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
     private final HackathonAIEngine baseEngine;
     private final AIReviewerProperties properties;
@@ -92,6 +93,115 @@ public class HackathonAIEngineV2 {
                 .build();
 
         return baseEngine.execute(context);
+    }
+
+    /**
+     * Execute download script to sync files from remote
+     */
+    private boolean executeDownloadScript() {
+        String scriptPath = properties.getBatch() != null && properties.getBatch().getDownloadScriptPath() != null
+                ? properties.getBatch().getDownloadScriptPath()
+                : "/home/jinhua/AI-Reviewer/download";
+
+        log.info("Executing download script: {}", scriptPath);
+
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder(scriptPath);
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            // Wait for script to complete
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0) {
+                log.info("Download script completed successfully");
+                return true;
+            } else {
+                log.error("Download script failed with exit code: {}", exitCode);
+                return false;
+            }
+        } catch (IOException e) {
+            log.error("Failed to execute download script: {}", e.getMessage(), e);
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Download script execution interrupted", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get total count of completed reviews from CSV
+     */
+    private int getCompletedReviewsCount() {
+        try {
+            Path csvPath = Paths.get(properties.getProcessor().getOutputPath(), CSV_FILENAME);
+            if (!Files.exists(csvPath)) {
+                return 0;
+            }
+
+            List<String> lines = Files.readAllLines(csvPath, StandardCharsets.UTF_8);
+            // Subtract 1 for header line
+            return Math.max(0, lines.size() - 1);
+        } catch (IOException e) {
+            log.warn("Failed to count completed reviews", e);
+            return 0;
+        }
+    }
+
+    /**
+     * Review all projects with continuous monitoring
+     * Executes download script every 2 minutes and rescans for new done.txt files
+     * Structure: FolderA (root) -> FolderB (subfolders) -> ZipC (zip files)
+     * Only processes FolderB that contains done.txt file
+     */
+    public void reviewAllProjectsContinuous(String rootDirectory) {
+        log.info("Starting continuous batch review for all projects in: {}", rootDirectory);
+        log.info("Will execute download script and rescan every {} minutes",
+                properties.getBatch() != null && properties.getBatch().getScanIntervalMinutes() != null
+                        ? properties.getBatch().getScanIntervalMinutes() : 2);
+
+        long scanIntervalMs = properties.getBatch() != null && properties.getBatch().getScanIntervalMinutes() != null
+                ? properties.getBatch().getScanIntervalMinutes() * 60 * 1000L
+                : DEFAULT_SCAN_INTERVAL_MS;
+
+        while (true) {
+            try {
+                // Execute download script
+                executeDownloadScript();
+
+                // Wait a bit for file system to sync
+                Thread.sleep(2000);
+
+                // Review all available projects
+                reviewAllProjects(rootDirectory);
+
+                // Print total completed count from CSV
+                int totalCompleted = getCompletedReviewsCount();
+                log.info("========================================");
+                log.info("CSV总记录数 (Total completed reviews): {}", totalCompleted);
+                log.info("========================================");
+
+                // Wait for next scan interval
+                log.info("Waiting {} minutes before next scan...",
+                        scanIntervalMs / 60000);
+                Thread.sleep(scanIntervalMs);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.info("Continuous review interrupted, shutting down...");
+                break;
+            } catch (Exception e) {
+                log.error("Error in continuous review loop", e);
+                // Continue even if there's an error
+                try {
+                    Thread.sleep(scanIntervalMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -347,6 +457,10 @@ public class HackathonAIEngineV2 {
                 java.nio.file.StandardOpenOption.APPEND);
 
             log.debug("Appended to CSV: {}", csvLine.trim());
+
+            // Print total completed count
+            int totalCompleted = getCompletedReviewsCount();
+            log.info("✅ Review completed and recorded. CSV总记录数: {}", totalCompleted);
         } catch (IOException e) {
             log.error("Failed to append to completed reviews CSV", e);
         }

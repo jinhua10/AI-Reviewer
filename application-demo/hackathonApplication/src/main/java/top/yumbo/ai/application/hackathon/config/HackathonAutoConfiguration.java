@@ -163,8 +163,8 @@ public class HackathonAutoConfiguration {
 
             // Execute based on mode
             if (reviewAllPath != null) {
-                // Batch review mode
-                runBatchReview(hackathonAIEngineV2, reviewAllPath);
+                // Batch review mode with continuous monitoring
+                runBatchReviewContinuous(hackathonAIEngineV2, reviewAllPath);
             } else if (reviewPath != null) {
                 // Single review mode
                 runReview(hackathonAIEngine, aiReviewerProperties, reviewPath);
@@ -218,6 +218,13 @@ public class HackathonAutoConfiguration {
         } else {
             log.error("Batch review failed: {}", result.getErrorMessage());
         }
+    }
+
+    private void runBatchReviewContinuous(HackathonAIEngineV2 engineV2, String zipDirectory) {
+        log.info("Starting continuous batch code review with periodic sync for: {}", zipDirectory);
+
+        // This method will run indefinitely, rescanning every 2 minutes
+        engineV2.reviewAllProjectsContinuous(zipDirectory);
     }
 
 }

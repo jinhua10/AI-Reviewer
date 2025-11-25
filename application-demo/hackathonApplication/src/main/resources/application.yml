@@ -100,6 +100,8 @@ ai-reviewer:
   batch:
     thread-pool-size: 4
     temp-extract-dir: ./temp/extracted-projects
+    download-script-path: /home/jinhua/AI-Reviewer/download
+    scan-interval-minutes: 2
 # Spring Boot Configuration
 spring:
   application:
