@@ -83,9 +83,15 @@ public class ZipUtil {
                     .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
                     .forEach(path -> {
                         try {
-                            Files.delete(path);
+                            // Check if file exists before deleting to avoid NoSuchFileException
+                            if (Files.exists(path)) {
+                                Files.delete(path);
+                            }
+                        } catch (java.nio.file.NoSuchFileException e) {
+                            // Ignore - file already deleted (possibly by another thread or symlink issue)
+                            log.debug("File already deleted or not found: {}", path);
                         } catch (IOException e) {
-                            log.warn("Failed to delete: {}", path, e);
+                            log.warn("Failed to delete: {} - {}", path, e.getMessage());
                         }
                     });
             }

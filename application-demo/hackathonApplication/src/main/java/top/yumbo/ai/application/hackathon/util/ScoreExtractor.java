@@ -17,6 +17,12 @@ public class ScoreExtractor {
         Pattern.CASE_INSENSITIVE
     );
 
+    // Pattern for Chinese format "【总分】: 85/100 分"
+    private static final Pattern CHINESE_SCORE_PATTERN = Pattern.compile(
+        "【?总分】?\\s*[:\\：]\\s*(\\d+(?:\\.\\d+)?)/100",
+        Pattern.CASE_INSENSITIVE
+    );
+
     // Alternative pattern for score at the beginning
     private static final Pattern SCORE_ALT_PATTERN = Pattern.compile(
         "Score\\s*[:\\：]\\s*(\\d+(?:\\.\\d+)?)",
@@ -34,12 +40,24 @@ public class ScoreExtractor {
             return null;
         }
 
-        // Try primary pattern first
-        Matcher matcher = TOTAL_SCORE_PATTERN.matcher(content);
+        // Try Chinese pattern first
+        Matcher matcher = CHINESE_SCORE_PATTERN.matcher(content);
         if (matcher.find()) {
             try {
                 double score = Double.parseDouble(matcher.group(1));
-                log.debug("Extracted score: {}", score);
+                log.debug("Extracted score (Chinese): {}", score);
+                return score;
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse score: {}", matcher.group(1), e);
+            }
+        }
+
+        // Try English pattern
+        matcher = TOTAL_SCORE_PATTERN.matcher(content);
+        if (matcher.find()) {
+            try {
+                double score = Double.parseDouble(matcher.group(1));
+                log.debug("Extracted score (English): {}", score);
                 return score;
             } catch (NumberFormatException e) {
                 log.warn("Failed to parse score: {}", matcher.group(1), e);
@@ -87,28 +105,51 @@ public class ScoreExtractor {
             return "";
         }
 
-        // Pattern to match overall comment section
-        // Matches: 【Overall Comment】 or 【Overall Comment】: followed by content
-        Pattern pattern = Pattern.compile(
+        // Pattern to match Chinese overall comment section "【总体评语】"
+        Pattern chinesePattern = Pattern.compile(
+            "【?总体评语】?\\s*[:\\：]?\\s*\\n?(.+?)(?=\\n\\n|\\n【|$)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = chinesePattern.matcher(content);
+        if (matcher.find()) {
+            String comment = matcher.group(1).trim();
+            comment = cleanComment(comment);
+            log.debug("Extracted overall comment (Chinese): {} chars", comment.length());
+            return comment;
+        }
+
+        // Pattern to match English overall comment section
+        Pattern englishPattern = Pattern.compile(
             "(?:【)?Overall Comment(?:】)?\\s*[:\\：]?\\s*\\n?(.+?)(?=\\n\\n|\\n【|$)",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
-        Matcher matcher = pattern.matcher(content);
+        matcher = englishPattern.matcher(content);
         if (matcher.find()) {
             String comment = matcher.group(1).trim();
-            // Remove any leading/trailing whitespace and newlines
-            comment = comment.replaceAll("^\\s+|\\s+$", "");
-            // Replace internal newlines with spaces for CSV compatibility
-            comment = comment.replaceAll("\\n+", " ");
-            // Escape quotes for CSV
-            comment = comment.replace("\"", "\"\"");
-            log.debug("Extracted overall comment: {} chars", comment.length());
+            comment = cleanComment(comment);
+            log.debug("Extracted overall comment (English): {} chars", comment.length());
             return comment;
         }
 
         log.warn("No overall comment found in content");
         return "";
+    }
+
+    /**
+     * Clean comment text for CSV storage
+     */
+    private static String cleanComment(String comment) {
+        // Remove any leading/trailing whitespace and newlines
+        comment = comment.replaceAll("^\\s+|\\s+$", "");
+        // Replace internal newlines with spaces for CSV compatibility
+        comment = comment.replaceAll("\\n+", " ");
+        // Remove parenthetical notes like (200字内简明总结...)
+        comment = comment.replaceAll("\\([^)]*字[^)]*\\)", "");
+        // Escape quotes for CSV
+        comment = comment.replace("\"", "\"\"");
+        return comment.trim();
     }
 }
 
