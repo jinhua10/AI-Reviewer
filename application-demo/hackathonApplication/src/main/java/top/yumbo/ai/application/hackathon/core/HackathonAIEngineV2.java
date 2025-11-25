@@ -106,9 +106,36 @@ public class HackathonAIEngineV2 {
         log.info("Executing download script: {}", scriptPath);
 
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder(scriptPath);
+            // Check if script file exists
+            File scriptFile = new File(scriptPath);
+            if (!scriptFile.exists()) {
+                log.error("Download script not found: {}", scriptPath);
+                return false;
+            }
+
+            // Use shell to execute the script on Unix-like systems
+            ProcessBuilder processBuilder;
+            String osName = System.getProperty("os.name").toLowerCase();
+
+            if (osName.contains("win")) {
+                // Windows
+                processBuilder = new ProcessBuilder("cmd.exe", "/c", scriptPath);
+            } else {
+                // Unix-like systems (Linux, Mac)
+                processBuilder = new ProcessBuilder("/bin/bash", scriptPath);
+            }
+
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
+
+            // Capture and log output
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    log.debug("Script output: {}", line);
+                }
+            }
 
             // Wait for script to complete
             int exitCode = process.waitFor();
