@@ -39,9 +39,11 @@ public class HackathonAIEngineV2 {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
     private static final String CSV_FILENAME = "completed-reviews.csv";
-    private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime,OverallComment\n";
+    private static final String CSV_HEADER = "FolderB,ZipFileName,Score,ReportFileName,CompletedTime,OverallComment,RetryCount\n";
     private static final String DONE_MARKER_FILE = "done.txt";
     private static final long DEFAULT_SCAN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+    private static final double MIN_VALID_SCORE = 30.0; // Minimum valid score threshold
+    private static final int MAX_RETRY_ATTEMPTS = 3; // Maximum retry attempts for low scores
 
     private final HackathonAIEngine baseEngine;
     private final AIReviewerProperties properties;
@@ -433,7 +435,7 @@ public class HackathonAIEngineV2 {
                 String line = lines.get(i).trim();
                 if (line.isEmpty()) continue;
 
-                String[] parts = line.split(",", 6);
+                String[] parts = line.split(",", 7);
                 if (parts.length >= 4) {
                     String folderB = parts[0];
                     String zipFileName = parts[1];
@@ -449,6 +451,13 @@ public class HackathonAIEngineV2 {
                     }
                     if (parts.length >= 6) {
                         review.overallComment = parts[5];
+                    }
+                    if (parts.length >= 7) {
+                        try {
+                            review.retryCount = Integer.parseInt(parts[6]);
+                        } catch (NumberFormatException e) {
+                            review.retryCount = 0;
+                        }
                     }
 
                     completed.put(key, review);
@@ -478,13 +487,14 @@ public class HackathonAIEngineV2 {
                 result.getOverallComment() : "";
 
             // Wrap overall comment in quotes for CSV if it contains commas or quotes
-            String csvLine = String.format("%s,%s,%s,%s,%s,\"%s\"\n",
+            String csvLine = String.format("%s,%s,%s,%s,%s,\"%s\",%d\n",
                 result.getFolderBName(),
                 result.getZipFileName(),
                 scoreStr,
                 reportFileName,
                 completedTime,
-                overallComment);
+                overallComment,
+                result.getRetryCount());
 
             Files.writeString(csvPath, csvLine, StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE,
@@ -503,79 +513,105 @@ public class HackathonAIEngineV2 {
     /**
      * Process a single project (extract, review, cleanup)
      * Report naming: FolderBName-Score-ZipFileName.md
+     * Retry logic: If score is 0 or < 30, retry up to 3 times
      */
     private ProjectReviewResult processProject(ProjectReviewTask task) {
         ProjectReviewResult result = new ProjectReviewResult();
         result.setFolderBName(task.getFolderBName());
         result.setZipFileName(task.getZipFilePath().getFileName().toString());
         result.setStartTime(LocalDateTime.now());
+        result.setRetryCount(0);
 
         Path extractedPath = null;
 
         try {
-            // Extract ZIP
+            // Extract ZIP once
             log.info("Extracting project from folder {}: {}", task.getFolderBName(), result.getZipFileName());
             extractedPath = ZipUtil.extractZip(task.getZipFilePath(), tempExtractDir);
 
-            // Review project
-            log.info("Reviewing project: {}/{}", task.getFolderBName(), result.getZipFileName());
-            AIConfig aiConfig = properties.getAi();
+            // Retry loop: up to MAX_RETRY_ATTEMPTS times
+            for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+                log.info("Reviewing project: {}/{} (Attempt {}/{})",
+                    task.getFolderBName(), result.getZipFileName(), attempt, MAX_RETRY_ATTEMPTS);
 
-            // Create processor config with custom output path
-            ProcessorConfig processorConfig = ProcessorConfig.builder()
-                    .processorType(properties.getProcessor().getType())
-                    .outputFormat(properties.getProcessor().getOutputFormat())
-                    .outputPath(null) // Will be set after getting score
-                    .build();
+                AIConfig aiConfig = properties.getAi();
 
-            ExecutionContext context = ExecutionContext.builder()
-                    .targetDirectory(extractedPath)
-                    .includePatterns(properties.getScanner().getIncludePatterns())
-                    .excludePatterns(properties.getScanner().getExcludePatterns())
-                    .aiConfig(aiConfig)
-                    .processorConfig(processorConfig)
-                    .threadPoolSize(properties.getExecutor().getThreadPoolSize())
-                    .build();
+                // Create processor config with custom output path
+                ProcessorConfig processorConfig = ProcessorConfig.builder()
+                        .processorType(properties.getProcessor().getType())
+                        .outputFormat(properties.getProcessor().getOutputFormat())
+                        .outputPath(null) // Will be set after getting score
+                        .build();
 
-            // Execute review with automatic anti-cheat filtering and README priority sorting
-            // The baseEngine (HackathonAIEngine) will:
-            // 1. Apply anti-cheat filter to remove suspicious comments
-            // 2. Sort files with README.md first
-            // 3. Build prompt and send to AI for review
-            ProcessResult processResult = baseEngine.execute(context);
+                ExecutionContext context = ExecutionContext.builder()
+                        .targetDirectory(extractedPath)
+                        .includePatterns(properties.getScanner().getIncludePatterns())
+                        .excludePatterns(properties.getScanner().getExcludePatterns())
+                        .aiConfig(aiConfig)
+                        .processorConfig(processorConfig)
+                        .threadPoolSize(properties.getExecutor().getThreadPoolSize())
+                        .build();
 
-            if (processResult.isSuccess()) {
-                // Extract score from content
-                Double score = ScoreExtractor.extractScore(processResult.getContent());
-                result.setScore(score);
+                // Execute review with automatic anti-cheat filtering and README priority sorting
+                ProcessResult processResult = baseEngine.execute(context);
 
-                // Extract overall comment from content
-                String overallComment = ScoreExtractor.extractOverallComment(processResult.getContent());
-                result.setOverallComment(overallComment);
+                if (processResult.isSuccess()) {
+                    // Extract score from content
+                    Double score = ScoreExtractor.extractScore(processResult.getContent());
+                    result.setScore(score);
 
-                // Get ZIP file name without extension for report
-                String zipNameWithoutExt = ZipUtil.getProjectNameFromZip(task.getZipFilePath());
+                    // Extract overall comment from content
+                    String overallComment = ScoreExtractor.extractOverallComment(processResult.getContent());
+                    result.setOverallComment(overallComment);
 
-                // Generate report filename: FolderBName-Score-ZipFileName.md
-                String reportFileName = task.getFolderBName() + "-" +
-                    ScoreExtractor.formatScoreForFilename(score) + "-" +
-                    zipNameWithoutExt + ".md";
-                Path reportPath = Paths.get(properties.getProcessor().getOutputPath(), reportFileName);
+                    // Check if score is valid (not 0 and >= 30)
+                    boolean isValidScore = score != null && score > 0 && score >= MIN_VALID_SCORE;
 
-                // Write report with score in filename
-                Files.createDirectories(reportPath.getParent());
-                Files.writeString(reportPath, processResult.getContent());
+                    if (!isValidScore && attempt < MAX_RETRY_ATTEMPTS) {
+                        // Score is too low, retry
+                        log.warn("⚠️ Project {}/{} received low score: {} (Attempt {}/{}). Retrying...",
+                            task.getFolderBName(), result.getZipFileName(), score, attempt, MAX_RETRY_ATTEMPTS);
+                        result.setRetryCount(attempt);
+                        continue; // Retry
+                    }
 
-                result.setReportPath(reportPath);
-                result.setSuccess(true);
+                    // Either score is valid, or we've exhausted retries
+                    result.setRetryCount(attempt - 1); // Record actual retry count (0 if first attempt succeeded)
 
-                log.info("Project {}/{} reviewed successfully with score: {}",
-                    task.getFolderBName(), result.getZipFileName(), score);
-            } else {
-                result.setSuccess(false);
-                result.setErrorMessage(processResult.getErrorMessage());
-                log.error("Project {}/{} review failed: {}",
-                    task.getFolderBName(), result.getZipFileName(), processResult.getErrorMessage());
+                    if (!isValidScore) {
+                        // Final attempt still has low score
+                        log.error("❌ Project {}/{} still has low score after {} attempts: {}. Recording final result.",
+                            task.getFolderBName(), result.getZipFileName(), MAX_RETRY_ATTEMPTS, score);
+                    }
+
+                    // Get ZIP file name without extension for report
+                    String zipNameWithoutExt = ZipUtil.getProjectNameFromZip(task.getZipFilePath());
+
+                    // Generate report filename: FolderBName-Score-ZipFileName.md
+                    String reportFileName = task.getFolderBName() + "-" +
+                        ScoreExtractor.formatScoreForFilename(score) + "-" +
+                        zipNameWithoutExt + ".md";
+                    Path reportPath = Paths.get(properties.getProcessor().getOutputPath(), reportFileName);
+
+                    // Write report with score in filename
+                    Files.createDirectories(reportPath.getParent());
+                    Files.writeString(reportPath, processResult.getContent());
+
+                    result.setReportPath(reportPath);
+                    result.setSuccess(true);
+
+                    log.info("✅ Project {}/{} reviewed successfully with score: {} (Retry count: {})",
+                        task.getFolderBName(), result.getZipFileName(), score, result.getRetryCount());
+
+                    break; // Success, exit retry loop
+
+                } else {
+                    result.setSuccess(false);
+                    result.setErrorMessage(processResult.getErrorMessage());
+                    log.error("Project {}/{} review failed: {}",
+                        task.getFolderBName(), result.getZipFileName(), processResult.getErrorMessage());
+                    break; // API call failed, don't retry
+                }
             }
 
         } catch (Exception e) {
@@ -670,6 +706,7 @@ public class HackathonAIEngineV2 {
         private LocalDateTime startTime;
         private LocalDateTime endTime;
         private String overallComment;
+        private int retryCount;
 
         // For backward compatibility with summary report
         public String getProjectName() {
@@ -732,6 +769,7 @@ public class HackathonAIEngineV2 {
         String reportFileName;
         String completedTime;
         String overallComment;
+        int retryCount;
     }
 }
 
