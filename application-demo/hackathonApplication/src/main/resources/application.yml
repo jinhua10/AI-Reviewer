@@ -151,3 +151,23 @@ ai-reviewer:
 spring:
   application:
     name: ai-reviewer
+  # Web server configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 500MB
+      max-request-size: 500MB
+      file-size-threshold: 10MB
+  # Thymeleaf configuration
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+    mode: HTML
+
+# Server configuration
+server:
+  port: 8080
+  compression:
+    enabled: true
+  tomcat:
+    max-swallow-size: 500MB

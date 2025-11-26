@@ -14,6 +14,8 @@ import top.yumbo.ai.application.hackathon.core.HackathonAIEngine;
 import top.yumbo.ai.application.hackathon.core.HackathonAIEngineV2;
 import top.yumbo.ai.application.hackathon.parser.HackathonFileParser;
 import top.yumbo.ai.application.hackathon.processor.HackathonCodeReviewProcessor;
+import top.yumbo.ai.application.hackathon.web.service.AccountService;
+import top.yumbo.ai.application.hackathon.web.service.FileUploadService;
 import top.yumbo.ai.core.context.ExecutionContext;
 import top.yumbo.ai.core.registry.AdapterRegistry;
 import top.yumbo.ai.starter.config.AIReviewerProperties;
@@ -91,7 +93,9 @@ public class HackathonAutoConfiguration {
 
     @Bean
     public CommandLineRunner runner(HackathonAIEngine hackathonAIEngine,
-                                     HackathonAIEngineV2 hackathonAIEngineV2) {
+                                     HackathonAIEngineV2 hackathonAIEngineV2,
+                                     AccountService accountService,
+                                     FileUploadService fileUploadService) {
         return args -> {
             log.info("AI Reviewer Started - Hackathon AIEngine bean found: {}", hackathonAIEngine != null);
             log.info("Configuration: {}", aiReviewerProperties);
@@ -163,13 +167,20 @@ public class HackathonAutoConfiguration {
 
             // Execute based on mode
             if (reviewAllPath != null) {
+                // Initialize web services for upload functionality
+                final String finalReviewAllPath = reviewAllPath;
+                log.info("Initializing web services for project path: {}", finalReviewAllPath);
+                accountService.loadAccounts(finalReviewAllPath);
+                fileUploadService.setProjectRootPath(finalReviewAllPath);
+
                 // Batch review mode with continuous monitoring
-                runBatchReviewContinuous(hackathonAIEngineV2, reviewAllPath);
+                runBatchReviewContinuous(hackathonAIEngineV2, finalReviewAllPath);
             } else if (reviewPath != null) {
                 // Single review mode
                 runReview(hackathonAIEngine, aiReviewerProperties, reviewPath);
             } else {
-                log.info("No --review or --reviewAll argument provided; application started without running a review.");
+                log.info("No --review or --reviewAll argument provided; web interface is available for uploads.");
+                log.info("Please use --reviewAll=<path> to enable batch review mode with web uploads.");
             }
         };
     }
