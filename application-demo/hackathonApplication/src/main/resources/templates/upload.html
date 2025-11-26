@@ -337,7 +337,7 @@
             <div th:if="${hasDone}" style="margin-bottom: 20px;">
                 <span class="done-badge">提交已完成</span>
                 <p style="color: #666; margin-top: 10px; font-size: 14px;">
-                    您的项目已提交，AI评审系统将很快处理。
+                    您的项目已提交，AI评审系统将很快处理。分数和评审结果不会提前告知，管理员会后台监控评分情况确保都能够进行AI打分。
                 </p>
             </div>
 
@@ -449,7 +449,7 @@
             // 第一次确认
             if (confirm('⚠️ 第一次确认：\n\n确定要标记提交完成吗？\n\n标记后将无法继续上传或修改文件。')) {
                 // 第二次确认
-                if (confirm('⚠️ 第二次确认：\n\n请再次确认您的决定！\n\n标记完成后：\n1. 无法再上传新文件\n2. 无法修改已上传的文件\n3. AI系统将立即开始评审\n\n是否继续？')) {
+                if (confirm('⚠️ 第二次确认：\n\n请再次确认您的决定！\n\n标记完成后：\n1. 无法再上传新文件\n2. 无法修改已上传的文件 3.管理员会后台监控评分情况确保都能够进行AI打分\n\n是否继续？')) {
                     // 两次确认都通过，提交表单
                     document.getElementById('doneForm').submit();
                 }
