@@ -48,7 +48,7 @@ public class UploadController {
      * 处理登录请求
      */
     @PostMapping("/login")
-    public String login(@RequestParam String accessCode,
+    public String login(@RequestParam("accessCode") String accessCode,
                        HttpServletResponse response,
                        RedirectAttributes redirectAttributes) {
 
@@ -103,7 +103,7 @@ public class UploadController {
      * 处理文件上传
      */
     @PostMapping("/upload")
-    public String handleFileUpload(@RequestParam("file") MultipartFile file,
+    public String handleFileUpload(@RequestParam(value = "file") MultipartFile file,
                                    HttpServletRequest request,
                                    RedirectAttributes redirectAttributes) {
 
