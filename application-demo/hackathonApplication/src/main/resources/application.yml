@@ -148,7 +148,7 @@ ai-reviewer:
     # 是否启用下载脚本（true=启用脚本下载，false=仅Web上传模式）
     enable-download-script: false
     download-script-path: /home/jinhua/AI-Reviewer/download
-    scan-interval-minutes: 1
+    scan-interval-minutes: 2
 # Spring Boot Configuration
 spring:
   application:
