@@ -45,6 +45,7 @@ public class AIReviewerProperties {
     public static class Batch {
         private Integer threadPoolSize = 4;
         private String tempExtractDir = "./temp/extracted-projects";
+        private Boolean enableDownloadScript = false;
         private String downloadScriptPath = "/home/jinhua/AI-Reviewer/download";
         private Integer scanIntervalMinutes = 2;
     }

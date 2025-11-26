@@ -145,8 +145,10 @@ ai-reviewer:
   batch:
     thread-pool-size: 4
     temp-extract-dir: ./temp/extracted-projects
+    # 是否启用下载脚本（true=启用脚本下载，false=仅Web上传模式）
+    enable-download-script: false
     download-script-path: /home/jinhua/AI-Reviewer/download
-    scan-interval-minutes: 2
+    scan-interval-minutes: 1
 # Spring Boot Configuration
 spring:
   application:
