@@ -324,9 +324,9 @@
             <div class="info-box">
                 <strong>📋 使用说明：</strong>
                 1. 将项目打包为ZIP文件上传<br>
-                2. 可以上传多个ZIP文件<br>
-                3. 所有文件上传完毕后点击"标记完成"<br>
-                4. 标记完成后AI将自动评审您的项目
+                2. 所有文件上传完毕后点击"标记完成"<br>
+                3. 标记完成后AI将自动评审您的项目<br>
+                4. 如需修改，请联系管理员 重置状态(Yu, Jinhua: jyu10@statestreet.com)
             </div>
         </div>
 
@@ -353,10 +353,10 @@
             </div>
 
             <div class="btn-group" th:if="${!hasDone and uploadedFiles != null and uploadedFiles.length > 0}">
-                <form action="/done" method="post" style="display: inline;">
-                    <button type="submit"
+                <form action="/done" method="post" style="display: inline;" id="doneForm">
+                    <button type="button"
                             class="btn btn-success"
-                            onclick="return confirm('确定要标记提交完成吗？标记后将无法继续上传文件。');">
+                            onclick="confirmSubmit()">
                         ✓ 标记完成
                     </button>
                 </form>
@@ -442,6 +442,18 @@
                     uploadBtn.textContent = '上传中...';
                 }
             });
+        }
+
+        // 两次确认提交完成
+        function confirmSubmit() {
+            // 第一次确认
+            if (confirm('⚠️ 第一次确认：\n\n确定要标记提交完成吗？\n\n标记后将无法继续上传或修改文件。')) {
+                // 第二次确认
+                if (confirm('⚠️ 第二次确认：\n\n请再次确认您的决定！\n\n标记完成后：\n1. 无法再上传新文件\n2. 无法修改已上传的文件\n3. AI系统将立即开始评审\n\n是否继续？')) {
+                    // 两次确认都通过，提交表单
+                    document.getElementById('doneForm').submit();
+                }
+            }
         }
     </script>
 </body>
