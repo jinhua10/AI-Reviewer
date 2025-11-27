@@ -3,19 +3,54 @@ ai-reviewer:
   # File scanner configuration
   scanner:
     include-patterns:
+      # Backend languages
       - "**/*.java"
       - "**/*.py"
-      - "**/*.js"
       - "**/*.go"
-      - "**/*.ts"
-      - "**/*.tsx"
-      - "**/*.vue"
       - "**/*.cs"         # C# source files
       - "**/*.cpp"        # C++ source files
       - "**/*.cc"         # C++ source files (alternative)
       - "**/*.cxx"        # C++ source files (alternative)
       - "**/*.h"          # C/C++ header files
       - "**/*.hpp"        # C++ header files
+      # JavaScript/TypeScript
+      - "**/*.js"
+      - "**/*.jsx"        # React JavaScript
+      - "**/*.ts"
+      - "**/*.tsx"        # React TypeScript
+      - "**/*.mjs"        # ES Module JavaScript
+      - "**/*.cjs"        # CommonJS JavaScript
+      # Vue.js
+      - "**/*.vue"
+      # HTML/CSS
+      - "**/*.html"
+      - "**/*.htm"
+      - "**/*.css"
+      - "**/*.scss"       # Sass
+      - "**/*.sass"       # Sass (indented syntax)
+      - "**/*.less"       # Less
+      - "**/*.styl"       # Stylus
+      - "**/*.stylus"     # Stylus
+      # Modern CSS
+      - "**/*.module.css"  # CSS Modules
+      - "**/*.module.scss" # SCSS Modules
+      # Svelte
+      - "**/*.svelte"
+      # Angular
+      - "**/*.component.ts"
+      - "**/*.component.html"
+      - "**/*.service.ts"
+      # Configuration files (JSON, YAML, TOML)
+      - "**/*.json"
+      - "**/*.json5"
+      - "**/*.jsonc"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.toml"
+      # Other web technologies
+      - "**/*.xml"
+      - "**/*.md"         # Markdown
+      - "**/*.mdx"        # MDX (Markdown + JSX)
     exclude-patterns:
       - "**/target/**"
       - "**/build/**"
