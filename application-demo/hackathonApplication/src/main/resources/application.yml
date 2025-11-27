@@ -10,6 +10,12 @@ ai-reviewer:
       - "**/*.ts"
       - "**/*.tsx"
       - "**/*.vue"
+      - "**/*.cs"         # C# source files
+      - "**/*.cpp"        # C++ source files
+      - "**/*.cc"         # C++ source files (alternative)
+      - "**/*.cxx"        # C++ source files (alternative)
+      - "**/*.h"          # C/C++ header files
+      - "**/*.hpp"        # C++ header files
     exclude-patterns:
       - "**/target/**"
       - "**/build/**"
@@ -20,6 +26,12 @@ ai-reviewer:
       - "**/.next/**"         # Next.js build output
       - "**/coverage/**"      # Test coverage reports
       - "**/__pycache__/**"   # Python cache
+      - "**/bin/**"           # C#/C++ binary output
+      - "**/obj/**"           # C# object files
+      - "**/Debug/**"         # C#/C++ debug output
+      - "**/Release/**"       # C#/C++ release output
+      - "**/packages/**"      # NuGet packages
+      - "**/out/**"           # CMake output
     max-file-size: "10MB"
   # Parser configuration
   parser:
