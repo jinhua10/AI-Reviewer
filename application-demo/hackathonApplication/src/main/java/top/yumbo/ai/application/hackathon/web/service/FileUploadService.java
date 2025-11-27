@@ -102,5 +102,41 @@ public class FileUploadService {
                 .map(p -> p.getFileName().toString())
                 .toArray(String[]::new);
     }
+
+    /**
+     * 删除指定的zip文件
+     */
+    public void deleteZipFile(String teamId, String fileName) throws IOException {
+        // 验证文件名
+        if (fileName == null || fileName.trim().isEmpty()) {
+            throw new IOException("文件名不能为空");
+        }
+
+        if (!fileName.toLowerCase().endsWith(".zip")) {
+            throw new IOException("只能删除ZIP文件");
+        }
+
+        // 安全检查：防止路径遍历攻击
+        if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            throw new IOException("非法的文件名");
+        }
+
+        Path teamDir = Paths.get(projectRootPath, teamId);
+        Path filePath = teamDir.resolve(fileName);
+
+        // 检查文件是否存在
+        if (!Files.exists(filePath)) {
+            throw new IOException("文件不存在: " + fileName);
+        }
+
+        // 检查文件是否在团队目录内（安全检查）
+        if (!filePath.normalize().startsWith(teamDir.normalize())) {
+            throw new IOException("非法的文件路径");
+        }
+
+        // 删除文件
+        Files.delete(filePath);
+        log.info("文件删除成功: {}", filePath);
+    }
 }
 

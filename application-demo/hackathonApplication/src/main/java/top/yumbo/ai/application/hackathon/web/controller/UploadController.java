@@ -157,6 +157,41 @@ public class UploadController {
     }
 
     /**
+     * 删除已上传的文件
+     */
+    @PostMapping("/delete")
+    public String deleteFile(@RequestParam("fileName") String fileName,
+                            HttpServletRequest request,
+                            RedirectAttributes redirectAttributes) {
+        String accessCode = getAccessCodeFromCookie(request);
+        AccountService.TeamAccount account = accountService.validateAccessCode(accessCode);
+
+        if (account == null) {
+            redirectAttributes.addFlashAttribute("error", "请先登录。");
+            return "redirect:/";
+        }
+
+        // 检查是否已经标记完成
+        if (fileUploadService.hasDoneFile(account.getTeamId())) {
+            redirectAttributes.addFlashAttribute("error", "提交已完成，无法删除文件。");
+            return "redirect:/upload";
+        }
+
+        try {
+            fileUploadService.deleteZipFile(account.getTeamId(), fileName);
+            redirectAttributes.addFlashAttribute("success",
+                "文件删除成功: " + fileName);
+            log.info("团队 {} 删除文件: {}", account.getTeamId(), fileName);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error",
+                "文件删除失败: " + e.getMessage());
+            log.error("文件删除失败，团队: {}, 文件: {}", account.getTeamId(), fileName, e);
+        }
+
+        return "redirect:/upload";
+    }
+
+    /**
      * 退出登录
      */
     @GetMapping("/logout")

@@ -216,6 +216,7 @@
             align-items: center;
             color: #333;
             font-size: 14px;
+            flex: 1;
         }
 
         .file-item-name::before {
@@ -226,6 +227,28 @@
         .file-item-size {
             color: #999;
             font-size: 12px;
+        }
+
+        .btn-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-delete:hover {
+            background: #ff3838;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
 
         .done-badge {
@@ -356,6 +379,19 @@
             <div class="file-list" th:if="${uploadedFiles != null and uploadedFiles.length > 0}">
                 <div class="file-item" th:each="file : ${uploadedFiles}">
                     <span class="file-item-name" th:text="${file}">project.zip</span>
+                    <form th:if="${!hasDone}"
+                          action="/delete"
+                          method="post"
+                          style="display: inline;"
+                          th:attr="data-filename=${file}"
+                          class="delete-form">
+                        <input type="hidden" name="fileName" th:value="${file}">
+                        <button type="button"
+                                class="btn-delete"
+                                onclick="confirmDelete(this)">
+                            🗑️ 删除
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -465,6 +501,19 @@
                     // 两次确认都通过，提交表单
                     document.getElementById('doneForm').submit();
                 }
+            }
+        }
+
+        // 删除文件确认
+        function confirmDelete(button) {
+            const form = button.closest('.delete-form');
+            const fileName = form.getAttribute('data-filename');
+
+            if (confirm('⚠️ 确认删除\n\n确定要删除文件 "' + fileName + '" 吗？\n\n此操作无法撤销。')) {
+                // 禁用按钮防止重复点击
+                button.disabled = true;
+                button.textContent = '删除中...';
+                form.submit();
             }
         }
     </script>

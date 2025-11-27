@@ -185,10 +185,10 @@ public class HackathonAIEngineV2 {
      * Only processes FolderB that contains done.txt file
      */
     public void reviewAllProjectsContinuous(String rootDirectory) {
-        boolean enableDownloadScript = properties.getBatch() != null
+        boolean enableDownloadScript = properties.getBatch() != null 
                 && properties.getBatch().getEnableDownloadScript() != null
                 && properties.getBatch().getEnableDownloadScript();
-
+        
         log.info("Starting continuous batch review for all projects in: {}", rootDirectory);
         log.info("Download script mode: {}", enableDownloadScript ? "ENABLED" : "DISABLED (Web upload only)");
         log.info("Will rescan every {} minutes",
