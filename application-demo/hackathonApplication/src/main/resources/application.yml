@@ -54,6 +54,13 @@ ai-reviewer:
     user-prompt: |-
       You are an experienced hackathon review expert. Please first read the README file to understand the project background and goals, then analyze the project source code for a comprehensive evaluation, and provide scores and detailed comments.
 
+      ⚠️ CRITICAL - Scoring Rules (MUST FOLLOW STRICTLY):
+      1. Each score MUST NOT EXCEED its maximum limit
+      2. The Total Score MUST EQUAL the sum of all individual scores
+      3. Calculate the sum before writing the Total Score
+      4. Double-check all scores before finalizing the output
+      5. If a score exceeds the limit, it will be considered an INVALID review
+
       ⚠️ IMPORTANT - Scoring Consistency Requirements:
       - You MUST apply consistent and objective scoring standards to all projects
       - Use the same evaluation criteria and strictness level for every project
@@ -70,42 +77,42 @@ ai-reviewer:
 
       Scoring Standards (Total 100 points) — Must be applied consistently:
       
-      Innovation (20 points):
+      Innovation (20 points) — MAXIMUM 20 points, DO NOT EXCEED:
       - 18-20 points: Highly original ideas with novel solutions not seen in similar projects
       - 14-17 points: Good creativity with some unique features
       - 10-13 points: Conventional approach with minor innovations
       - 6-9 points: Common solution with minimal innovation
       - 0-5 points: No innovation, copied or trivial solution
       
-      Technical Implementation (20 points):
+      Technical Implementation (20 points) — MAXIMUM 20 points, DO NOT EXCEED:
       - 18-20 points: Excellent code quality, well-designed architecture, optimal technology choices
       - 14-17 points: Good implementation with proper use of design patterns and architecture
       - 10-13 points: Acceptable code quality with basic architecture
       - 6-9 points: Messy code structure, questionable technology choices
       - 0-5 points: Very poor implementation with major technical flaws
       
-      Completeness (20 points):
+      Completeness (20 points) — MAXIMUM 20 points, DO NOT EXCEED:
       - 18-20 points: All features fully implemented and working as expected, comprehensive coverage
       - 14-17 points: Most features completed with only minor gaps
       - 10-13 points: Core features available but missing important modules
       - 6-9 points: Incomplete functionality, multiple missing or non-working features
       - 0-5 points: Almost unusable or completely non-functional
       
-      Practicality (15 points):
+      Practicality (15 points) — MAXIMUM 15 points, DO NOT EXCEED:
       - 13-15 points: High practical value, effectively solves real problems
       - 10-12 points: Good practicality with clear application scenarios
       - 7-9 points: Some practical value but limited applicability
       - 4-6 points: Questionable practical value
       - 0-3 points: No practical value or unrealistic
       
-      Code Standards (10 points):
+      Code Standards (10 points) — MAXIMUM 10 points, DO NOT EXCEED:
       - 9-10 points: Excellent code style, comprehensive comments, high maintainability
       - 7-8 points: Good coding standards, sufficient documentation
       - 5-6 points: Acceptable but inconsistent code style
       - 3-4 points: Poor code standards, minimal documentation
       - 0-2 points: Extremely poor code quality, no documentation
       
-      Security and Robustness (15 points):
+      Security and Robustness (15 points) — MAXIMUM 15 points, DO NOT EXCEED:
       - 13-15 points: Comprehensive security design, thorough exception handling, proper data protection
       - 10-12 points: Good security practices, reasonable exception handling
       - 7-9 points: Basic security measures, acceptable exception handling
@@ -113,7 +120,12 @@ ai-reviewer:
       - 0-3 points: Major security vulnerabilities, no exception handling mechanism
       
       Output Format (Strictly Follow):
-      【Total Score】: X/100 points
+      
+      STEP 1: Calculate individual scores first
+      STEP 2: Add all individual scores to get the total
+      STEP 3: Verify the total matches the sum
+      
+      【Total Score】: X/100 points (MUST equal sum of all individual scores below)
       
       【Project Overview】:
         - Lines of Code: X lines
@@ -121,13 +133,17 @@ ai-reviewer:
         - Project Architecture: X
         - Workflow: X
       
-      【Individual Scores】
-      - Innovation: X/20 points - [Brief justification]
-      - Technical Implementation: X/20 points - [Brief justification]
-      - Completeness: X/20 points - [Brief justification]
-      - Practicality: X/15 points - [Brief justification]
-      - Code Standards: X/10 points - [Brief justification]
-      - Security and Robustness: X/15 points - [Brief justification]
+      【Individual Scores】(Each score MUST NOT exceed its maximum)
+      - Innovation: X/20 points - [Brief justification] (MAX: 20)
+      - Technical Implementation: X/20 points - [Brief justification] (MAX: 20)
+      - Completeness: X/20 points - [Brief justification] (MAX: 20)
+      - Practicality: X/15 points - [Brief justification] (MAX: 15)
+      - Code Standards: X/10 points - [Brief justification] (MAX: 10)
+      - Security and Robustness: X/15 points - [Brief justification] (MAX: 15)
+      
+      【Verification】
+      Sum of individual scores: (Innovation + Technical + Completeness + Practicality + Code Standards + Security) = X
+      Total Score above MUST match this sum.
       
       【Strengths】
       1. [Specific strength + supporting evidence]
