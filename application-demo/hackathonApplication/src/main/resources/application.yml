@@ -6,11 +6,20 @@ ai-reviewer:
       - "**/*.java"
       - "**/*.py"
       - "**/*.js"
+      - "**/*.go"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.vue"
     exclude-patterns:
       - "**/target/**"
       - "**/build/**"
       - "**/node_modules/**"
       - "**/.git/**"
+      - "**/vendor/**"        # Go dependencies
+      - "**/dist/**"          # TypeScript/JavaScript build output
+      - "**/.next/**"         # Next.js build output
+      - "**/coverage/**"      # Test coverage reports
+      - "**/__pycache__/**"   # Python cache
     max-file-size: "10MB"
   # Parser configuration
   parser:
