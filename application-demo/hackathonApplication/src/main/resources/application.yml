@@ -202,6 +202,7 @@ ai-reviewer:
       【Please Begin Analysis】
       Project Content: %s
     temperature: 0
+    top-p: 0.3  # 极度严格模式：只考虑前30%概率token，倾向给更低分和更严格评价
     max-tokens: 8190 # 生成的最大内容限制
     timeout-seconds: 600
     max-retries: 3

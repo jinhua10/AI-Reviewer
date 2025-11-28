@@ -45,6 +45,11 @@ public class AIConfig {
      */
     private Double temperature;
     /**
+     * Top P for nucleus sampling (0.0 to 1.0)
+     * Controls diversity via nucleus sampling: 0.5 means only tokens comprising the top 50% probability mass are considered.
+     */
+    private Double topP;
+    /**
      * Max tokens to generate
      */
     private Integer maxTokens;

@@ -57,6 +57,7 @@ public class HackathonAutoConfiguration {
         log.info("Region: {}", aiConfig.getRegion());
         log.info("Model: {}", aiConfig.getModel());
         log.info("Temperature: {}", aiConfig.getTemperature());
+        log.info("TopP: {}", aiConfig.getTopP());
         log.info("MaxTokens: {}", aiConfig.getMaxTokens());
         log.info("TimeoutSeconds: {}", aiConfig.getTimeoutSeconds());
         log.info("MaxRetries: {}", aiConfig.getMaxRetries());

@@ -38,6 +38,7 @@ public class BedrockAdapter implements IAIService {
     private String modelId;
     private Integer maxTokens;
     private double temperature;
+    private Double topP; // Top P for nucleus sampling
 
     /**
      * 构造函数
@@ -48,6 +49,7 @@ public class BedrockAdapter implements IAIService {
         this.config = config;
         this.maxTokens = config.getMaxTokens();
         this.temperature = config.getTemperature();
+        this.topP = config.getTopP() != null ? config.getTopP() : 0.9; // 默认 0.9
 
         this.modelId = extractModelId(config.getModel());
 
@@ -222,6 +224,21 @@ public class BedrockAdapter implements IAIService {
             requestBody.put("steps", 30);
             requestBody.put("seed", 0);
 
+            // Writer Palmyra 模型系列（新增）
+        } else if (actualModelId.contains("writer.palmyra")) {
+            // Writer Palmyra 使用 Messages API 格式
+            JSONObject message = new JSONObject();
+            message.put("role", "user");
+            message.put("content", prompt);
+            requestBody.put("messages", new Object[]{message});
+            requestBody.put("max_tokens", maxTokens);
+            requestBody.put("temperature", temperature);
+            // Writer Palmyra 支持 top_p 参数
+            if (topP != null) {
+                requestBody.put("top_p", topP);
+                log.debug("Using top_p={} for Writer Palmyra model", topP);
+            }
+
         } else {
             // 默认格式（通用，适用于未知模型）
             log.warn("使用默认请求格式，模型ID: {}", actualModelId);
@@ -231,7 +248,10 @@ public class BedrockAdapter implements IAIService {
             requestBody.put("messages", new Object[]{message});
             requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
-            requestBody.put("top_p", 0.5);
+            // 默认格式也支持 top_p
+            if (topP != null) {
+                requestBody.put("top_p", topP);
+            }
         }
 
         return requestBody.toJSONString();
