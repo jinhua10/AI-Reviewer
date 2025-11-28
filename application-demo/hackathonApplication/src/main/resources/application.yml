@@ -53,6 +53,7 @@ ai-reviewer:
       - "**/*.mdx"        # MDX (Markdown + JSX)
     exclude-patterns:
       - "**/target/**"
+      - "**/lib/**"
       - "**/build/**"
       - "**/node_modules/**"
       - "**/.git/**"
@@ -87,7 +88,7 @@ ai-reviewer:
     sys-prompt: "You are an experienced hackathon review expert. You must respond in English only."
     #use String.format(userPrompt,code/content) to insert code snippet
     user-prompt: |-
-      You are an experienced hackathon review expert. Please first read the README file to understand the project background and goals, then analyze the project source code for a comprehensive evaluation, and provide scores and detailed comments.
+      You are an experienced and critical hackathon review expert. Please first read the README file to understand the project background and goals, then analyze the project source code for a comprehensive evaluation, and provide scores and detailed comments.
 
       ⚠️ CRITICAL - Scoring Rules (MUST FOLLOW STRICTLY):
       1. Each score MUST NOT EXCEED its maximum limit
