@@ -363,6 +363,19 @@
                 </code>
                 <strong style="color: #cc3300;">注意：markdown 不要包含base64的图片信息</strong>
             </div>
+
+            <div class="info-box" style="background: #ffe6e6; border-color: #ffb3b3; color: #cc0000; margin-top: 15px;">
+                <strong>🚨 AI评审扣分项提醒：</strong>
+                为确保获得更好的评审分数，请注意以下事项：
+                <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                    <li><strong>安全问题：</strong>代码中硬编码API密钥、密码、token等敏感信息</li>
+                    <li><strong>代码质量：</strong>缺少单元测试文件、无日志系统(只用print)、异常处理过于宽泛(catch Exception)</li>
+                    <li><strong>创新性：</strong>仅组合现有工具库而无独特改进或创新</li>
+                    <li><strong>实用性：</strong>依赖付费云服务、部署复杂、缺少Docker支持</li>
+                    <li><strong>文档完整性：</strong>缺少依赖文件(requirements.txt等)、部署文档不完整</li>
+                </ul>
+                <strong style="display: block; margin-top: 10px; color: #990000;">💡 建议：使用环境变量管理配置、添加测试用例、实现日志系统、提供完整部署文档</strong>
+            </div>
         </div>
 
         <!-- 已上传文件卡片 -->
@@ -400,7 +413,7 @@
                 尚未上传文件
             </div>
 
-            <div class="btn-group" th:if="${!hasDone and uploadedFiles != null and uploadedFiles.length > 0}">
+            <div class="btn-group" th:if="${!hasDone and uploadedFiles != null and uploadedFiles.length > 0}" style="align-items: center;">
                 <form action="/done" method="post" style="display: inline;" id="doneForm">
                     <button type="button"
                             class="btn btn-success"
@@ -408,6 +421,10 @@
                         ✓ 标记完成
                     </button>
                 </form>
+                <span style="color: #cc0000; font-weight: 600; font-size: 14px; margin-left: 15px; display: inline-flex; align-items: center;">
+                    <span style="font-size: 20px; margin-right: 5px;">⚠️</span>
+                    只有点击"标记完成"后才会进行AI评审
+                </span>
             </div>
         </div>
 
