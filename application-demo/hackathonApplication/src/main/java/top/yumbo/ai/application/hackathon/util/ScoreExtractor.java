@@ -148,9 +148,11 @@ public class ScoreExtractor {
         comment = comment.replaceAll("\\n+", " ");
         // Remove parenthetical notes like (200字内简明总结...)
         comment = comment.replaceAll("\\([^)]*字[^)]*\\)", "");
-        // Remove any remaining closing brackets like "s】" or "】"
-        comment = comment.replaceAll("[s】]*$", "");
-        // Escape quotes for CSV
+        // Remove any remaining closing brackets: "s】", "s]", "】", "]" at the end
+        comment = comment.replaceAll("s[\\]\\u3011]+|[\\]\\u3011]+$", "");
+        // Compress multiple spaces to single space
+        comment = comment.replaceAll("\\s+", " ");
+        // Escape quotes for CSV (double them)
         comment = comment.replace("\"", "\"\"");
         return comment.trim();
     }

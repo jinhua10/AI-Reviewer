@@ -160,6 +160,68 @@ public class HackathonAIEngineV2 {
     }
 
     /**
+     * Escape a field for CSV: wrap in quotes, replace internal quotes with double quotes
+     */
+    private String escapeCsvField(String field) {
+        if (field == null) return "";
+        String cleaned = field.replaceAll("\\r?\\n", " ").trim();
+        // Escape double quotes by doubling them
+        cleaned = cleaned.replace("\"", "\"\"");
+        // Wrap in quotes to handle commas and special characters
+        return "\"" + cleaned + "\"";
+    }
+
+    /**
+     * Sanitize overall comment: remove "s】" and other artifacts, compress whitespace
+     */
+    private String sanitizeOverallComment(String comment) {
+        if (comment == null) return "";
+        String s = comment.trim();
+        // Remove trailing "s】", "s]", "】", "]" patterns
+        s = s.replaceAll("s[\\]\\u3011]+|[\\]\\u3011]+$", "");
+        // Remove leading/trailing brackets
+        s = s.replaceAll("^\\u3010|\\u3011$|^\\[|\\]$", "");
+        // Compress whitespace
+        s = s.replaceAll("\\s+", " ").trim();
+        return s;
+    }
+
+    /**
+     * Parse a CSV line respecting quoted fields and escaped quotes (RFC 4180)
+     */
+    private List<String> parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        if (line == null) return fields;
+
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    // Escaped quote: ""
+                    current.append('"');
+                    i++;
+                } else {
+                    // Toggle quote state
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                // Field separator
+                fields.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        // Add last field
+        fields.add(current.toString());
+        return fields;
+    }
+
+    // ...existing code...
+
+    /**
      * Get total count of completed reviews from CSV
      */
     private int getCompletedReviewsCount() {
@@ -425,7 +487,7 @@ public class HackathonAIEngineV2 {
     }
 
     /**
-     * Load completed reviews from CSV file
+     * Load completed reviews from CSV file (uses RFC 4180 CSV parsing)
      */
     private Map<String, CompletedReview> loadCompletedReviews() {
         Map<String, CompletedReview> completed = new HashMap<>();
@@ -444,26 +506,27 @@ public class HackathonAIEngineV2 {
                 String line = lines.get(i).trim();
                 if (line.isEmpty()) continue;
 
-                String[] parts = line.split(",", 7);
-                if (parts.length >= 4) {
-                    String folderB = parts[0];
-                    String zipFileName = parts[1];
+                List<String> parts = parseCsvLine(line);
+                // Ensure we have at least 4 columns
+                if (parts.size() >= 4) {
+                    String folderB = parts.get(0);
+                    String zipFileName = parts.get(1);
                     String key = folderB + "|" + zipFileName;
 
                     CompletedReview review = new CompletedReview();
                     review.folderBName = folderB;
                     review.zipFileName = zipFileName;
-                    review.score = parts[2];
-                    review.reportFileName = parts[3];
-                    if (parts.length >= 5) {
-                        review.completedTime = parts[4];
+                    review.score = parts.size() > 2 ? parts.get(2) : "";
+                    review.reportFileName = parts.size() > 3 ? parts.get(3) : "";
+                    if (parts.size() >= 5) {
+                        review.completedTime = parts.get(4);
                     }
-                    if (parts.length >= 6) {
-                        review.overallComment = parts[5];
+                    if (parts.size() >= 6) {
+                        review.overallComment = parts.get(5);
                     }
-                    if (parts.length >= 7) {
+                    if (parts.size() >= 7) {
                         try {
-                            review.retryCount = Integer.parseInt(parts[6]);
+                            review.retryCount = Integer.parseInt(parts.get(6));
                         } catch (NumberFormatException e) {
                             review.retryCount = 0;
                         }
@@ -480,7 +543,7 @@ public class HackathonAIEngineV2 {
     }
 
     /**
-     * Append a completed review to the CSV file
+     * Append a completed review to the CSV file (uses RFC 4180 CSV format)
      */
     private synchronized void appendToCompletedReviewsCsv(ProjectReviewResult result) {
         try {
@@ -492,19 +555,25 @@ public class HackathonAIEngineV2 {
                 result.getReportPath().getFileName().toString() : "";
             String completedTime = LocalDateTime.now().format(
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String overallComment = result.getOverallComment() != null ?
+            String overallCommentRaw = result.getOverallComment() != null ?
                 result.getOverallComment() : "";
 
-            // Wrap overall comment in quotes for CSV if it contains commas or quotes
-            String csvLine = String.format("%s,%s,%s,%s,%s,\"%s\",%d\n",
-                result.getFolderBName(),
-                result.getZipFileName(),
-                scoreStr,
-                reportFileName,
-                completedTime,
-                overallComment,
-                result.getRetryCount());
+            // Sanitize and escape overall comment
+            String sanitized = sanitizeOverallComment(overallCommentRaw);
+            String overallCommentField = escapeCsvField(sanitized);
 
+            // Build CSV line using field escaping
+            String csvLine = String.join(",",
+                escapeCsvField(result.getFolderBName()),
+                escapeCsvField(result.getZipFileName()),
+                escapeCsvField(scoreStr),
+                escapeCsvField(reportFileName),
+                escapeCsvField(completedTime),
+                overallCommentField,
+                String.valueOf(result.getRetryCount())
+            ) + "\n";
+
+            Files.createDirectories(csvPath.getParent());
             Files.writeString(csvPath, csvLine, StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE,
                 java.nio.file.StandardOpenOption.APPEND);
