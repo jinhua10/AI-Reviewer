@@ -52,22 +52,115 @@ ai-reviewer:
       - "**/*.md"         # Markdown
       - "**/*.mdx"        # MDX (Markdown + JSX)
     exclude-patterns:
-      - "**/target/**"
-      - "**/lib/**"
-      - "**/build/**"
-      - "**/node_modules/**"
-      - "**/.git/**"
-      - "**/vendor/**"        # Go dependencies
+      # Build output directories
+      - "**/target/**"        # Maven build output
+      - "**/build/**"         # Gradle/general build output
       - "**/dist/**"          # TypeScript/JavaScript build output
-      - "**/.next/**"         # Next.js build output
-      - "**/coverage/**"      # Test coverage reports
-      - "**/__pycache__/**"   # Python cache
+      - "**/out/**"           # General output directory
       - "**/bin/**"           # C#/C++ binary output
       - "**/obj/**"           # C# object files
       - "**/Debug/**"         # C#/C++ debug output
       - "**/Release/**"       # C#/C++ release output
+      - "**/.next/**"         # Next.js build output
+      - "**/.nuxt/**"         # Nuxt.js build output
+      - "**/.output/**"       # Nitro output
+      - "**/.svelte-kit/**"   # SvelteKit build output
+      - "**/public/build/**"  # Public build assets
+
+      # IDE configuration directories
+      - "**/.idea/**"         # JetBrains IDEs (IntelliJ, WebStorm, PyCharm, etc.)
+      - "**/.vscode/**"       # Visual Studio Code
+      - "**/.vs/**"           # Visual Studio
+      - "**/.eclipse/**"      # Eclipse
+      - "**/.settings/**"     # Eclipse settings
+      - "**/.project"         # Eclipse project file
+      - "**/.classpath"       # Eclipse classpath
+      - "**/*.iml"            # IntelliJ module files
+      - "**/*.ipr"            # IntelliJ project files
+      - "**/*.iws"            # IntelliJ workspace files
+      - "**/.fleet/**"        # JetBrains Fleet
+      - "**/.atom/**"         # Atom editor
+      - "**/.sublime-*"       # Sublime Text
+
+      # Dependency directories
+      - "**/node_modules/**"  # Node.js dependencies
+      - "**/vendor/**"        # Go/PHP dependencies
       - "**/packages/**"      # NuGet packages
-      - "**/out/**"           # CMake output
+      - "**/lib/**"           # Library files
+      - "**/.pnp/**"          # Yarn PnP
+      - "**/.yarn/**"         # Yarn cache
+
+      # Version control
+      - "**/.git/**"          # Git repository
+      - "**/.svn/**"          # Subversion
+      - "**/.hg/**"           # Mercurial
+      - "**/.bzr/**"          # Bazaar
+
+      # Cache and temporary files
+      - "**/__pycache__/**"   # Python bytecode cache
+      - "**/*.pyc"            # Python compiled files
+      - "**/*.pyo"            # Python optimized files
+      - "**/.pytest_cache/**" # Pytest cache
+      - "**/.mypy_cache/**"   # MyPy cache
+      - "**/.ruff_cache/**"   # Ruff cache
+      - "**/.cache/**"        # General cache
+      - "**/.temp/**"         # Temporary files
+      - "**/tmp/**"           # Temporary files
+      - "**/.DS_Store"        # macOS metadata
+      - "**/Thumbs.db"        # Windows thumbnail cache
+
+      # Test and coverage reports
+      - "**/coverage/**"      # Test coverage reports
+      - "**/.coverage"        # Python coverage data
+      - "**/htmlcov/**"       # Python HTML coverage
+      - "**/.nyc_output/**"   # NYC coverage
+      - "**/test-results/**"  # Test results
+      - "**/.pytest_results/**" # Pytest results
+
+      # Log files
+      - "**/logs/**"          # Log files
+      - "**/*.log"            # Log files
+
+      # Go specific
+      - "**/go.work.sum"      # Go workspace sum
+
+      # Rust specific
+      - "**/target/**"        # Rust build output (already covered)
+      - "**/Cargo.lock"       # Rust lock file (optional)
+
+      # Ruby specific
+      - "**/.bundle/**"       # Bundler directory
+      - "**/vendor/bundle/**" # Bundled gems
+
+      # Java specific
+      - "**/.gradle/**"       # Gradle cache
+      - "**/.m2/**"           # Maven local repository
+      - "**/gradle-app.setting" # Gradle settings
+
+      # PHP specific
+      - "**/composer.phar"    # Composer executable
+      - "**/vendor/**"        # Composer dependencies (already covered)
+
+      # Python virtual environments
+      - "**/venv/**"          # Virtual environment
+      - "**/.venv/**"         # Virtual environment
+      - "**/env/**"           # Virtual environment
+      - "**/.env/**"          # Virtual environment
+      - "**/virtualenv/**"    # Virtual environment
+      - "**/.virtualenv/**"   # Virtual environment
+      - "**/ENV/**"           # Virtual environment
+      - "**/conda/**"         # Conda environment
+      - "**/.conda/**"        # Conda environment
+
+      # Documentation builds
+      - "**/docs/_build/**"   # Sphinx documentation
+      - "**/site/**"          # MkDocs site
+
+      # OS specific
+      - "**/.Spotlight-V100/**" # macOS Spotlight
+      - "**/.Trashes"         # macOS Trash
+      - "**/ehthumbs.db"      # Windows thumbnail cache
+      - "**/Desktop.ini"      # Windows desktop config
     max-file-size: "200KB"
   # Parser configuration
   parser:
