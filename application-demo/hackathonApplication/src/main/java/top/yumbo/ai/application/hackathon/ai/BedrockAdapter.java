@@ -231,7 +231,7 @@ public class BedrockAdapter implements IAIService {
             requestBody.put("messages", new Object[]{message});
             requestBody.put("max_tokens", maxTokens);
             requestBody.put("temperature", temperature);
-//            requestBody.put("top_p", 0.9);
+            requestBody.put("top_p", 0.5);
         }
 
         return requestBody.toJSONString();
