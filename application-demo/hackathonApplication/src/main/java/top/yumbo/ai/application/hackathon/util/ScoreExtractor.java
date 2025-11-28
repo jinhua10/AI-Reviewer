@@ -120,8 +120,9 @@ public class ScoreExtractor {
         }
 
         // Pattern to match English overall comment section
+        // Support variations: "【Overall Comments】", "Overall Comments:", "【Overall Comment】", "Overall Comment:"
         Pattern englishPattern = Pattern.compile(
-            "(?:【)?Overall Comment(?:】)?\\s*[:\\：]?\\s*\\n?(.+?)(?=\\n\\n|\\n【|$)",
+            "(?:【)?Overall Comments?(?:】)?\\s*[:\\：]?\\s*\\n?(.+?)(?=\\n\\n|\\n【|$)",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
@@ -147,6 +148,8 @@ public class ScoreExtractor {
         comment = comment.replaceAll("\\n+", " ");
         // Remove parenthetical notes like (200字内简明总结...)
         comment = comment.replaceAll("\\([^)]*字[^)]*\\)", "");
+        // Remove any remaining closing brackets like "s】" or "】"
+        comment = comment.replaceAll("[s】]*$", "");
         // Escape quotes for CSV
         comment = comment.replace("\"", "\"\"");
         return comment.trim();
