@@ -72,6 +72,43 @@ public class HackathonAIEngineV2 {
     }
 
     /**
+     * Parse maxFileSize string (e.g., "10MB", "200KB") to bytes
+     */
+    private Long parseMaxFileSize(String maxFileSizeStr) {
+        if (maxFileSizeStr == null || maxFileSizeStr.trim().isEmpty()) {
+            log.debug("No maxFileSize configured, using default: 10MB");
+            return 10 * 1024 * 1024L; // Default 10MB
+        }
+
+        String upper = maxFileSizeStr.toUpperCase().trim();
+        long multiplier = 1;
+        String numStr = upper;
+
+        if (upper.endsWith("GB")) {
+            multiplier = 1024 * 1024 * 1024;
+            numStr = upper.substring(0, upper.length() - 2).trim();
+        } else if (upper.endsWith("MB")) {
+            multiplier = 1024 * 1024;
+            numStr = upper.substring(0, upper.length() - 2).trim();
+        } else if (upper.endsWith("KB")) {
+            multiplier = 1024;
+            numStr = upper.substring(0, upper.length() - 2).trim();
+        } else if (upper.endsWith("B")) {
+            multiplier = 1;
+            numStr = upper.substring(0, upper.length() - 1).trim();
+        }
+
+        try {
+            long size = Long.parseLong(numStr) * multiplier;
+            log.info("Parsed maxFileSize: {} = {} bytes ({} KB)", maxFileSizeStr, size, size / 1024);
+            return size;
+        } catch (NumberFormatException e) {
+            log.warn("Invalid maxFileSize format: {}, using default 10MB", maxFileSizeStr, e);
+            return 10 * 1024 * 1024L;
+        }
+    }
+
+    /**
      * Review a single project (original behavior)
      */
     public ProcessResult reviewSingleProject(String targetPath) {
@@ -85,10 +122,14 @@ public class HackathonAIEngineV2 {
                     new File(targetPath).getName() + "-review-report.md"))
                 .build();
 
+        // Parse maxFileSize from configuration
+        Long maxFileSize = parseMaxFileSize(properties.getScanner().getMaxFileSize());
+
         ExecutionContext context = ExecutionContext.builder()
                 .targetDirectory(Paths.get(targetPath))
                 .includePatterns(properties.getScanner().getIncludePatterns())
                 .excludePatterns(properties.getScanner().getExcludePatterns())
+                .maxFileSize(maxFileSize)
                 .aiConfig(aiConfig)
                 .processorConfig(processorConfig)
                 .threadPoolSize(properties.getExecutor().getThreadPoolSize())
@@ -545,6 +586,9 @@ public class HackathonAIEngineV2 {
 
                 AIConfig aiConfig = properties.getAi();
 
+                // Parse maxFileSize from configuration
+                Long maxFileSize = parseMaxFileSize(properties.getScanner().getMaxFileSize());
+
                 // Create processor config with custom output path
                 ProcessorConfig processorConfig = ProcessorConfig.builder()
                         .processorType(properties.getProcessor().getType())
@@ -556,6 +600,7 @@ public class HackathonAIEngineV2 {
                         .targetDirectory(extractedPath)
                         .includePatterns(properties.getScanner().getIncludePatterns())
                         .excludePatterns(properties.getScanner().getExcludePatterns())
+                        .maxFileSize(maxFileSize)
                         .aiConfig(aiConfig)
                         .processorConfig(processorConfig)
                         .threadPoolSize(properties.getExecutor().getThreadPoolSize())

@@ -59,6 +59,12 @@ public class ExecutionContext {
      * Exclude patterns
      */
     private List<String> excludePatterns;
+
+    /**
+     * Maximum file size in bytes (files larger than this will be skipped)
+     */
+    private Long maxFileSize;
+
     /**
      * AI configuration
      */

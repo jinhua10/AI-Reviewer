@@ -165,9 +165,17 @@ public class HackathonAIEngine extends AIEngine {
             // Initialize thread pool
             this.executorService = Executors.newFixedThreadPool(context.getThreadPoolSize());
 
-            // Step 1: Scan files
+            // Step 1: Scan files (with size limit if specified)
             long scanStartMs = System.currentTimeMillis();
-            List<Path> files = fileScanner.scan(context.getTargetDirectory());
+            List<Path> files;
+            if (context.getMaxFileSize() != null && context.getMaxFileSize() > 0) {
+                log.info("Scanning with file size limit: {} bytes ({} KB)",
+                    context.getMaxFileSize(), context.getMaxFileSize() / 1024);
+                files = fileScanner.scanWithSizeLimit(context.getTargetDirectory(), context.getMaxFileSize());
+            } else {
+                log.info("Scanning without file size limit");
+                files = fileScanner.scan(context.getTargetDirectory());
+            }
             long scanTimeMs = System.currentTimeMillis() - scanStartMs;
             log.debug("File scanning took {} ms", scanTimeMs);
 
