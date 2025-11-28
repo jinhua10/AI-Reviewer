@@ -40,130 +40,33 @@ ai-reviewer:
       - "**/*.component.ts"
       - "**/*.component.html"
       - "**/*.service.ts"
-      # Configuration files (JSON, YAML, TOML) - Only for dependencies and project config
-      - "**/package.json"         # Node.js dependencies
-      - "**/pom.xml"              # Maven dependencies
-      - "**/gradle.build"         # Gradle dependencies
-      - "**/go.mod"               # Go dependencies
-      - "**/go.sum"               # Go checksums
-      - "**/requirements.txt"      # Python dependencies
-      - "**/Pipfile"              # Python pipenv
-      - "**/*.csproj"             # C# project file
-      - "**/*.vcxproj"            # C++ project file
-      - "**/Cargo.toml"           # Rust dependencies
-      - "**/composer.json"        # PHP dependencies
-      - "**/config.yml"
-      - "**/config.yaml"
-      - "**/.env.example"         # Environment config example
-      - "**/.env.sample"          # Environment config sample
-      - "**/Dockerfile"           # Docker configuration
-      - "**/docker-compose.yml"
-      - "**/docker-compose.yaml"
-      # Markdown - Only README files
-      - "**/README.md"            # Main documentation
+      # Configuration files (JSON, YAML, TOML)
+      - "**/*.json"
+      - "**/*.json5"
+      - "**/*.jsonc"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.toml"
+      # Other web technologies
+      - "**/*.xml"
+      - "**/*.md"         # Markdown
+      - "**/*.mdx"        # MDX (Markdown + JSX)
     exclude-patterns:
-      # Build outputs and artifacts
       - "**/target/**"
       - "**/build/**"
-      - "**/out/**"
-      - "**/dist/**"
-      - "**/bin/**"
-      - "**/obj/**"
-      - "**/Debug/**"
-      - "**/Release/**"
-      # Node.js and JavaScript
       - "**/node_modules/**"
-      - "**/.next/**"
-      - "**/coverage/**"
-      - "**/.nuxt/**"
-      - "**/bower_components/**"
-      # Go
-      - "**/vendor/**"
-      # Python
-      - "**/__pycache__/**"
-      - "**/*.pyc"
-      - "**/.pytest_cache/**"
-      - "**/.tox/**"
-      - "**/.venv/**"
-      - "**/venv/**"
-      - "**/.env"
-      # Lock files - DO NOT INCLUDE IN REVIEW
-      - "**/package-lock.json"
-      - "**/yarn.lock"
-      - "**/pnpm-lock.yaml"
-      - "**/npm-shrinkwrap.json"
-      - "**/Pipfile.lock"
-      - "**/poetry.lock"
-      - "**/Gemfile.lock"
-      - "**/composer.lock"
-      - "**/gradle.lock"
-      # Image files - DO NOT INCLUDE
-      - "**/*.png"
-      - "**/*.jpg"
-      - "**/*.jpeg"
-      - "**/*.gif"
-      - "**/*.svg"
-      - "**/*.webp"
-      - "**/*.ico"
-      - "**/*.bmp"
-      - "**/*.tiff"
-      # IDE and editor configuration - DO NOT INCLUDE
-      - "**/.vscode/**"
-      - "**/.idea/**"
-      - "**/*.swp"
-      - "**/*.swo"
-      - "**/.DS_Store"
-      - "**/*.iml"
-      - "**/Thumbs.db"
-      - "**/.editorconfig"
-      - "**/.jshintrc"
-      - "**/.eslintrc*"
-      - "**/.prettierrc*"
-      - "**/.stylelintrc*"
-      # Git and VCS
       - "**/.git/**"
-      - "**/.gitignore"
-      - "**/.gitattributes"
-      - "**/.svn/**"
-      # Package managers
-      - "**/packages/**"
-      - "**/.gradle/**"
-      - "**/.m2/**"
-      - "**/gems/**"
-      # OS and temporary files
-      - "**/.cache/**"
-      - "**/.tmp/**"
-      - "**/tmp/**"
-      - "**/temp/**"
-      - "**/.log"
-      - "**/*.log"
-      - "**/.session"
-      # Documentation build outputs
-      - "**/docs/_build/**"
-      - "**/site-packages/**"
-      # Compiled binaries and executables
-      - "**/*.exe"
-      - "**/*.dll"
-      - "**/*.so"
-      - "**/*.dylib"
-      - "**/*.class"
-      - "**/*.o"
-      - "**/*.a"
-      - "**/*.lib"
-      # NuGet, npm, gem packages
-      - "**/packages/**"
-      # Java specific
-      - "**/*.jar"
-      - "**/*.war"
-      - "**/*.ear"
-      # C# specific
-      - "**/.vs/**"
-      - "**/.vscode/**"
-      # Misc
-      - "**/.env.local"
-      - "**/.env.*.local"
-      - "**/secrets/**"
-      - "**/.sonarqube/**"
+      - "**/vendor/**"        # Go dependencies
+      - "**/dist/**"          # TypeScript/JavaScript build output
+      - "**/.next/**"         # Next.js build output
+      - "**/coverage/**"      # Test coverage reports
+      - "**/__pycache__/**"   # Python cache
+      - "**/bin/**"           # C#/C++ binary output
+      - "**/obj/**"           # C# object files
+      - "**/Debug/**"         # C#/C++ debug output
+      - "**/Release/**"       # C#/C++ release output
+      - "**/packages/**"      # NuGet packages
+      - "**/out/**"           # CMake output
     max-file-size: "10MB"
   # Parser configuration
   parser:
