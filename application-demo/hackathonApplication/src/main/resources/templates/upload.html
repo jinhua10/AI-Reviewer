@@ -368,13 +368,14 @@
                 <strong>🚨 AI评审扣分项提醒：</strong>
                 为确保获得更好的评审分数，请注意以下事项：
                 <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                    <li><strong>文件大小限制：</strong>单个源代码文件不应超过100KB（约3000行），超过此大小的文件将被自动过滤，不参与评审</li>
                     <li><strong>安全问题：</strong>代码中硬编码API密钥、密码、token等敏感信息</li>
                     <li><strong>代码质量：</strong>缺少单元测试文件、无日志系统(只用print)、异常处理过于宽泛(catch Exception)</li>
                     <li><strong>创新性：</strong>仅组合现有工具库而无独特改进或创新</li>
                     <li><strong>实用性：</strong>依赖付费云服务、部署复杂、缺少Docker支持</li>
                     <li><strong>文档完整性：</strong>缺少依赖文件(requirements.txt等)、部署文档不完整</li>
                 </ul>
-                <strong style="display: block; margin-top: 10px; color: #990000;">💡 建议：使用环境变量管理配置、添加测试用例、实现日志系统、提供完整部署文档</strong>
+                <strong style="display: block; margin-top: 10px; color: #990000;">💡 建议：保持文件模块化（单文件<100KB）、使用环境变量管理配置、添加测试用例、实现日志系统、提供完整部署文档</strong>
             </div>
         </div>
 

@@ -47,27 +47,61 @@ ai-reviewer:
       - "**/readme.md"
       - "**/README.MD"
       - "**/README.txt"
-      - "**/*.md"         # 其他Markdown文档
-      - "**/*.mdx"        # MDX (Markdown + JSX)
+      # 注意：不包含 **/*.md，避免docs/目录下大量低价值文档
 
-      # 核心配置文件 - 评审价值：60-70%
-      - "**/*.json"       # 包括package.json等
-      - "**/*.json5"
-      - "**/*.jsonc"
-      - "**/*.yml"
-      - "**/*.yaml"
-      - "**/*.toml"
-      - "**/*.xml"        # 包括pom.xml等
-      - "**/*.ini"
-      - "**/*.conf"
-      - "**/*.config"
+      # 核心配置文件 - 评审价值：60-70%（精确匹配，避免过多配置文件）
+      # JavaScript/Node.js
+      - "**/package.json"     # npm核心配置
+      - "**/tsconfig.json"    # TypeScript配置
+      - "**/vite.config.*"    # Vite配置
+      - "**/webpack.config.*" # Webpack配置
+      - "**/.eslintrc.*"      # ESLint配置
 
-      # 数据库/脚本 - 评审价值：70-80%
+      # Java/Maven/Gradle
+      - "**/pom.xml"          # Maven配置
+      - "**/build.gradle"     # Gradle配置
+      - "**/build.gradle.kts" # Gradle Kotlin DSL
+      - "**/settings.gradle"  # Gradle设置
+
+      # Python
+      - "**/requirements.txt" # pip依赖
+      - "**/setup.py"         # Python安装脚本
+      - "**/pyproject.toml"   # Python项目配置
+
+      # Go
+      - "**/go.mod"           # Go模块
+
+      # Rust
+      - "**/Cargo.toml"       # Rust配置
+
+      # Ruby
+      - "**/Gemfile"          # Ruby依赖
+
+      # PHP
+      - "**/composer.json"    # PHP依赖
+
+      # Dart/Flutter
+      - "**/pubspec.yaml"     # Dart/Flutter配置
+
+      # 部署配置
+      - "**/Dockerfile"
+      - "**/docker-compose.yml"
+      - "**/docker-compose.yaml"
+      - "**/.env.example"
+      - "**/Makefile"
+
+      # 数据库/API
       - "**/*.sql"
-      - "**/*.sh"         # Shell scripts
+      - "**/schema.sql"
+      - "**/init.sql"
+      - "**/openapi.yaml"
+      - "**/swagger.yaml"
+
+      # 脚本文件
+      - "**/*.sh"             # Shell scripts
       - "**/*.bash"
-      - "**/*.bat"        # Windows批处理
-      - "**/*.ps1"        # PowerShell
+      - "**/*.bat"            # Windows批处理
+      - "**/*.ps1"            # PowerShell
 
       # 注意：CSS/SCSS/LESS等样式文件已从此处移除，在exclude-patterns中明确排除
     exclude-patterns:
@@ -146,6 +180,55 @@ ai-reviewer:
       - "**/composer.lock"      # PHP Composer锁文件
       - "**/go.sum"             # Go依赖校验和
       - "**/Cargo.lock"         # Rust依赖锁文件
+
+      # ===== 测试相关低价值文件 - AI评审价值：0-10% =====
+      - "**/__snapshots__/**"   # Jest快照测试
+      - "**/*.snap"             # 快照文件
+      - "**/fixtures/**"        # 测试固定数据
+      - "**/mocks/**"           # Mock数据
+      - "**/test-data/**"       # 测试数据
+      - "**/sample-data/**"     # 示例数据
+      - "**/*.spec.js.snap"     # Jest快照
+
+      # ===== 自动生成的代码 - AI评审价值：0% =====
+      - "**/*.generated.*"      # 标记为生成的文件
+      - "**/*.g.dart"           # Flutter生成的文件
+      - "**/*.g.go"             # Go生成的文件
+      - "**/*.pb.go"            # Protobuf生成的Go代码
+      - "**/*.pb.h"             # Protobuf生成的C++头文件
+      - "**/*.pb.cc"            # Protobuf生成的C++代码
+      - "**/generated/**"       # 生成代码目录
+      - "**/.generated/**"      # 生成代码目录
+
+      # ===== 示例/演示代码 - AI评审价值：10-20% =====
+      - "**/examples/**"        # 示例代码
+      - "**/demos/**"           # 演示代码
+      - "**/samples/**"         # 示例代码
+      - "**/tutorial/**"        # 教程代码
+
+      # ===== 文档相关（详细文档） - AI评审价值：10-20% =====
+      - "**/docs/**/*.md"       # docs目录下的详细文档（保留根目录README）
+      - "**/*.mdx"              # MDX文档
+      - "**/documentation/**"   # 文档目录
+      - "**/.storybook/**"      # Storybook配置
+      - "**/stories/**"         # Storybook stories
+
+      # ===== 大型JSON/XML数据文件 - AI评审价值：0-5% =====
+      - "**/*.min.json"         # 压缩的JSON
+      - "**/data/*.json"        # data目录下的JSON数据
+      - "**/locales/**/*.json"  # 国际化翻译文件
+      - "**/i18n/**/*.json"     # 国际化文件
+      - "**/translations/**"    # 翻译文件
+
+      # ===== 配置相关低价值文件 =====
+      - "**/.prettierrc"        # Prettier配置（通常很小但价值低）
+      - "**/.prettierrc.*"
+      - "**/.editorconfig"      # 编辑器配置
+      - "**/.browserslistrc"    # 浏览器列表
+      - "**/tsconfig.*.json"    # TypeScript扩展配置（保留主tsconfig.json）
+      - "**/jest.config.*"      # Jest配置
+      - "**/.babelrc"           # Babel配置
+      - "**/.babelrc.*"
 
       # Build output directories
       - "**/target/**"        # Maven build output
@@ -256,7 +339,7 @@ ai-reviewer:
       - "**/.Trashes"         # macOS Trash
       - "**/ehthumbs.db"      # Windows thumbnail cache
       - "**/Desktop.ini"      # Windows desktop config
-    max-file-size: "200KB"
+    max-file-size: "100KB"  # 降低到100KB：单文件过大通常是代码组织问题，且消耗大量token
   # Parser configuration
   parser:
     enabled-parsers:
