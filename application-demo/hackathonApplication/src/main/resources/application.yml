@@ -201,7 +201,7 @@ ai-reviewer:
       
       【Please Begin Analysis】
       Project Content: %s
-    temperature: 0.2
+    temperature: 0
     max-tokens: 8190 # 生成的最大内容限制
     timeout-seconds: 600
     max-retries: 3
