@@ -276,7 +276,9 @@ public class BedrockAdapter implements IAIService {
 
             // 构建请求体（根据不同模型格式会有所不同）
             log.info(config.toString());
-            String requestBody = buildRequestBody(String.format(userPrompt, data.getContent()));
+            // 使用 replace 而不是 String.format 避免提示词中的特殊字符（如 '+', '%'）被误认为格式化标志
+            String formattedPrompt = userPrompt.replace("%s", data.getContent());
+            String requestBody = buildRequestBody(formattedPrompt);
 
             log.debug("调用 Bedrock 模型 - Model ID: {}, Region: {}", modelId, config.getRegion());
             log.debug("请求体: {}", requestBody);

@@ -113,7 +113,9 @@ public class HttpBasedAIAdapter implements IAIService {
         System.out.println(data.getMetadata());
         System.out.println(config.getUserPrompt());
         System.out.println(data.getContent());
-        userMessage.put("content", String.format(config.getUserPrompt(), data.getContent()));
+        // 使用 replace 而不是 String.format 避免提示词中的特殊字符（如 '+', '%'）被误认为格式化标志
+        String formattedPrompt = config.getUserPrompt().replace("%s", data.getContent());
+        userMessage.put("content", formattedPrompt);
         requestBody.put("messages", new Map[]{systemMessage, userMessage});
         return requestBody;
     }
