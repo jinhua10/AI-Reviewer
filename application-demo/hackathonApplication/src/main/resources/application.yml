@@ -97,15 +97,6 @@ ai-reviewer:
       - "**/Gemfile.lock"
       - "**/composer.lock"
       - "**/gradle.lock"
-      # Markdown files - EXCLUDE non-README
-      - "**/*.md"
-      - "!**/README.md"               # Keep only README.md
-      - "**/CHANGELOG.md"
-      - "**/CONTRIBUTING.md"
-      - "**/CHANGELOG.*"
-      - "**/AUTHORS.md"
-      - "**/LICENSE.md"
-      - "**/*.mdx"
       # Image files - DO NOT INCLUDE
       - "**/*.png"
       - "**/*.jpg"
