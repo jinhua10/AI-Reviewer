@@ -3,7 +3,7 @@ ai-reviewer:
   # File scanner configuration
   scanner:
     include-patterns:
-      # Backend languages
+      # Backend languages - 评审核心价值：90-100%
       - "**/*.java"
       - "**/*.py"
       - "**/*.go"
@@ -13,45 +13,140 @@ ai-reviewer:
       - "**/*.cxx"        # C++ source files (alternative)
       - "**/*.h"          # C/C++ header files
       - "**/*.hpp"        # C++ header files
-      # JavaScript/TypeScript
+      - "**/*.rs"         # Rust
+      - "**/*.rb"         # Ruby
+      - "**/*.php"        # PHP
+      - "**/*.swift"      # Swift
+      - "**/*.kt"         # Kotlin
+      - "**/*.kts"        # Kotlin Script
+      - "**/*.scala"      # Scala
+      - "**/*.r"          # R
+      - "**/*.R"          # R
+      - "**/*.m"          # Objective-C
+      - "**/*.mm"         # Objective-C++
+
+      # JavaScript/TypeScript - 评审核心价值：90-100%
       - "**/*.js"
       - "**/*.jsx"        # React JavaScript
       - "**/*.ts"
       - "**/*.tsx"        # React TypeScript
       - "**/*.mjs"        # ES Module JavaScript
       - "**/*.cjs"        # CommonJS JavaScript
-      # Vue.js
-      - "**/*.vue"
-      # HTML/CSS
+
+      # Frontend frameworks - 评审核心价值：90-100%
+      - "**/*.vue"        # Vue.js
+      - "**/*.svelte"     # Svelte
+      - "**/*.dart"       # Dart/Flutter
+
+      # HTML (结构代码，保留) - 评审价值：60-70%
       - "**/*.html"
       - "**/*.htm"
-      - "**/*.css"
-      - "**/*.scss"       # Sass
-      - "**/*.sass"       # Sass (indented syntax)
-      - "**/*.less"       # Less
-      - "**/*.styl"       # Stylus
-      - "**/*.stylus"     # Stylus
-      # Modern CSS
-      - "**/*.module.css"  # CSS Modules
-      - "**/*.module.scss" # SCSS Modules
-      # Svelte
-      - "**/*.svelte"
-      # Angular
-      - "**/*.component.ts"
-      - "**/*.component.html"
-      - "**/*.service.ts"
-      # Configuration files (JSON, YAML, TOML)
-      - "**/*.json"
+
+      # 文档 - 评审价值：80-90%
+      - "**/README.md"
+      - "**/readme.md"
+      - "**/README.MD"
+      - "**/README.txt"
+      - "**/*.md"         # 其他Markdown文档
+      - "**/*.mdx"        # MDX (Markdown + JSX)
+
+      # 核心配置文件 - 评审价值：60-70%
+      - "**/*.json"       # 包括package.json等
       - "**/*.json5"
       - "**/*.jsonc"
       - "**/*.yml"
       - "**/*.yaml"
       - "**/*.toml"
-      # Other web technologies
-      - "**/*.xml"
-      - "**/*.md"         # Markdown
-      - "**/*.mdx"        # MDX (Markdown + JSX)
+      - "**/*.xml"        # 包括pom.xml等
+      - "**/*.ini"
+      - "**/*.conf"
+      - "**/*.config"
+
+      # 数据库/脚本 - 评审价值：70-80%
+      - "**/*.sql"
+      - "**/*.sh"         # Shell scripts
+      - "**/*.bash"
+      - "**/*.bat"        # Windows批处理
+      - "**/*.ps1"        # PowerShell
+
+      # 注意：CSS/SCSS/LESS等样式文件已从此处移除，在exclude-patterns中明确排除
     exclude-patterns:
+      # ===== 样式文件 - AI评审价值：0-5% =====
+      - "**/*.css"            # CSS样式文件
+      - "**/*.scss"           # Sass/SCSS样式
+      - "**/*.sass"           # Sass样式（缩进语法）
+      - "**/*.less"           # Less样式
+      - "**/*.styl"           # Stylus样式
+      - "**/*.stylus"         # Stylus样式
+      - "**/*.module.css"     # CSS Modules
+      - "**/*.module.scss"    # SCSS Modules
+      - "**/*.styled.js"      # Styled Components
+      - "**/*.styled.ts"      # Styled Components (TypeScript)
+      - "**/*.styles.js"      # Style files
+      - "**/*.styles.ts"      # Style files (TypeScript)
+
+      # ===== 静态资源 - AI评审价值：0% =====
+      # 图片文件
+      - "**/*.png"
+      - "**/*.jpg"
+      - "**/*.jpeg"
+      - "**/*.gif"
+      - "**/*.svg"
+      - "**/*.ico"
+      - "**/*.bmp"
+      - "**/*.webp"
+      - "**/*.tiff"
+      - "**/*.tif"
+      - "**/*.psd"
+      - "**/*.ai"
+      - "**/*.sketch"
+
+      # 字体文件
+      - "**/*.woff"
+      - "**/*.woff2"
+      - "**/*.ttf"
+      - "**/*.eot"
+      - "**/*.otf"
+
+      # 媒体文件
+      - "**/*.mp4"
+      - "**/*.avi"
+      - "**/*.mov"
+      - "**/*.wmv"
+      - "**/*.flv"
+      - "**/*.webm"
+      - "**/*.mp3"
+      - "**/*.wav"
+      - "**/*.ogg"
+      - "**/*.m4a"
+      - "**/*.aac"
+
+      # 文档/压缩文件
+      - "**/*.pdf"
+      - "**/*.zip"
+      - "**/*.rar"
+      - "**/*.7z"
+      - "**/*.tar"
+      - "**/*.gz"
+      - "**/*.bz2"
+
+      # ===== Source Map文件 - AI评审价值：0% =====
+      - "**/*.map"            # JavaScript/CSS source maps
+      - "**/*.js.map"
+      - "**/*.css.map"
+      - "**/*.ts.map"
+
+      # ===== 依赖锁文件 - AI评审价值：5-10% =====
+      - "**/package-lock.json"  # npm锁文件（通常很大）
+      - "**/yarn.lock"          # Yarn锁文件
+      - "**/pnpm-lock.yaml"     # pnpm锁文件
+      - "**/poetry.lock"        # Python Poetry锁文件
+      - "**/Pipfile.lock"       # Python Pipfile锁文件
+      - "**/Gemfile.lock"       # Ruby Gemfile锁文件
+      - "**/composer.lock"      # PHP Composer锁文件
+      - "**/go.sum"             # Go依赖校验和
+      - "**/Cargo.lock"         # Rust依赖锁文件
+
       # Build output directories
       - "**/target/**"        # Maven build output
       - "**/build/**"         # Gradle/general build output
